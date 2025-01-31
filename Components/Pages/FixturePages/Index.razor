@@ -1,0 +1,116 @@
+@page "/fixtures"
+@page "/"
+
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.EntityFrameworkCore
+@using FixtureManagementV3.Models
+@using FixtureManagementV3.ViewModels
+@using FixtureManagementV3.Data
+@using FixtureManagementV3.Components.Helper
+@using System.Linq
+
+@implements IAsyncDisposable
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Index</PageTitle>
+
+<h1>Fixtures</h1>
+
+<p>
+    <a href="fixtures/create">Create New</a>
+</p>
+<div class="row">
+    <div class="col-md-8">
+        <EditForm FormName="FilterFixtures" Model="Filter" method="post" class="form-inline" onsubmit="FilterFixtures" Enhance>
+            <div class="container">
+                <div class="row my-3 align-self-center">
+                    <div class="col-sm">
+                        <label for="startDate">Start Date</label>
+                        <InputDate id="startDate" @bind-Value="Filter!.StartDate" class="form-control"/>
+                    </div>
+                    <div class="col-sm">
+                        <label for="endDate">End Date</label>
+                        <InputDate id="endDate" @bind-Value="Filter!.EndDate" class="form-control"/> 
+                    </div>
+                    <div class="col-sm" >
+                        <label>Home</label>
+                        <InputCheckbox id="ishome" @bind-Value="Filter!.IncludeHome" class="form-check-input"/>
+                        <label>Away</label>
+                        <InputCheckbox id="isaway" @bind-Value="Filter!.IncludeAway" class="form-check-input"/>  
+                    </div>
+                    <div class="col-sm">
+                        <input type="submit" value="Filter" class="btn btn-primary" /> |
+                        <a asp-page="./Index">Reset</a>
+                    </div>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    @* <QuickGrid Items="fixturesVM" Theme="corporate" class="table table-striped table-sm">
+
+        <PropertyColumn Property="fixture => fixture.Date" />
+        <PropertyColumn Property="fixture => fixture.Team" />
+        <PropertyColumn Title="H/A" Property='fixture => (fixture.IsHome ? "H" : "A")'/>
+        <PropertyColumn Property="fixture => fixture.Opponent" />
+        <PropertyColumn Property="fixture => fixture.Type" />
+        <PropertyColumn Property="fixture => fixture.Start" />
+        <PropertyColumn Property="fixture => fixture.Pitch" />
+        <TemplateColumn Context="fixture">
+            <a href="@($"fixtures/edit?id={fixture.Id}")"><Icon Type="Icon.IconType.Edit"/></a>
+            <a href="@($"fixtures/allocate?id={fixture.Id}")"><Icon Type="Icon.IconType.Schedule"/></a>
+            <a href="@($"fixture/delete?id={fixture.Id}")"><Icon Type="Icon.IconType.Delete"/></a>
+        </TemplateColumn>
+    </QuickGrid> *@
+    <FixtureGrid CanEdit="true" Fixtures="@fixturesVM" TeamHidden="false"/>
+
+</div>
+
+@code {
+
+    private AppDBContext context = default!;
+    private IQueryable<FixtureViewModel> fixturesVM = default!; //Enumerable.Empty<FixtureViewModel>().AsQueryable();
+    
+    [SupplyParameterFromForm (FormName="FilterFixtures")]
+    private FilterContext? Filter {get; set;} 
+    protected override async Task OnInitializedAsync()    
+    {
+        context = DbFactory.CreateDbContext();
+        Filter ??= new();
+        fixturesVM = (await context.Fixture
+                .Include(f => f.Team)
+                .Include(f => f.FixtureAllocation)
+                    .ThenInclude(fa => fa!.Pitch)
+                .OrderBy(f => f.Date)
+                    .ThenBy(f => f.Team!.AgeGroup)
+                .Where(f => (f.Date >= Filter.StartDateOnly && f.Date <= Filter.EndDateOnly))
+                .Where(f => f.IsHome == Filter.IncludeHome || f.IsHome != Filter.IncludeAway)
+                .ToListAsync())
+                .Select(f => new FixtureViewModel(f, true))
+                .AsQueryable();
+    }
+
+    private void FilterFixtures() {
+
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+
+    public class FilterContext {
+        public bool IncludeHome {get; set;} = true;
+        public bool IncludeAway {get; set;} = false;
+        public DateTime StartDate {get; set;} = (DateTime.Now);
+        public DateTime EndDate {get; set;} = (DateTime.Now.Date.AddDays(21));
+
+        public DateOnly StartDateOnly {
+            get => DateOnly.FromDateTime(StartDate.Date);
+        }
+        public DateOnly EndDateOnly {
+            get => DateOnly.FromDateTime(EndDate.Date);
+        }
+    }    
+}

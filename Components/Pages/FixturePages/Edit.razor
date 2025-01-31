@@ -1,0 +1,113 @@
+@page "/fixtures/edit"
+@using Microsoft.EntityFrameworkCore
+@using FixtureManagementV3.Models
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+@if (Fixture is null)
+{
+    <h2>Fixture</h2>
+    <hr />
+    <p><em>Loading...</em></p>
+}
+else
+{   
+    <hr />
+    var team = Fixture.Team?.DisplayName ?? "Team X";
+    <h3>@team</h3>
+    <hr />
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Fixture" OnValidSubmit="UpdateFixture" FormName="edit" Enhance>
+                
+                <DataAnnotationsValidator />
+                @* <ValidationSummary role="alert"/> *@
+                <input type="hidden" name="Fixture.TeamId" @bind-value="@Fixture.TeamId" />
+                <input type="hidden" name="Fixture.Id" @bind-value="@Fixture.Id" @/>
+                <div class="mb-3">
+                    <label for="date" class="form-label">Date:</label>
+                    <InputDate id="date" @bind-Value="Fixture.Date" class="form-control" />
+                    <ValidationMessage For="() => Fixture.Date" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="ishome" class="form-label">Home:</label>
+                    <InputCheckbox id="ishome" @bind-Value="Fixture.IsHome" class="form-check-input" />
+                    <ValidationMessage For="() => Fixture.IsHome" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                <span class="text-danger">*</span>
+                    <label for="opponent" class="form-label">Opponent:</label>
+                    <InputText id="opponent" @bind-Value="Fixture.Opponent" class="form-control" aria-required="true"/>
+                    <ValidationMessage For="() => Fixture.Opponent" class="text-danger" />
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <br
+    <a href="#" onclick="history.back()">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private System.Guid Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private Fixture? Fixture { get; set; }
+ 
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Fixture ??= await context.Fixture
+            .Include(f=> f.Team)
+            .FirstOrDefaultAsync(f => f.Id == Id);
+        if (Fixture is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    // To protect from overposting attacks, enable the specific properties you want to bind to.
+    // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task UpdateFixture()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Attach(Fixture!).State = EntityState.Modified;
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!FixtureExists(Fixture!.Id))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/fixtures");
+    }
+
+    private bool FixtureExists(System.Guid id)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Fixture.Any(e => e.Id == id);
+    }
+
+    public class Holodeck
+    {
+        public string? Id { get; set; }
+    }
+}

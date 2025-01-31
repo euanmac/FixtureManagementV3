@@ -1,0 +1,17 @@
+<PageScript Src="./Components/Helper/FullCalendar.razor.js?dummy" />
+<div id='calendar' initialview='@(InitialView)' initialdate='@(InitialDate.ToString("yyyy-MM-dd"))'/>
+
+@code {
+
+    [Parameter]
+    public DateOnly InitialDate {get; set;} = DateOnly.FromDateTime(DateTime.Now);
+    [Parameter]   
+    public bool ShowDayView {get; set;} = false;
+
+    private string InitialView {
+        get 
+        {
+            return ShowDayView ? "resourceTimeGridDay" : "timeGridWeek";
+        }
+    }
+}

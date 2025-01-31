@@ -1,0 +1,170 @@
+@page "/fixtures/allocate"
+@using Microsoft.EntityFrameworkCore
+@using FixtureManagementV3.Models
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<h1>Schedule Fixture</h1>
+
+<hr />
+@* @{ var team = $"{fixture!.Team!.DisplayName} v {fixture!.Opponent} on {fixture!.Date.ToString("dd-MMM-yy")}"; } *@
+@{ var team = $"{fixture!.Team!.DisplayName}";}
+
+<h4>@team</h4>
+<h5> v </h5>
+<h4>@fixture!.Opponent </h4> 
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="FixtureAllocation" OnValidSubmit="SaveChanges" FormName="create" Enhance>
+            <input type="hidden" name="FixtureAllocation.Id" @bind-value="FixtureAllocation!.Id"/>
+            <input type="hidden" name="FixtureAllocation.FixtureId" @bind-value="FixtureAllocation!.FixtureId"/>
+
+            @* <div class="mb-3">
+                <h5 class="form-label">@(fixture!.Opponent)</h5> 
+            </div> *@
+            <div class="mb-3">
+                <span class="text-danger">*</span>
+                <label for="pitchid" class="form-label">Pitch</label> 
+                <InputSelect id="pitchid" @bind-Value="FixtureAllocation!.PitchId" class="form-control" aria-required="true">
+                    @foreach (var pitch in pitchList)
+                    {
+                        <option value="@pitch.Id">@pitch.Name</option> 
+                    }
+                </InputSelect> 
+                <ValidationMessage For="() => FixtureAllocation.PitchId" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <span class="text-danger">*</span>
+                <label for="start" class="form-label">@($"Start ({fixture.Date.ToString("dd-MMM-yyyy")})") </label> 
+                <InputDate id="start" @bind-Value="FixtureAllocation.Start"  Type="InputDateType.Time" class="form-control" aria-required="true" /> 
+                @* <InputDate type="time" @bind-value="FixtureAllocation!.StartTimeOnly" @bind:format="hh:mm" id="start" class="form-control" aria-required="true"/> *@
+                <ValidationMessage For="() => FixtureAllocation.Start" class="text-danger"/> 
+            </div>        
+            <div class="mb-3">
+                <span class="text-danger">*</span>
+                <label for="duration" class="form-label">Duration</label> 
+                <InputSelect id="duration" @bind-Value="FixtureAllocation.Duration" class="form-control" aria-required="true">
+                    @foreach (var duration in durations)
+                    {
+                        <option value="@duration">@duration.TotalMinutes</option>
+                    }
+                </InputSelect> 
+                <ValidationMessage For="() => FixtureAllocation.Duration" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <span class="text-danger">*</span>
+                <label for="isconfirmed" class="form-label">Is Confirmed?</label> 
+                <InputCheckbox id="isconfirmed" @bind-Value="FixtureAllocation.IsConfirmed" class="form-check-input" aria-required="true"/> 
+                <ValidationMessage For="() => FixtureAllocation.IsConfirmed" class="text-danger" /> 
+            </div>        
+
+            @* <button class="btn btn-secondary" onclick="history.back()">Back</button> *@
+            <button type="submit" class="btn btn-primary" name="Action" value="@(isNew ? "add" : "update")">Save</button>
+            <button type="submit" class="btn btn-danger" name="Action" value="delete" >Delete</button>
+
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <br>
+    <a href="#" onclick="history.back()">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private FixtureAllocation? FixtureAllocation { get; set; }
+
+    [SupplyParameterFromQuery (Name="id")]
+    private System.Guid FixtureId { get; set; }
+    private Fixture? fixture;
+
+    private TimeSpan[] durations = new TimeSpan[] { TimeSpan.FromMinutes(60), 
+                                                  TimeSpan.FromMinutes(75), 
+                                                  TimeSpan.FromMinutes(90), 
+                                                  TimeSpan.FromMinutes(105), 
+                                                  TimeSpan.FromMinutes(120)};
+
+    private IQueryable<Pitch> pitchList = default!;
+    private bool isNew = true;
+
+    [SupplyParameterFromForm]
+    string Action { get; set; } = "update";
+
+    protected override async Task OnInitializedAsync()
+    {
+            using var context = DbFactory.CreateDbContext();
+            pitchList = (await context.Pitch
+            .ToListAsync())
+            .OrderBy(p => p.DisplayOrder)
+            .AsQueryable();        
+
+            fixture = await context.Fixture
+                .Include(f => f.Team)
+                .Include(f => f.FixtureAllocation)
+                .FirstOrDefaultAsync(m => m.Id == FixtureId);
+
+            if (fixture is null)
+            {
+                NavigationManager.NavigateTo("notfound");
+                return;
+            }
+
+            //Flag new if not already allocated
+            isNew = !fixture.IsAllocated;
+
+            //If allocation not null then supplied from form post so just returb
+            if (FixtureAllocation is not null) {
+                return;
+            }
+
+            //If not new then set allocation to be that linked to fixture
+            if (!isNew) {
+                FixtureAllocation = fixture.FixtureAllocation;
+                return;
+            }
+
+            //Must be unallocated ao create new onw
+            FixtureAllocation = new FixtureAllocation
+            {
+                Id = Guid.NewGuid(),
+                FixtureId = FixtureId,
+                Fixture = fixture,
+                PitchId = pitchList.First(p => p.DisplayOrder == 5).Id,
+                Start = new TimeOnly(9,30),
+                Duration = TimeSpan.FromMinutes(90),
+                IsConfirmed = false
+            };
+            return;
+    }
+
+    // To protect from overposting attacks, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task SaveChanges()
+    {
+        using var context = DbFactory.CreateDbContext();
+        //combine the dates to get it right
+        @* FixtureAllocation!.Start = new DateTime(DateOnly.FromDateTime(FixtureAllocation.Start), FixtureAllocation.StartTimeOnly); *@
+        @* FixtureAllocation!.Start = FixtureAllocation.StartTimeOnly; *@
+        
+        //Update date to be fixture date
+        switch (Action) {
+            case "add":
+                context.FixtureAllocation.Add(FixtureAllocation!);
+                break;
+            case "update":
+                context.FixtureAllocation.Update(FixtureAllocation!);
+                //context.FixtureAllocation.Entry(FixtureAllocation!).State = EntityState.Modified
+                break;
+            case "delete":
+                context.FixtureAllocation.Remove(FixtureAllocation!);
+                break;
+        }
+        
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/fixtures");
+    }
+
+}

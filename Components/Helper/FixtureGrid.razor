@@ -1,0 +1,42 @@
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.EntityFrameworkCore
+@using FixtureManagementV3.Models
+@using FixtureManagementV3.ViewModels
+@using FixtureManagementV3.Data
+@using FixtureManagementV3.Components.Helper
+@using System.Linq
+
+<div>
+    <QuickGrid Items="Fixtures" Theme="corporate" class="table table-striped table-sm">
+        <PropertyColumn Property="fixture => fixture.Date" />
+        @if (!@TeamHidden)
+        {
+            <TemplateColumn Context="fixture">
+                <a href="@($"teams/details?id={fixture.TeamId}")">@fixture.Team</a>
+            </TemplateColumn>
+        }
+        <PropertyColumn Title="H/A" Property='fixture => (fixture.IsHome ? "H" : "A")'/>
+        <PropertyColumn Property="fixture => fixture.Opponent" />
+        <PropertyColumn Property="fixture => fixture.Type" />
+        <PropertyColumn Property="fixture => fixture.Start" />
+        <PropertyColumn Property="fixture => fixture.Pitch" />
+        <TemplateColumn Context="fixture">
+            <a href="@($"fixtures/edit?id={fixture.Id}")"><Icon Type="Icon.IconType.Edit"/></a>
+            @if (fixture.IsHome) {
+                <a href="@($"fixtures/allocate?id={fixture.Id}")"><Icon Type="Icon.IconType.Schedule"/></a>
+            }
+            <a href="@($"fixtures/delete?id={fixture.Id}")"><Icon Type="Icon.IconType.Delete"/></a>
+        </TemplateColumn>
+    </QuickGrid>
+</div>
+
+@code {
+
+    [Parameter, EditorRequired]
+    public required IQueryable<FixtureViewModel> Fixtures {get; set;}
+    [Parameter]
+    public bool CanEdit {get; set;}
+    [Parameter]
+    public bool TeamHidden {get; set;}= true;
+
+}   

@@ -1,0 +1,83 @@
+@page "/fixtures/create"
+@using Microsoft.EntityFrameworkCore
+@using FixtureManagementV3.Models
+@using FixtureManagementV3.Data
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+
+<h2>Fixture</h2>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Fixture" OnValidSubmit="AddFixture" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert"/>
+            <div class="mb-3">
+                <label for="teamid" class="form-label">TeamId:</label> 
+                @* <InputText id="teamid" @bind-Value="Fixture.TeamId" class="form-control" />  *@
+                <InputSelect id="teamid" @bind-Value="Fixture.TeamId" class="form-control">
+                    @foreach (var team in teamList)
+                    {
+                        <option value="@team.Id">@team.DisplayName</option>
+                    }
+                </InputSelect> 
+
+                <ValidationMessage For="() => Fixture.TeamId" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="date" class="form-label">Date:</label> 
+                <InputDate id="date" @bind-Value="Fixture.Date" class="form-control" /> 
+                <ValidationMessage For="() => Fixture.Date" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="ishome" class="form-label">IsHome:</label> 
+                <InputCheckbox id="ishome" @bind-Value="Fixture.IsHome" class="form-check-input" /> 
+                <ValidationMessage For="() => Fixture.IsHome" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <span class="text-danger">*</span>
+                <label for="opponent" class="form-label">Opponent:</label> 
+                <InputText id="opponent" @bind-Value="Fixture.Opponent" class="form-control" aria-required="true"/> 
+                <ValidationMessage For="() => Fixture.Opponent" class="text-danger" /> 
+            </div>        
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <br
+    <a href="#" onclick="history.back()">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private Fixture Fixture { get; set; } = new();
+
+    private IQueryable<Team> teamList = default!;
+        
+    protected override async Task OnInitializedAsync()
+    {
+            using var context = DbFactory.CreateDbContext();
+            teamList = (await context.Team
+            .ToListAsync())
+            .OrderBy(t => t.AgeGroup)
+            .ThenBy(t => t.Gender)
+            .ThenBy(t => t.Name)
+            .AsQueryable();
+
+    }
+
+    // To protect from overposting attacks, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task AddFixture()
+    {
+
+        using var context = DbFactory.CreateDbContext();
+        context.Fixture.Add(Fixture);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/fixtures");
+    }
+}

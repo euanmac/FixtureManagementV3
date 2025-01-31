@@ -1,0 +1,106 @@
+@page "/teams/details"
+@using Microsoft.EntityFrameworkCore
+@using FixtureManagementV3.Models
+@using FixtureManagementV3.ViewModels
+@using FixtureManagementV3.Components.Helper
+@using FixtureManagementV3.Data
+@using System.ComponentModel.DataAnnotations
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    @if (team is null)
+    {
+        <h2>Fixture</h2>
+        <hr />
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <hr />
+            <h3>@team!.DisplayName</h3>
+        <hr />
+        <dl class="row">
+            <dt class="col-sm-2">Gender</dt>
+            <dd class="col-sm-4">@team.Gender</dd>
+            <dt class="col-sm-2">Age Group</dt>
+            <dd class="col-sm-4">@team.GroupDescription</dd>
+            <dt class="col-sm-2">League</dt>
+            @if (team.FixtureURL.Length > 0) {
+                <dd class="col-sm-4"><a href="@team.FixtureURL">@(Utilities.GetAttributeOfType<DisplayAttribute>(@team.League)!.Name ?? "")</a></dd>
+            } else {
+                <dd class="col-sm-4">@(Utilities.GetAttributeOfType<DisplayAttribute>(@team.League)!.Name ?? "")</dd>
+            }
+            <dt class="col-sm-2">Division</dt>
+            <dd class="col-sm-4">@team.Division</dd>
+            <dt class="col-sm-2">Match Day</dt>
+            <dd class="col-sm-10">@team.MatchDay</dd>
+            @foreach (var item in team.Contacts)
+            {
+                <dt class="col-sm-2">
+                    @item.ContactType
+                </dt>
+                @if (isAuthenticated)
+                {
+                    <dd class="col-sm-10">
+                        @item.Person.FullName
+                        (<a href="mailto:@item.Person.Email">@item.Person.Email</a>)
+                    </dd>
+                }
+                else
+                {
+                    <dd class="col-sm-10">
+                        @item.Person.FullName
+                    </dd>
+                }
+            }
+        </dl>
+        <FixtureGrid CanEdit="true" Fixtures="@fixture" TeamHidden="true"/>
+        <div>
+            @if (isAuthenticated) {
+                <div><a href="@($"/teams/edit?id={team.Id}")">Edit</a> |</div>
+            }
+            <a href="@($"/teams")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private Team? team;
+    private IQueryable<FixtureViewModel> fixture = default!; 
+    [SupplyParameterFromQuery]
+    private System.Guid Id { get; set; }
+    private bool isAuthenticated = false;
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        isAuthenticated = (user.Identity is not null && user.Identity.IsAuthenticated);
+
+        using var context = DbFactory.CreateDbContext();
+        fixture = (await context.Fixture
+                .Include(f => f.Team)
+                .Include(f => f.FixtureAllocation)
+                    .ThenInclude(fa => fa!.Pitch)
+                .OrderBy(f => f.Date)
+                    .ThenBy(f => f.Team!.AgeGroup)
+                .Where(f => f.TeamId == Id)
+                .ToListAsync())
+                .Select(f => new FixtureViewModel(f, true))
+                .AsQueryable();
+        team = await context.Team
+                .Include(t => t.Contacts)
+                    .ThenInclude(c => c.Person)
+                .Where(t => t.Id == Id)
+                .FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (team is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}

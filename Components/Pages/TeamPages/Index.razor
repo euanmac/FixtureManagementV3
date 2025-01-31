@@ -1,0 +1,58 @@
+@page "/teams"
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.EntityFrameworkCore
+@using FixtureManagementV3.Models
+@using FixtureManagementV3.Components.Helper
+@using System.ComponentModel.DataAnnotations
+@implements IAsyncDisposable
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Index</PageTitle>
+
+<h1>Teams</h1>
+
+<p>
+    <a href="teams/create">Create</a>
+</p>
+
+<QuickGrid Class="table table-sm table-striped" Items="team" >
+    @* <PropertyColumn Property="team => team.AgeGroup" Title="Age Group"/> *@
+    <TemplateColumn Context="team" title="Name" >
+        <a href="@($"teams/details?id={team.Id}")">@team.DisplayName</a>
+    </TemplateColumn>
+    <PropertyColumn Property="team => team.Gender" />
+    <PropertyColumn Property="@(t => Utilities.GetAttributeOfType<DisplayAttribute>(t.League)!.Name ?? "")" Title="League"/>
+    <PropertyColumn Property="team => team.Division" />
+    <TemplateColumn Context="team" title="Contacts">
+        @{ foreach (var contact in team.Contacts.OrderBy(c => c.ContactType))
+            {
+                @contact.Person.FirstName @:  @contact.Person.LastName <br />
+            }
+        }
+    </TemplateColumn>
+    <TemplateColumn Context="team">
+        <a href="@($"teams/details?id={team.Id}")"><Icon Type="Icon.IconType.Details"/></a>
+        <a href="@($"teams/edit?id={team.Id}")"><Icon Type="Icon.IconType.Edit"/></a>
+        <a href="@($"teams/delete?id={team.Id}")"><Icon Type="Icon.IconType.Delete"/></a>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    private AppDBContext context = default!;
+    private IQueryable<Team> team = default!; 
+
+    protected override void OnInitialized()
+    {
+        
+        context = DbFactory.CreateDbContext();
+        team = context.Team
+                .Include(t => t.Contacts)
+                    .ThenInclude(c => c.Person)
+                .OrderBy(t => t.AgeGroup)
+                    .ThenBy(t => t.Gender)
+                    .ThenBy(t => t.Division);
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}
