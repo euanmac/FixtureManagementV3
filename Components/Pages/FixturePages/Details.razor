@@ -1,0 +1,60 @@
+@page "/fixtures/details"
+@using Microsoft.EntityFrameworkCore
+@using FixtureManagementV3.Models
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+
+    @if (fixture is null)
+    {
+        <h2>Fixture</h2>
+        <hr />
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <hr />
+        <h3>@fixture.Team!.DisplayName</h3>
+        <hr />
+        var venue = @fixture.IsHome ? "Home" : "Away";
+        <dl class="row">
+            <dt class="col-sm-2">Date</dt>
+            <dd class="col-sm-10">@fixture.Date</dd>
+            <dt class="col-sm-2">Venue</dt>
+            <dd class="col-sm-10">@venue</dd>
+            <dt class="col-sm-2">Opponent</dt>
+            <dd class="col-sm-10">@fixture.Opponent</dd>
+            <dt class="col-sm-2">FixtureType</dt>
+            <dd class="col-sm-10">@fixture.FixtureType</dd>
+        </dl>
+        <div>
+            <a href="@($"/fixtures/edit?id={fixture.Id}")">Edit</a> |
+            <a href="@($"/fixtures")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private Fixture? fixture;
+
+    [SupplyParameterFromQuery]
+    private System.Guid Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        fixture = await context.Fixture
+            .Include(f => f.Team)
+            .FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (fixture is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}
+

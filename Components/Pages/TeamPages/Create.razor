@@ -1,0 +1,96 @@
+@page "/teams/create"
+@using Microsoft.EntityFrameworkCore
+@using FixtureManagementV3.Models
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+
+<h2>Team</h2>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Team" OnValidSubmit="AddTeam" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert"/>
+            <div class="mb-3">
+                <span class="text-danger">*</span>
+                <label for="name" class="form-label">Name:</label> 
+                <InputText id="name" @bind-Value="Team.Name" class="form-control" aria-required="true"/> 
+                <ValidationMessage For="() => Team.Name" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <span class="text-danger">*</span>
+                <label for="agegroup" class="form-label">Age Group:</label> 
+                <InputSelect id="agegroup" @bind-Value="Team.AgeGroup" class="form-control" aria-required="true"> 
+                    @foreach (var ag in Enum.GetValues(typeof(AgeGroup)))
+                    {
+                        <option value="@ag">@ag</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="() => Team.AgeGroup" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="gender" class="form-label">Gender:</label> 
+                <InputSelect @bind-Value="Team.Gender" class="form-control" aria-required="true"> 
+                    @foreach (var gender in Enum.GetValues(typeof(Gender)))
+                    {
+                        <option value="@gender">@gender</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="() => Team.Gender" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="league" class="form-label">League:</label> 
+                <InputSelect @bind-Value="Team.League" class="form-control" aria-required="true"> 
+                    @foreach (var league in Enum.GetValues(typeof(League)))
+                    {
+                        <option value="@league">@league</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="() => Team.League" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="division" class="form-label">Division:</label> 
+                <InputSelect @bind-Value="Team.Division" class="form-control" aria-required="true"> 
+                    @foreach (var division in Enum.GetValues(typeof(Division)))
+                    {
+                        <option value="@division">@division</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="() => Team.Division" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="fulltimeteamid" class="form-label">FullTimeTeamId:</label> 
+                <InputText id="fulltimeteamid" @bind-Value="Team.FullTimeTeamId" class="form-control" /> 
+                <ValidationMessage For="() => Team.FullTimeTeamId" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="fulltimeleagueid" class="form-label">FullTimeLeagueId:</label> 
+                <InputText id="fulltimeleagueid" @bind-Value="Team.FullTimeLeagueId" class="form-control" /> 
+                <ValidationMessage For="() => Team.FullTimeLeagueId" class="text-danger" /> 
+            </div>           
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/teams">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private Team Team { get; set; } = new();
+
+    // To protect from overposting attacks, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task AddTeam()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Team.Add(Team);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/teams");
+    }
+}
