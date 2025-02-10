@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using CsvHelper.Configuration.Attributes;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 namespace FixtureManagementV3.Models
 {
     public class TeamContact
@@ -13,9 +14,9 @@ namespace FixtureManagementV3.Models
 
         //Navigation
         [Ignore]
-        public required Person Person { get; set; }
+        public Person? Person { get; set; }
         [Ignore]
-        public required Team Team { get; set; }
+        public Team? Team { get; set; }
 
     }
 

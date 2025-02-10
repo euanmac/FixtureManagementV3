@@ -7,14 +7,19 @@
 @implements IAsyncDisposable
 @inject IDbContextFactory<AppDBContext> DbFactory
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Teams</PageTitle>
 
 <h1>Teams</h1>
 
-<p>
-    <a href="teams/create">Create</a>
-</p>
+@if (isAuthenticated) {
+    <p>
+        <a class="btn btn-primary btn-sm" href="teams/create">Add Team</a>
+    </p>
+}
+<hr>
+
 
 <QuickGrid Class="table table-sm table-striped" Items="team" >
     @* <PropertyColumn Property="team => team.AgeGroup" Title="Age Group"/> *@
@@ -27,24 +32,30 @@
     <TemplateColumn Context="team" title="Contacts">
         @{ foreach (var contact in team.Contacts.OrderBy(c => c.ContactType))
             {
-                @contact.Person.FirstName @:  @contact.Person.LastName <br />
+                @contact.Person!.FirstName @:  @contact.Person.LastName <br />
             }
         }
     </TemplateColumn>
-    <TemplateColumn Context="team">
-        <a href="@($"teams/details?id={team.Id}")"><Icon Type="Icon.IconType.Details"/></a>
-        <a href="@($"teams/edit?id={team.Id}")"><Icon Type="Icon.IconType.Edit"/></a>
-        <a href="@($"teams/delete?id={team.Id}")"><Icon Type="Icon.IconType.Delete"/></a>
-    </TemplateColumn>
+    @if (isAuthenticated) {
+        <TemplateColumn Context="team">
+            <a href="@($"teams/details?id={team.Id}")"><Icon Type="Icon.IconType.Details"/></a>
+            <a href="@($"teams/edit?id={team.Id}")"><Icon Type="Icon.IconType.Edit"/></a>
+            <a href="@($"teams/delete?id={team.Id}")"><Icon Type="Icon.IconType.Delete"/></a>
+        </TemplateColumn>
+    }
 </QuickGrid>
 
 @code {
     private AppDBContext context = default!;
     private IQueryable<Team> team = default!; 
+    private bool isAuthenticated = false;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()    
     {
-        
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        isAuthenticated = (user.Identity is not null && user.Identity.IsAuthenticated);
+
         context = DbFactory.CreateDbContext();
         team = context.Team
                 .Include(t => t.Contacts)

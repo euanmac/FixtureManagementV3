@@ -1,0 +1,132 @@
+@page "/contacts/edit"
+@using Microsoft.EntityFrameworkCore
+@using FixtureManagementV3.Models
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+<h2>Person</h2>
+<hr />
+@if (Person is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Person" OnValidSubmit="UpdatePerson" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary role="alert"/>
+                <input type="hidden" name="Person.Id" value="@Person.Id" />
+                <div class="mb-3">
+                    <label for="firstname" class="form-label">First Name:</label>
+                    <InputText id="firstname" @bind-Value="Person.FirstName" class="form-control" />
+                    <ValidationMessage For="() => Person.FirstName" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="lastname" class="form-label">Last Name:</label>
+                    <InputText id="lastname" @bind-Value="Person.LastName" class="form-control" />
+                    <ValidationMessage For="() => Person.LastName" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="tel" class="form-label">Telephone:</label>
+                    <InputText id="tel" @bind-Value="Person.Tel" class="form-control" />
+                    <ValidationMessage For="() => Person.Tel" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email:</label>
+                    <InputText id="email" @bind-Value="Person.Email" class="form-control" />
+                    <ValidationMessage For="() => Person.Email" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="isref" class="form-label">Is Referee:</label>
+                    <InputCheckbox id="isref" @bind-Value="Person.IsRef" class="form-check-input" />
+                    <ValidationMessage For="() => Person.IsRef" class="text-danger" />
+                </div>
+                <hr/>
+                <dl class="row">
+                    @foreach (var item in teamContacts)
+                    {
+                        <dt class="col-sm-2">
+                            @item.ContactType
+                        </dt>
+                        <dd class="col-sm-10">
+                            @item.Team.DisplayName
+                        </dd>
+                        @if (isAuthenticated)
+                        {
+                        }
+                    }
+                </dl>
+            <button type="submit" class="btn btn-primary">Save</button>
+        </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/contacts">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private System.Guid Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private Person? Person { get; set; }
+    private List<TeamContact> teamContacts = default!;
+    private bool isAuthenticated = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Person ??= await context.Person.FirstOrDefaultAsync(m => m.Id == Id);
+        teamContacts = await context.TeamContact
+            .Include(tc => tc.Team)
+            .Where(tc => tc.PersonId == Id)
+            .OrderBy(tc => tc.Team.AgeGroup)
+            .ToListAsync();
+
+        if (Person is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    // To protect from overposting attacks, enable the specific properties you want to bind to.
+    // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task UpdatePerson()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Attach(Person!).State = EntityState.Modified;
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!PersonExists(Person!.Id))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/contacts");
+    }
+
+    private bool PersonExists(System.Guid id)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Person.Any(e => e.Id == id);
+    }
+}

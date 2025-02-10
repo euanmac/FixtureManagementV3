@@ -1,0 +1,81 @@
+@page "/contacts"
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.EntityFrameworkCore
+@using FixtureManagementV3.Models
+@using FixtureManagementV3.Components.Helper
+@implements IAsyncDisposable
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Index</PageTitle>
+
+<h1>Contacts</h1>
+
+@if (isAuthenticated)  {
+    <p>
+        <a href="contacts/create">Create New</a>
+    </p>
+}
+
+<QuickGrid Class="table table-striped" Items="person">
+    <PropertyColumn Property="person => person.FirstName" Title="First Name" />
+    <PropertyColumn Property="person => person.LastName"Title="Last Name"/>
+    @if (isAuthenticated) {
+        <PropertyColumn Property="person => person.Tel" Title="Telephone" />
+        <PropertyColumn Property="person => person.Email" Title="Email" />
+    }
+    <TemplateColumn Context="person" title="Teams">
+
+        @{foreach (var tc in teamContact.Where(tc => tc.PersonId == person.Id).ToList())
+            {
+                @tc.Team!.DisplayName <br />
+            }
+        }
+   
+    </TemplateColumn>
+    @if (isAuthenticated)
+    {
+        <TemplateColumn Context="person">
+            <a href="@($"contacts/edit?id={person.Id}")"><Icon Type="Icon.IconType.Edit"/></a> |
+            <a href="@($"contacts/details?id={person.Id}")"><Icon Type="Icon.IconType.Details"/></a> |
+            <a href="@($"contacts/delete?id={person.Id}")"><Icon Type="Icon.IconType.Delete"/></a>
+
+        </TemplateColumn>
+    }    
+</QuickGrid>
+
+@code {
+    private AppDBContext context = default!;
+    private IQueryable<Person> person = default!; 
+    private bool isAuthenticated = false;
+    private List<TeamContact> teamContact = default!;
+    protected override async Task OnInitializedAsync()    {
+        context = DbFactory.CreateDbContext();
+        person = context.Person
+                @* .Include(p => p.) *@
+                .OrderBy(p => p.LastName)
+                .ThenBy(p => p.FirstName);      
+
+        teamContact = await context.TeamContact
+            .Include(tc => tc.Team)
+            .OrderBy(tc => tc.Team.AgeGroup)
+            .ToListAsync();
+
+        //Check whether authenticated
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        isAuthenticated = (user.Identity is not null && user.Identity.IsAuthenticated);
+  
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+
+    @* public record  {
+    
+        Person person;
+        TeamContact teamContact;
+    } *@
+
+}
+

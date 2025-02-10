@@ -28,7 +28,7 @@
             <div class="mb-3">
                 <span class="text-danger">*</span>
                 <label for="pitchid" class="form-label">Pitch</label> 
-                <InputSelect id="pitchid" @bind-Value="FixtureAllocation!.PitchId" class="form-control" aria-required="true">
+                <InputSelect id="pitchid" @bind-Value="FixtureAllocation!.PitchId" class="form-control form-select" aria-required="true">
                     @foreach (var pitch in pitchList)
                     {
                         <option value="@pitch.Id">@pitch.Name</option> 
@@ -46,7 +46,7 @@
             <div class="mb-3">
                 <span class="text-danger">*</span>
                 <label for="duration" class="form-label">Duration</label> 
-                <InputSelect id="duration" @bind-Value="FixtureAllocation.Duration" class="form-control" aria-required="true">
+                <InputSelect id="duration" @bind-Value="FixtureAllocation.Duration" class="form-controlb form-select" aria-required="true">
                     @foreach (var duration in durations)
                     {
                         <option value="@duration">@duration.TotalMinutes</option>
