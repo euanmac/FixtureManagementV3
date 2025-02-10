@@ -35,37 +35,57 @@
             } else {
                 <dd class="col-sm-4">@(Utilities.GetAttributeOfType<DisplayAttribute>(@team.League)!.Name ?? "")</dd>
             }
-            <dt class="col-sm-2">Division</dt>
-            <dd class="col-sm-4">@team.Division</dd>
             <dt class="col-sm-2">Match Day</dt>
-            <dd class="col-sm-10">@team.MatchDay</dd>
-            @foreach (var item in team.Contacts)
-            {
-                <dt class="col-sm-2">
-                    @item.ContactType
-                </dt>
-                @if (isAuthenticated)
+            <dd class="col-sm-4">@team.MatchDay</dd>
+            <dt class="col-sm-2">Division</dt>
+            <dd class="col-sm-10">@team.Division</dd>
+
+                @foreach (var tcType in teamContactGroupedByType.Keys)
                 {
+                    var tcTypeString = tcType.ToString() + (teamContactGroupedByType[tcType].Count > 1 ? "s" : ""); 
+                    <dt class="col-sm-2">@tcTypeString</dt>
                     <dd class="col-sm-10">
-                        @item.Person.FullName
-                        (<a href="mailto:@item.Person.Email">@item.Person.Email</a>)
+                    @foreach (var (index, item) in teamContactGroupedByType[tcType].Index())
+                    {
+                        var formName = $"{tcType}{index}";
+                        <EditForm method="post" Model="item" OnSubmit="RemoveContact" FormName="@formName" Enhance>
+                        <input type="hidden" name="teamContactToRemove.Id" value="@item.Id" />
+                        <input type="hidden" name="teamContactToRemove.PersonId" value="@item.PersonId" />
+                        <input type="hidden" name="teamContactToRemove.TeamId" value="@item.TeamId" />
+                        <input type="hidden" name="teamContactToRemove.ContactType" value="@item.ContactType" />
+
+                        @if (isAuthenticated)
+                        {
+                            <span>
+                                @item.Person!.FullName
+                                (<a href="mailto:@item.Person.Email">@item.Person.Email</a>)
+                                <button type="submit" style="border: none; background-color: transparent" class="btn-link">
+                                    <Icon Type="Icon.IconType.Delete"/>     
+                                </button>
+                            </span>
+                        }
+                        else
+                        {
+                            <dd class="col-sm-4">
+                                @item!.Person!.FullName
+                            </dd>
+                        }
+                        </EditForm>
+                    }
                     </dd>
                 }
-                else
-                {
-                    <dd class="col-sm-10">
-                        @item.Person.FullName
-                    </dd>
-                }
-            }
         </dl>
-        <FixtureGrid CanEdit="true" Fixtures="@fixture" TeamHidden="true"/>
         <div>
             @if (isAuthenticated) {
-                <div><a href="@($"/teams/edit?id={team.Id}")">Edit</a> |</div>
+                <span><a class="btn btn-primary btn-sm" href="@($"/teams/edit?id={team.Id}")">Edit</a></span>
+                <span><a class="btn btn-primary btn-sm" href="@($"/teamcontacts/create?teamid={team.Id}")">Add Contact</a></span>
+                <span><a class="btn btn-secondary btn-sm" href="@($"/teams")">Back</a></span>
+            } else {
+                <span><a class="btn btn-secondary btn-sm" href="@($"/teams")">Back</a></span>
             }
-            <a href="@($"/teams")">Back to List</a>
         </div>
+        <br>
+        <FixtureGrid CanEdit="true" Fixtures="@fixture" TeamHidden="true"/>
     }
 </div>
 
@@ -75,6 +95,12 @@
     [SupplyParameterFromQuery]
     private System.Guid Id { get; set; }
     private bool isAuthenticated = false;
+    private Dictionary<ContactType, List<TeamContact>> teamContactGroupedByType { get; set; } = default!;
+ 
+
+    [SupplyParameterFromForm]
+    private TeamContact? teamContactToRemove {get; set;}
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
@@ -102,5 +128,21 @@
         {
             NavigationManager.NavigateTo("notfound");
         }
+
+        teamContactGroupedByType = team!.Contacts.GroupBy(tc => tc.ContactType).ToDictionary(g => g.Key, g => g.ToList());
+
     }
+
+    
+    private async Task RemoveContact()
+    {
+        if (teamContactToRemove is not null)
+        {
+            using var context = DbFactory.CreateDbContext();
+            context.TeamContact.Remove(teamContactToRemove);
+            await context.SaveChangesAsync();
+            NavigationManager.NavigateTo(NavigationManager.Uri, true);
+        }
+    }
+
 }

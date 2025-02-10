@@ -7,7 +7,7 @@
 @using System.Linq
 
 <div>
-    <QuickGrid Items="Fixtures" Theme="corporate" class="table table-striped table-sm">
+    <QuickGrid Items="Fixtures" Theme="corporate" id="fixtures" class="table table-striped table-sm">
         <PropertyColumn Property="fixture => fixture.Date" />
         @if (!@TeamHidden)
         {
@@ -21,11 +21,16 @@
         <PropertyColumn Property="fixture => fixture.Start" />
         <PropertyColumn Property="fixture => fixture.Pitch" />
         <TemplateColumn Context="fixture">
-            <a href="@($"fixtures/edit?id={fixture.Id}")"><Icon Type="Icon.IconType.Edit"/></a>
-            @if (fixture.IsHome) {
-                <a href="@($"fixtures/allocate?id={fixture.Id}")"><Icon Type="Icon.IconType.Schedule"/></a>
+            @if(CanEdit)
+            {
+            <div class="p-1">
+                <a href="@($"fixtures/edit?id={fixture.Id}")"><Icon Type="Icon.IconType.Edit"/>|</a>
+                @if (fixture.IsHome) {
+                    <a href="@($"fixtures/allocate?id={fixture.Id}")"><Icon Type="Icon.IconType.Schedule"/></a>
+                }
+                <a href="@($"fixtures/delete?id={fixture.Id}")"><Icon Type="Icon.IconType.Delete"/></a>
+            </div>
             }
-            <a href="@($"fixtures/delete?id={fixture.Id}")"><Icon Type="Icon.IconType.Delete"/></a>
         </TemplateColumn>
     </QuickGrid>
 </div>

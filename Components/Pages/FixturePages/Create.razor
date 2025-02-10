@@ -7,9 +7,7 @@
 
 <PageTitle>Create</PageTitle>
 
-<h1>Create</h1>
-
-<h2>Fixture</h2>
+<h1>New Fixture</h1>
 <hr />
 <div class="row">
     <div class="col-md-4">
@@ -17,9 +15,9 @@
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert"/>
             <div class="mb-3">
-                <label for="teamid" class="form-label">TeamId:</label> 
+                <label for="teamid" class="form-label">Team:</label> 
                 @* <InputText id="teamid" @bind-Value="Fixture.TeamId" class="form-control" />  *@
-                <InputSelect id="teamid" @bind-Value="Fixture.TeamId" class="form-control">
+                <InputSelect id="teamid" @bind-Value="Fixture.TeamId" class="form-control form-select">
                     @foreach (var team in teamList)
                     {
                         <option value="@team.Id">@team.DisplayName</option>
@@ -34,7 +32,7 @@
                 <ValidationMessage For="() => Fixture.Date" class="text-danger" /> 
             </div>        
             <div class="mb-3">
-                <label for="ishome" class="form-label">IsHome:</label> 
+                <label for="ishome" class="form-label">Home:</label> 
                 <InputCheckbox id="ishome" @bind-Value="Fixture.IsHome" class="form-check-input" /> 
                 <ValidationMessage For="() => Fixture.IsHome" class="text-danger" /> 
             </div>        
@@ -43,7 +41,9 @@
                 <label for="opponent" class="form-label">Opponent:</label> 
                 <InputText id="opponent" @bind-Value="Fixture.Opponent" class="form-control" aria-required="true"/> 
                 <ValidationMessage For="() => Fixture.Opponent" class="text-danger" /> 
-            </div>        
+            </div> 
+            <button type="submit" class="btn btn-primary">Save</button>
+       
         </EditForm>
     </div>
 </div>
@@ -62,12 +62,17 @@
     protected override async Task OnInitializedAsync()
     {
             using var context = DbFactory.CreateDbContext();
+
             teamList = (await context.Team
             .ToListAsync())
             .OrderBy(t => t.AgeGroup)
             .ThenBy(t => t.Gender)
             .ThenBy(t => t.Name)
             .AsQueryable();
+
+            if (teamList.Count() != 0) {
+
+            }
 
     }
 

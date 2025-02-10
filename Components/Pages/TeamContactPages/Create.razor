@@ -1,0 +1,116 @@
+@page "/teamcontacts/create"
+@using Microsoft.EntityFrameworkCore
+@using FixtureManagementV3.Models
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<h1>Add</h1>
+
+<h2>Team Contact</h2>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="TeamContactVM" OnValidSubmit="AddTeamContact" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert"/>
+            <div class="mb-3">
+                <label for="teamid" class="form-label">Team :</label> 
+                <InputSelect id="teamid" @bind-Value="TeamContactVM.TeamId" class="form-control">
+                    @foreach (var team in teams)
+                    {
+                        <option value="@team.Id">@team.DisplayName</option>
+                    }
+                </InputSelect> 
+
+                <ValidationMessage For="() => TeamContactVM.TeamId" class="text-danger" /> 
+            </div>
+            <div class="mb-3">
+                <label for="contacttype" class="form-label">Contact Type:</label> 
+                <InputSelect @bind-Value="TeamContactVM.TeamContactType" class="form-control" aria-required="true"> 
+                    @foreach (var ct in Enum.GetValues(typeof(ContactType)))
+                    {
+                        <option value="@ct">@ct</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="() => TeamContactVM.TeamContactType" class="text-danger" /> 
+            </div>  
+            <div class="mb-3">
+                <label for="personid" class="form-label">Person :</label> 
+                <InputSelect id="personid" @bind-Value="TeamContactVM.PersonId" class="form-control">
+                    @foreach (var person in contacts)
+                    {
+                        <option value="@person.Id">@person.FullName</option>
+                    }
+                </InputSelect> 
+
+                <ValidationMessage For="() => TeamContactVM.TeamId" class="text-danger" /> 
+            </div>      
+
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/teamcontacts">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private TeamContactViewModel TeamContactVM { get; set; } = new TeamContactViewModel () ;
+    [SupplyParameterFromQuery]
+    private System.Guid? TeamId { get; set; }
+    [SupplyParameterFromQuery]
+    private System.Guid? PersonId { get; set; }
+    private List<Team> teams = default!;
+    private List<Person> contacts = default!; 
+    private Team? team;
+    private Person? person;
+
+
+   protected override async Task OnInitializedAsync()
+    
+    {   
+        using var context = DbFactory.CreateDbContext();
+
+        contacts = await context.Person
+            .OrderBy(p => p.LastName)
+            .ToListAsync();
+
+        teams = await context.Team
+            .OrderBy(t => t.AgeGroup)
+            .ToListAsync();
+
+    }
+
+    // To protect from overposting attacks, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task AddTeamContact()
+    {
+        using var context = DbFactory.CreateDbContext();
+        if (TeamContactVM != null)
+        {
+
+            TeamContact tc = new TeamContact { 
+                Id = Guid.NewGuid(),
+                TeamId = TeamContactVM.TeamId,
+                PersonId = TeamContactVM.PersonId,
+                ContactType = TeamContactVM.TeamContactType
+            };
+            context.TeamContact.Add(tc);
+            await context.SaveChangesAsync();
+            NavigationManager.NavigateTo($"teams/details?id={tc.TeamId}");
+        
+        }
+    }
+
+    public class TeamContactViewModel
+    {
+        public string PersonFullName { get; set; } = "";
+        public Guid PersonId { get; set; } = Guid.NewGuid();
+        public ContactType TeamContactType { get; set; } = ContactType.Manager;
+        public string TeamDisplayName { get; set; } = "";
+        public Guid TeamId { get; set; } = Guid.NewGuid();
+    }
+}

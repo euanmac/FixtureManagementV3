@@ -27,27 +27,27 @@ export function onLoad() {
           resources: [
             {
                 "id": "a37dbd57-1722-4f2a-91a3-af141bb2029c",
-                "title": "S",
+                "title": "Stadium",
                 "displayOrder": 1
             },
             {
                 "id": "8f55b18e-368e-4dad-9a56-1df8c2731702",
-                "title": "P2",
+                "title": "Pitch 2",
                 "displayOrder": 2
             },
             {
                 "id": "7ca8cb22-4b34-4c53-aeae-d15eceeecaa1",
-                "title": "P3",
+                "title": "Pitch 3",
                 "displayOrder": 3
             },
             {
                 "id": "92c2dd82-38c9-4b1a-aacf-e9f207b9dd7a",
-                "title": "P4",
+                "title": "Pitch 4",
                 "displayOrder": 4
             },
             {
                 "id": "9e365bfe-ddc2-4296-83df-b278a846207f",
-                "title": "L3G",
+                "title": "Large 3G",
                 "displayOrder": 5
             },
             {

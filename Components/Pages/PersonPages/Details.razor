@@ -1,0 +1,56 @@
+@page "/contacts/details"
+@using Microsoft.EntityFrameworkCore
+@using FixtureManagementV3.Models
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>Person</h2>
+    <hr />
+    @if (person is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">FirstName</dt>
+            <dd class="col-sm-10">@person.FirstName</dd>
+            <dt class="col-sm-2">LastName</dt>
+            <dd class="col-sm-10">@person.LastName</dd>
+            <dt class="col-sm-2">Tel</dt>
+            <dd class="col-sm-10">@person.Tel</dd>
+            <dt class="col-sm-2">Email</dt>
+            <dd class="col-sm-10">@person.Email</dd>
+            <dt class="col-sm-2">IsRef</dt>
+            <dd class="col-sm-10">@person.IsRef</dd>
+            <dt class="col-sm-2">FullName</dt>
+            <dd class="col-sm-10">@person.FullName</dd>
+        </dl>
+        <div>
+            <a href="@($"/contacts/edit?id={person.Id}")">Edit</a> |
+            <a href="@($"/contacts")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private Person? person;
+
+    [SupplyParameterFromQuery]
+    private System.Guid Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        person = await context.Person.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (person is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}

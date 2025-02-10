@@ -1,0 +1,54 @@
+@page "/teamcontacts/details"
+@using Microsoft.EntityFrameworkCore
+@using FixtureManagementV3.Models
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>TeamContact</h2>
+    <hr />
+    @if (teamcontact is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">PersonId</dt>
+            <dd class="col-sm-10">@teamcontact.PersonId</dd>
+            <dt class="col-sm-2">TeamId</dt>
+            <dd class="col-sm-10">@teamcontact.TeamId</dd>
+            <dt class="col-sm-2">ContactType</dt>
+            <dd class="col-sm-10">@teamcontact.ContactType</dd>
+            <dt class="col-sm-2">Person</dt>
+            <dd class="col-sm-10">@teamcontact.Person</dd>
+            <dt class="col-sm-2">Team</dt>
+            <dd class="col-sm-10">@teamcontact.Team</dd>
+        </dl>
+        <div>
+            <a href="@($"/teamcontacts/edit?id={teamcontact.Id}")">Edit</a> |
+            <a href="@($"/teamcontacts")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private TeamContact? teamcontact;
+
+    [SupplyParameterFromQuery]
+    private System.Guid Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        teamcontact = await context.TeamContact.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (teamcontact is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}

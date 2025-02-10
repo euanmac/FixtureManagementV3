@@ -7,5 +7,7 @@ public class AppDBContext(DbContextOptions<AppDBContext> options) : DbContext(op
     public DbSet<FixtureManagementV3.Models.Team> Team { get; set; } = default!;
     public DbSet<FixtureManagementV3.Models.FixtureAllocation> FixtureAllocation { get; set; } = default!;
     public DbSet<FixtureManagementV3.Models.Pitch> Pitch { get; set; } = default!;
+    public DbSet<FixtureManagementV3.Models.Person> Person { get; set; } = default!;
+    public DbSet<FixtureManagementV3.Models.TeamContact> TeamContact { get; set; } = default!;
 
 }

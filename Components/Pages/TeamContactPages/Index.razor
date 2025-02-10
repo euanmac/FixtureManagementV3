@@ -1,0 +1,37 @@
+@page "/teamcontacts"
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.EntityFrameworkCore
+@using FixtureManagementV3.Components.Helper
+@using FixtureManagementV3.Models
+@implements IAsyncDisposable
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="teamcontacts/create">Create New</a>
+</p>
+
+<QuickGrid Class="table" Items="context.TeamContact.Include(tc => tc.Team).Include(tc => tc.Person).OrderBy(tc => tc.Team.AgeGroup)">
+    <PropertyColumn Property="teamcontact => teamcontact.Team.DisplayName" />
+    <PropertyColumn Property="teamcontact => teamcontact.ContactType" />
+    <PropertyColumn Property="teamcontact => teamcontact.Person.FullName" />
+    <TemplateColumn Context="teamcontact">
+        <a href="@($"teamcontacts/delete?id={teamcontact.Id}")"><Icon Type="Icon.IconType.Delete"/></a>
+
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    private AppDBContext context = default!;
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}
