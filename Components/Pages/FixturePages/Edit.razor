@@ -25,35 +25,30 @@ else
             <EditForm method="post" Model="Fixture" OnValidSubmit="UpdateFixture" FormName="edit" Enhance>
                 
                 <DataAnnotationsValidator />
-                @* <ValidationSummary role="alert"/> *@
                 <input type="hidden" name="Fixture.TeamId" @bind-value="@Fixture.TeamId" />
                 <input type="hidden" name="Fixture.Id" @bind-value="@Fixture.Id" @/>
-                <div class="mb-3">
-                    <label for="date" class="form-label">Date:</label>
+                <div class="mb-3 form-floating">
                     <InputDate id="date" @bind-Value="Fixture.Date" class="form-control" />
+                    <label for="date" class="form-label">Date</label>
                     <ValidationMessage For="() => Fixture.Date" class="text-danger" />
                 </div>
-                <div class="mb-3">
-                    <label for="ishome" class="form-label">Home:</label>
+                <div class="mb-2 form-check">
+                    <label for="ishome" class="form-label">Home</label>
                     <InputCheckbox id="ishome" @bind-Value="Fixture.IsHome" class="form-check-input" />
-                    <ValidationMessage For="() => Fixture.IsHome" class="text-danger" />
                 </div>
-                <div class="mb-3">
-                <span class="text-danger">*</span>
-                    <label for="opponent" class="form-label">Opponent:</label>
+                <div class="mb-3 form-floating">                
                     <InputText id="opponent" @bind-Value="Fixture.Opponent" class="form-control" aria-required="true"/>
+                    <label for="opponent" class="form-label">Opponent:</label>
                     <ValidationMessage For="() => Fixture.Opponent" class="text-danger" />
                 </div>
                 <button type="submit" class="btn btn-primary">Save</button>
+                <a class="btn btn-secondary" href="#" onclick="history.back()">Back</a>
+
             </EditForm>
         </div>
     </div>
 }
 
-<div>
-    <br
-    <a href="#" onclick="history.back()">Back to List</a>
-</div>
 
 @code {
     [SupplyParameterFromQuery]
@@ -106,8 +101,4 @@ else
         return context.Fixture.Any(e => e.Id == id);
     }
 
-    public class Holodeck
-    {
-        public string? Id { get; set; }
-    }
 }

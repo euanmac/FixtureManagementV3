@@ -10,47 +10,40 @@
 <h1>New Fixture</h1>
 <hr />
 <div class="row">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <EditForm method="post" Model="Fixture" OnValidSubmit="AddFixture" FormName="create" Enhance>
             <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert"/>
-            <div class="mb-3">
-                <label for="teamid" class="form-label">Team:</label> 
-                @* <InputText id="teamid" @bind-Value="Fixture.TeamId" class="form-control" />  *@
+            <div class="mb-3 form-floating">
                 <InputSelect id="teamid" @bind-Value="Fixture.TeamId" class="form-control form-select">
                     @foreach (var team in teamList)
                     {
                         <option value="@team.Id">@team.DisplayName</option>
                     }
                 </InputSelect> 
-
-                <ValidationMessage For="() => Fixture.TeamId" class="text-danger" /> 
+                <label for="teamid" class="form-label">Team</label>                 
             </div>        
-            <div class="mb-3">
-                <label for="date" class="form-label">Date:</label> 
+            <div class="mb-3 form-floating">
                 <InputDate id="date" @bind-Value="Fixture.Date" class="form-control" /> 
-                <ValidationMessage For="() => Fixture.Date" class="text-danger" /> 
+                <label for="date" class="form-label">Date</label> 
             </div>        
-            <div class="mb-3">
-                <label for="ishome" class="form-label">Home:</label> 
+            <div class="mb-2 form-check">
+                <label for="ishome" class="form-label">Home</label> 
                 <InputCheckbox id="ishome" @bind-Value="Fixture.IsHome" class="form-check-input" /> 
-                <ValidationMessage For="() => Fixture.IsHome" class="text-danger" /> 
             </div>        
-            <div class="mb-3">
-                <span class="text-danger">*</span>
-                <label for="opponent" class="form-label">Opponent:</label> 
-                <InputText id="opponent" @bind-Value="Fixture.Opponent" class="form-control" aria-required="true"/> 
+            <div class="mb-3 form-floating">
+                <InputText id="opponent" @bind-Value="Fixture.Opponent" class="form-control" aria-required="true" placholder="Opponent"/>                     
+                <label for="opponent" class="form-label">Opponent</label> 
                 <ValidationMessage For="() => Fixture.Opponent" class="text-danger" /> 
             </div> 
-            <button type="submit" class="btn btn-primary">Save</button>
-       
+            <button type="submit" class="btn btn-primary btn">Save</button>
+            <a href="#" onclick="history.back()" class="btn btn btn-secondary">Back</a>
         </EditForm>
     </div>
 </div>
 
 <div>
     <br
-    <a href="#" onclick="history.back()">Back to List</a>
+
 </div>
 
 @code {
@@ -71,7 +64,7 @@
             .AsQueryable();
 
             if (teamList.Count() != 0) {
-
+                Fixture = new Fixture { TeamId = teamList.First().Id, Date = DateOnly.FromDateTime(DateTime.Now), FixtureType = FixtureType.League, IsHome = true };
             }
 
     }
