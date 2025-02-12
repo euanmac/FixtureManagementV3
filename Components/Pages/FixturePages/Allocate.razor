@@ -25,26 +25,21 @@
             @* <div class="mb-3">
                 <h5 class="form-label">@(fixture!.Opponent)</h5> 
             </div> *@
-            <div class="mb-3">
-                <span class="text-danger">*</span>
-                <label for="pitchid" class="form-label">Pitch</label> 
+            <div class="mb-3 form-floating">
                 <InputSelect id="pitchid" @bind-Value="FixtureAllocation!.PitchId" class="form-control form-select" aria-required="true">
                     @foreach (var pitch in pitchList)
                     {
                         <option value="@pitch.Id">@pitch.Name</option> 
                     }
                 </InputSelect> 
-                <ValidationMessage For="() => FixtureAllocation.PitchId" class="text-danger" /> 
+                <label for="pitchid" class="form-label">Pitch</label>
+                <ValidationMessage For="() => FixtureAllocation.PitchId" class="text-danger" />  
             </div>        
-            <div class="mb-3">
-                <span class="text-danger">*</span>
-                <label for="start" class="form-label">@($"Start ({fixture.Date.ToString("dd-MMM-yyyy")})") </label> 
+            <div class="mb-3 form-floating">
                 <InputDate id="start" @bind-Value="FixtureAllocation.Start"  Type="InputDateType.Time" class="form-control" aria-required="true" /> 
-                @* <InputDate type="time" @bind-value="FixtureAllocation!.StartTimeOnly" @bind:format="hh:mm" id="start" class="form-control" aria-required="true"/> *@
-                <ValidationMessage For="() => FixtureAllocation.Start" class="text-danger"/> 
-            </div>        
+                <label for="start" class="form-label">@($"Start ({fixture.Date.ToString("dd-MMM-yyyy")})") </label> 
+            </div>
             <div class="mb-3">
-                <span class="text-danger">*</span>
                 <label for="duration" class="form-label">Duration</label> 
                 <InputSelect id="duration" @bind-Value="FixtureAllocation.Duration" class="form-controlb form-select" aria-required="true">
                     @foreach (var duration in durations)
@@ -55,7 +50,6 @@
                 <ValidationMessage For="() => FixtureAllocation.Duration" class="text-danger" /> 
             </div>        
             <div class="mb-3">
-                <span class="text-danger">*</span>
                 <label for="isconfirmed" class="form-label">Is Confirmed?</label> 
                 <InputCheckbox id="isconfirmed" @bind-Value="FixtureAllocation.IsConfirmed" class="form-check-input" aria-required="true"/> 
                 <ValidationMessage For="() => FixtureAllocation.IsConfirmed" class="text-danger" /> 
@@ -64,6 +58,7 @@
             @* <button class="btn btn-secondary" onclick="history.back()">Back</button> *@
             <button type="submit" class="btn btn-primary" name="Action" value="@(isNew ? "add" : "update")">Save</button>
             <button type="submit" class="btn btn-danger" name="Action" value="delete" >Delete</button>
+            <a class="btn btn-secondary" href="#" onclick="history.back()">Back</a>
 
         </EditForm>
     </div>
@@ -71,7 +66,7 @@
 
 <div>
     <br>
-    <a href="#" onclick="history.back()">Back to List</a>
+
 </div>
 
 @code {
@@ -116,7 +111,7 @@
             //Flag new if not already allocated
             isNew = !fixture.IsAllocated;
 
-            //If allocation not null then supplied from form post so just returb
+            //If allocation not null then supplied from form post so just return
             if (FixtureAllocation is not null) {
                 return;
             }
@@ -127,7 +122,7 @@
                 return;
             }
 
-            //Must be unallocated ao create new onw
+            //Must be unallocated ao create new one
             FixtureAllocation = new FixtureAllocation
             {
                 Id = Guid.NewGuid(),

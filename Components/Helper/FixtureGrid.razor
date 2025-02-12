@@ -23,13 +23,11 @@
         <TemplateColumn Context="fixture">
             @if(CanEdit)
             {
-            <div class="p-1">
-                <a href="@($"fixtures/edit?id={fixture.Id}")"><Icon Type="Icon.IconType.Edit"/>|</a>
+                <a class ="px-1" href="@($"fixtures/edit?id={fixture.Id}")"><Icon Type="Icon.IconType.Edit"/>|</a>
                 @if (fixture.IsHome) {
                     <a href="@($"fixtures/allocate?id={fixture.Id}")"><Icon Type="Icon.IconType.Schedule"/></a>
                 }
-                <a href="@($"fixtures/delete?id={fixture.Id}")"><Icon Type="Icon.IconType.Delete"/></a>
-            </div>
+                <a class ="px-1" href="@($"fixtures/delete?id={fixture.Id}")"><Icon Type="Icon.IconType.Delete"/></a>        
             }
         </TemplateColumn>
     </QuickGrid>
