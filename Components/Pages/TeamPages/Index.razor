@@ -1,8 +1,5 @@
 @page "/teams"
 @using Microsoft.AspNetCore.Components.QuickGrid
-@using Microsoft.EntityFrameworkCore
-@using FixtureManagementV3.Models
-@using FixtureManagementV3.Components.Helper
 @using System.ComponentModel.DataAnnotations
 @implements IAsyncDisposable
 @inject IDbContextFactory<AppDBContext> DbFactory
@@ -12,14 +9,12 @@
 <PageTitle>Teams</PageTitle>
 
 <h1>Teams</h1>
-
+<hr>
 @if (isAuthenticated) {
     <p>
-        <a class="btn btn-primary btn-sm" href="teams/create">Add Team</a>
+        <a class="btn btn-primary" href="teams/create"> <Icon Type="Icon.IconType.Add"/> Team</a>
     </p>
 }
-<hr>
-
 
 <QuickGrid Class="table table-sm table-striped" Items="team" >
     @* <PropertyColumn Property="team => team.AgeGroup" Title="Age Group"/> *@

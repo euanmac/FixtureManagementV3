@@ -1,8 +1,8 @@
 @page "/teamcontacts/delete"
-@using Microsoft.EntityFrameworkCore
-@using FixtureManagementV3.Models
+
 @inject IDbContextFactory<AppDBContext> DbFactory
 @inject NavigationManager NavigationManager
+@attribute [Authorize]
 
 <PageTitle>Delete</PageTitle>
 

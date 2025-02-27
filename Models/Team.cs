@@ -198,6 +198,93 @@ namespace FixtureManagementV3.Models
         // public List<Fixture> Fixtures { get; set; } = [];
         public List<TeamContact> Contacts { get; set; } = [];
 
+        public async Task<List<TeamReconiliationRow>> ReconcileAsync(DateOnly start, DateOnly end, IList<Fixture> fixtures)
+        {
+
+            //Download fixtures if team is on fulltime, filter so only within start and end date
+            List<DownloadFixture> downloadFixtures = !this.IsOnFullTime ? new List<DownloadFixture>() :
+                (await FixtureDownloader.FromFullTimeAsync(this))
+                .Where(f => (f.Date >= start && f.Date <= end))
+                .ToList();
+
+            //Get list of DB fixtures for date range
+            List<Fixture> filteredFixtures = fixtures
+                .Where(f => (f.Date >= start && f.Date <= end && f.TeamId == this.Id))
+                .ToList();
+
+ 
+            //If no local or fulltime fixtures then return rec row
+            //Check for rows, if none, create empty row for team to represent no fixture
+            if (downloadFixtures.Count == 0 && filteredFixtures.Count == 0)
+            {
+                int offset = this.MatchDay == DayOfWeek.Sunday ? 6 : (int)this.MatchDay - 1;
+                return new List<TeamReconiliationRow> { new TeamReconiliationRow { Team = this, MatchDate = start.AddDays(offset), RecStatus = FixtureRecMatchType.noFixture } };
+            }
+
+            //Find fixtures for dates
+            //If fixtures exists then try to match
+            IList<TeamReconiliationRow> recRows = filteredFixtures.Select(f =>
+                {
+                    //Default row for local fixture
+                    TeamReconiliationRow recRow = new TeamReconiliationRow {
+                        Team = this,
+                        Id = f.Id,
+                        MatchDate = f.Date,
+                        Opponent = f.Opponent,
+                        Venue = (f.IsHome ? "H" : "A"),
+                        FixtureType = f.FixtureType,
+                        CanAllocate = f.CanAllocate,
+                        IsAllocated = f.IsAllocated,
+                        AllocationId = f.IsAllocated ? f.FixtureAllocation!.Id : Guid.Empty,
+                        Pitch = f.IsAllocated ? f.FixtureAllocation!.Pitch!.Name : "",
+                        Start = f.IsAllocated ? f.FixtureAllocation!.Start : TimeOnly.MinValue,
+                        IsConfirmed = f.IsAllocated ? f.FixtureAllocation!.IsConfirmed : false
+
+                    };
+
+                    //Check for downloaded fixture that matches
+                    DownloadFixture? downloaded = downloadFixtures.FirstOrDefault(df =>
+                        (f.Date) == df.Date &&
+                        f.Opponent == df.Opponent &&
+                        f.IsHome == df.IsHome &&
+                        f.FixtureType == df.FixtureType
+                        );
+
+                    //Found download so check whether it matches
+                    if (downloaded != null)
+                    {
+                        recRow.RecStatus = FixtureRecMatchType.fullTimematched;
+                        //Need to remove downloaded from list!
+                        downloadFixtures.Remove(downloaded);   
+                    }
+                    //No match so just set whether there should be a full time match or not if team not set up 
+                    else
+                    {
+                        recRow.RecStatus = this.IsOnFullTime ? FixtureRecMatchType.localFixtureUnmatched : FixtureRecMatchType.localFixtureOnly;
+                    }
+                    return recRow;
+                 }).ToList();
+
+            //Now need to find any downloaded fixtures that dont have a matching local fixture - any matching should already have been removed above
+            IList<TeamReconiliationRow> downloadRecs = downloadFixtures
+                .Select(df =>
+                {
+                    return new TeamReconiliationRow
+                    {
+                        Id = df.Id,
+                        Team = this,
+                        MatchDate = df.Date,
+                        Opponent = df.Opponent,
+                        Venue = (df.IsHome ? "H" : "A"),
+                        RecStatus = FixtureRecMatchType.fullTimeUnmatched,
+                        FixtureType = df.FixtureType
+
+                    };
+                }).ToList();
+
+            return recRows.Concat(downloadRecs).ToList();
+
+        }
 
      }
 

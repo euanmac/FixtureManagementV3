@@ -21,58 +21,48 @@
 <hr>
 <div class="row align-items-center g-4">
     <div class="col-auto">
-    @* <form> *@
-    <EditForm FormName="FilterFixtures" Model="Filter" method="post" class="form-inline" OnSubmit="FilterFixtures" Enhance>
-      <div class="row g-3 align-items-center">
-        <div class="col-auto">
- <!--        </div>
-        <div class="col-auto"> -->
-
-          <div class="form-floating">
-            @* <label for="startDate">Start Date</label> *@
-            <InputDate id="startDate" @bind-Value="Filter!.StartDate" class="form-control form-control" placeholder="29/02/1976"/>
-            <label for="startDate">Start Date</label>
+      <EditForm FormName="FilterFixtures" Model="Filter" method="post" class="form-inline" OnSubmit="FilterFixtures" Enhance>
+        <div class="row g-3 align-items-center">
+          <div class="col-auto">
+            <div class="form-floating">
+              <InputDate id="startDate" @bind-Value="Filter!.StartDate" class="form-control form-control" placeholder="29/02/1976"/>
+              <label for="startDate">Start Date</label>
+            </div>
+          </div>
+          <div class="col-auto">
+              <div class="form-floating">
+                  <InputDate id="endDate" @bind-Value="Filter!.EndDate" class="form-control form-control" placeholder="29/02/1976"/>
+                  <label for="endDate">End Date</label>
+              </div
+          </div>
+          <div class="col-auto">
+              <label>Home</label>
+              <InputCheckbox type="checkbox" id="ishome" @bind-Value="Filter!.IncludeHome"class="form-check-input"/>
+              
+          @* </div>
+          <div class="col-auto"> *@
+              <label autocomplete="off">Away</label>
+              <InputCheckbox  id="isaway" @bind-Value="Filter!.IncludeAway" class="form-check-input"/>  
+          </div>
+          <div class="col-auto">
+              <button type="submit" value="Filter" class="btn btn btn-outline-primary">Filter</button>
+              <button class="btn btn btn-outline-secondary" onclick="document.getElementById('fixtures').classList.toggle('table-striped')">Reset</button>
           </div>
         </div>
-        <div class="col-auto">
-            <div class="form-floating">
-                @* <label for="endDate">End Date</label> *@
-                <InputDate id="endDate" @bind-Value="Filter!.EndDate" class="form-control form-control" placeholder="29/02/1976"/>
-                <label for="endDate">End Date</label>
-            </div
-        </div>
-        <div class="col-auto">
-            <label>Home</label>
-            <input type="checkbox" id="ishome" class="form-check-input"/>
-        @* </div>
-        <div class="col-auto"> *@
-            <label autocomplete="off">Away</label>
-            <InputCheckbox  id="isaway" @bind-Value="Filter!.IncludeAway" class="form-check-input"/>  
-        </div>
-        <div class="col-auto">
-          @* <button type="submit" value="Filter" class="btn btn-sm btn-primary">Filter</button> |
-          <a>Reset</a> *@
-            <button type="submit" value="Filter" class="btn btn btn-outline-primary">Filter</button>
-            <a class="btn btn btn-outline-secondary">Reset</a>
-        </div>
-      </div>
-    </EditForm>
-    @* </form> *@
+      </EditForm>
   </div>
   <div class="col-auto">
      <forn>
        <div class="row g-3 align-items-center">
         <div class="col-auto">
             @if (isAuthenticated) {
-                <a href="fixtures/create" class="btn btn btn-primary"><Icon Type="Icon.IconType.Add"/> Add</a> 
-                <a class="btn btn btn-primary"><Icon Type="Icon.IconType.Download"/> Download</a>
+                <a href="fixtures/create" class="btn btn btn-primary">Add <Icon Type="Icon.IconType.Add"/></a> 
+                <button class="btn btn btn-primary" onclick="document.getElementById('fixtures').classList.toggle('table-striped')"><Icon Type="Icon.IconType.Download"/> Download</button>
             }
         </div>
       </div>
      </forn>
   </div>
-
-
 </div>
 
 

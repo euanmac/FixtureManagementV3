@@ -1,9 +1,9 @@
 @page "/contacts/edit"
-@using Microsoft.EntityFrameworkCore
-@using FixtureManagementV3.Models
+
 @inject IDbContextFactory<AppDBContext> DbFactory
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
 
 <PageTitle>Edit</PageTitle>
 

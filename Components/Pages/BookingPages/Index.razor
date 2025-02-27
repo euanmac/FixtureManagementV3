@@ -1,0 +1,81 @@
+@page "/bookings"
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.EntityFrameworkCore
+@using FixtureManagementV3.Models
+@using FixtureManagementV3.Components.Helper
+
+@implements IAsyncDisposable
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Bookings</PageTitle>
+
+<h1>Bookings</h1>
+<hr/>
+<p>
+    <a class="btn btn-primary" href="bookings/create">Add Booking</a>
+    @* <input type="checkbox" class="btn-check" id="btn-check" autocomplete="off">
+    <label class="btn btn-check-primary" for="btn-check">Single toggle</label> *@
+    @* <input type="checkbox" class="btn-check" id="btn-check-outlined" autocomplete="off">
+    @* <label class="btn btn-outline-primary" for="btn-check-outlined">Single toggle</label><br> *@
+    @* <input type="checkbox" class="btn-check" id="btn-check" autocomplete="off" onclick="FilterDate()">
+    <label>Show Past</label> *@ 
+</p>
+
+<QuickGrid Class="table" Items="context.Booking.Include(b => b.Pitch)" ItemKey="@(c => $"{c.Id}:{c.IsPast.ToString()}")">
+    <PropertyColumn Property="booking => booking.Title" />
+    <PropertyColumn Property="booking => booking.Start" />
+    <PropertyColumn Property="booking => booking.End" />
+    <PropertyColumn Property="booking => booking.Pitch!.Name" title="Pitch"/>
+    <TemplateColumn Context="booking"  title="Recurring" Align="Align.Center">
+        <InputCheckbox @bind-Value="booking.IsRecurring" disabled />
+    </TemplateColumn>
+    @if (isAuthenticated) {
+        <TemplateColumn Context="booking">
+            <a href="@($"bookings/edit?id={booking.Id}")"><Icon Type="Icon.IconType.Edit"/></a> |
+            <a href="@($"bookings/delete?id={booking.Id}")"><Icon Type="Icon.IconType.Delete"/></a>
+        </TemplateColumn>
+    }
+</QuickGrid>
+
+<script>
+
+function FilterDate(){
+    // Get the current date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to midnight to compare only the date part
+
+    // Get all rows of the table
+    const rows = document.querySelectorAll('table tbody tr');
+
+    rows.forEach(row => {
+        // Get the date from the specified date column (assuming it's the second column, index 1)
+        const dateCell = row.cells[3];
+        const dateText = dateCell.textContent.trim();
+        const rowDate = new Date(dateText);
+
+        // Compare the date from the column with the current date
+        if (rowDate < today) {
+            // Hide the row if the date is less than today
+            row.style.display = 'none';
+        }
+    });
+}
+</script>
+
+@code {
+    private AppDBContext context = default!;
+    private bool isAuthenticated = false;
+
+    protected override async Task OnInitializedAsync() 
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        isAuthenticated = (user.Identity is not null && user.Identity.IsAuthenticated);
+
+        context = DbFactory.CreateDbContext();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

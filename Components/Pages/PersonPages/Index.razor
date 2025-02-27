@@ -8,13 +8,13 @@
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Contacts</PageTitle>
 
 <h1>Contacts</h1>
-
+<hr>
 @if (isAuthenticated)  {
     <p>
-        <a href="contacts/create">Create New</a>
+        <a class="btn btn-primary" href="contacts/create"><Icon Type="Icon.IconType.Add"/> Contact</a>
     </p>
 }
 
@@ -37,8 +37,8 @@
     @if (isAuthenticated)
     {
         <TemplateColumn Context="person">
-            <a href="@($"contacts/edit?id={person.Id}")"><Icon Type="Icon.IconType.Edit"/></a> |
-            <a href="@($"contacts/details?id={person.Id}")"><Icon Type="Icon.IconType.Details"/></a> |
+            <a href="@($"contacts/edit?id={person.Id}")"><Icon Type="Icon.IconType.Edit"/></a>
+            @* <a href="@($"contacts/details?id={person.Id}")"><Icon Type="Icon.IconType.Details"/></a> *@
             <a href="@($"contacts/delete?id={person.Id}")"><Icon Type="Icon.IconType.Delete"/></a>
 
         </TemplateColumn>
@@ -70,12 +70,6 @@
     }
 
     public async ValueTask DisposeAsync() => await context.DisposeAsync();
-
-    @* public record  {
-    
-        Person person;
-        TeamContact teamContact;
-    } *@
 
 }
 

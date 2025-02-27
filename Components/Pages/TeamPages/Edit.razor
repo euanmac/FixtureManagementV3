@@ -1,8 +1,8 @@
 @page "/teams/edit"
-@using Microsoft.EntityFrameworkCore
-@using FixtureManagementV3.Models
+
 @inject IDbContextFactory<AppDBContext> DbFactory
 @inject NavigationManager NavigationManager
+@attribute [Authorize]
 
 <PageTitle>Edit</PageTitle>
 
@@ -102,7 +102,7 @@ else
     {
         using var context = DbFactory.CreateDbContext();
         Team ??= await context.Team.FirstOrDefaultAsync(m => m.Id == Id);
-
+        
         if (Team is null)
         {
             NavigationManager.NavigateTo("notfound");

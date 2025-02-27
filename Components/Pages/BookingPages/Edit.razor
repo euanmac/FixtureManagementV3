@@ -1,0 +1,121 @@
+@page "/bookings/edit"
+@using Microsoft.EntityFrameworkCore
+@using FixtureManagementV3.Models
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+<h2>Booking</h2>
+<hr />
+@if (Booking is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Booking" OnValidSubmit="UpdateBooking" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <input type="hidden" name="Booking.Id" value="@Booking.Id" />
+                <div class="mb-3 form-floating">
+                    <InputText id="title" @bind-Value="Booking.Title" class="form-control" />
+                    <label for="title" class="form-label">Title</label>
+                    <ValidationMessage For="() => Booking!.Title" class="text-danger" />
+                </div>
+                <div class="mb-3 form-floating">
+                    <InputDate id="start" Type="InputDateType.DateTimeLocal" @bind-Value="Booking!.Start" class="form-control" />
+                    <label for="start" class="form-label">Start</label>
+                    <ValidationMessage For="() => Booking!.Start" class="text-danger" />
+                </div>
+                <div class="mb-3 form-floating">
+                    <InputDate id="end" Type="InputDateType.DateTimeLocal" @bind-Value="Booking!.End" class="form-control" />
+                    <label for="end" class="form-label">End</label>
+                    <ValidationMessage For="() => Booking!.End" class="text-danger" />
+                </div>
+                <div class="mb-3 form-floating">
+                    <InputSelect id="pitchid" @bind-Value="Booking!.PitchId" class="form-control form-select" aria-required="true">
+                        @foreach (var pitch in pitchList)
+                        {
+                            <option value="@pitch.Id">@pitch.Name</option>
+                        }
+                    </InputSelect>
+                    <label for="pitchid" class="form-label">Pitch</label>
+                    <ValidationMessage For="() => Booking!.PitchId" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="isrecurring" class="form-label">Is Recurring</label>
+                    <InputCheckbox id="isrecurring" @bind-Value="Booking!.IsRecurring" class="form-check-input" />
+                    <ValidationMessage For="() => Booking!.IsRecurring" class="text-danger" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/bookings">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private System.Guid Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private Booking? Booking { get; set; }
+    private IQueryable<Pitch> pitchList = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Booking ??= await context.Booking.FirstOrDefaultAsync(m => m.Id == Id);
+        
+        pitchList = (await context.Pitch
+        .ToListAsync())
+        .OrderBy(p => p.DisplayOrder)
+        .AsQueryable();      
+
+        if (Booking is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    // To protect from overposting attacks, enable the specific properties you want to bind to.
+    // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task UpdateBooking()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Attach(Booking!).State = EntityState.Modified;
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!BookingExists(Booking!.Id))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/bookings");
+    }
+
+    private bool BookingExists(System.Guid id)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Booking.Any(e => e.Id == id);
+    }
+}

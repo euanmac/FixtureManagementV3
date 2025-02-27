@@ -7,8 +7,11 @@ namespace FixtureManagementV3.Models
     public class Booking
     {
         public Guid Id { get; set; }
+        [Required]
         public string Title { get; set;} = "";
+        [Required]
         public DateTime Start { get; set; }
+        [Required]
         public DateTime End { get; set; }
         public Guid PitchId { get; set; }
         [Display(Name = "Recurring")]

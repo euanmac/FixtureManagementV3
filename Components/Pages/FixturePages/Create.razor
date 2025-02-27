@@ -1,9 +1,10 @@
 @page "/fixtures/create"
-@using Microsoft.EntityFrameworkCore
+
 @using FixtureManagementV3.Models
 @using FixtureManagementV3.Data
 @inject IDbContextFactory<AppDBContext> DbFactory
 @inject NavigationManager NavigationManager
+@attribute [Authorize]
 
 <PageTitle>Create</PageTitle>
 
@@ -31,10 +32,15 @@
                 <InputCheckbox id="ishome" @bind-Value="Fixture.IsHome" class="form-check-input" /> 
             </div>        
             <div class="mb-3 form-floating">
-                <InputText id="opponent" @bind-Value="Fixture.Opponent" class="form-control" aria-required="true" placholder="Opponent"/>                     
+                <InputText id="opponent" @bind-Value="Fixture.Opponent" class="form-control"  placeholder=" " aria-required="true"/>                     
                 <label for="opponent" class="form-label">Opponent</label> 
                 <ValidationMessage For="() => Fixture.Opponent" class="text-danger" /> 
             </div> 
+             @* <div class="mb-3 form-floating">
+                <InputText id="lastname" @bind-Value="Person.LastName" class="form-control" placeholder=" "/> 
+                <label for="lastname" class="form-label">Last Name</label> 
+                <ValidationMessage For="() => Person.LastName" class="text-danger" /> 
+            </div>     *@
             <button type="submit" class="btn btn-primary btn">Save</button>
             <a href="#" onclick="history.back()" class="btn btn btn-secondary">Back</a>
         </EditForm>
@@ -64,7 +70,7 @@
             .AsQueryable();
 
             if (teamList.Count() != 0) {
-                Fixture = new Fixture { TeamId = teamList.First().Id, Date = DateOnly.FromDateTime(DateTime.Now), FixtureType = FixtureType.League, IsHome = true };
+                Fixture = new Fixture { TeamId = teamList.First().Id, Date = DateOnly.FromDateTime(DateTime.Now), FixtureType = FixtureType.League, IsHome = true, Opponent="" };
             }
 
     }

@@ -54,6 +54,11 @@ export function onLoad() {
                 "id": "b89084d2-1095-428c-bc52-885f2b207c1b",
                 "title": "Meadow",
                 "displayOrder": 6
+            },
+            {
+                "id": "ff4b08c8-dc9a-4f4a-9ec1-bada343145b9",     
+                "title": "Small Astro",
+                "displayOrder": 0
             }],
             resourceOrder: 'displayOrder',
             events: 'api/event'
