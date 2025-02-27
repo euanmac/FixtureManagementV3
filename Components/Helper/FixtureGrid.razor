@@ -3,7 +3,6 @@
 @using FixtureManagementV3.Models
 @using FixtureManagementV3.ViewModels
 @using FixtureManagementV3.Data
-@using FixtureManagementV3.Components.Helper
 @using System.Linq
 
 <div>
@@ -23,7 +22,7 @@
         <TemplateColumn Context="fixture">
             @if(CanEdit)
             {
-                <a class ="px-1" href="@($"fixtures/edit?id={fixture.Id}")"><Icon Type="Icon.IconType.Edit"/>|</a>
+                <a class ="px-1" href="@($"fixtures/edit?id={fixture.Id}")"><Icon Type="Icon.IconType.Edit"/></a>
                 @if (fixture.IsHome) {
                     <a href="@($"fixtures/allocate?id={fixture.Id}")"><Icon Type="Icon.IconType.Schedule"/></a>
                 }

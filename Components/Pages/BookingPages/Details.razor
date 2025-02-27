@@ -1,0 +1,57 @@
+@page "/bookings/details"
+
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>Booking</h2>
+    <hr />
+    @if (booking is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">Title</dt>
+            <dd class="col-sm-10">@booking.Title</dd>
+            <dt class="col-sm-2">Start</dt>
+            <dd class="col-sm-10">@booking.Start</dd>
+            <dt class="col-sm-2">End</dt>
+            <dd class="col-sm-10">@booking.End</dd>
+            <dt class="col-sm-2">PitchId</dt>
+            <dd class="col-sm-10">@booking.PitchId</dd>
+            <dt class="col-sm-2">IsRecurring</dt>
+            <dd class="col-sm-10">@booking.IsRecurring</dd>
+            <dt class="col-sm-2">IsPast</dt>
+            <dd class="col-sm-10">@booking.IsPast</dd>
+            <dt class="col-sm-2">Pitch</dt>
+            <dd class="col-sm-10">@booking.Pitch</dd>
+        </dl>
+        <div>
+            <a href="@($"/bookings/edit?id={booking.Id}")">Edit</a> |
+            <a href="@($"/bookings")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private Booking? booking;
+
+    [SupplyParameterFromQuery]
+    private System.Guid Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        booking = await context.Booking.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (booking is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}

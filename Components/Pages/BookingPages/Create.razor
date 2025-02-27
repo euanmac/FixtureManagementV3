@@ -1,0 +1,108 @@
+@page "/bookings/create"
+
+@using FixtureManagementV3.Models
+@using Microsoft.AspNetCore.Authorization
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+
+<h2>Booking</h2>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" EditContext="editContext"  OnValidSubmit="AddBooking" FormName="create" Enhance>
+            <input type="hidden" name="Booking.Id" value="@Booking.Id" />
+            <DataAnnotationsValidator />
+            <div class="mb-3 form-floating">
+                <InputText id="title" @bind-Value="Booking.Title" class="form-control" placeholder=" " /> 
+                <label for="title" class="form-label">Title</label> 
+                <ValidationMessage For="() => Booking.Title" class="text-danger" /> 
+            </div>        
+            <div class="mb-3 form-floating">
+                <InputDate id="start" Type="InputDateType.DateTimeLocal" @bind-Value="Booking.Start" class="form-control" /> 
+                <label for="start" class="form-label">Start</label> 
+                <ValidationMessage For="() => Booking.Start" class="text-danger" /> 
+            </div>        
+            <div class="mb-3 form-floating">
+                <InputDate id="end" Type="InputDateType.DateTimeLocal" @bind-Value="Booking.End" class="form-control" /> 
+                <label for="end" class="form-label">End</label> 
+                <ValidationMessage For="() => Booking.End" class="text-danger" /> 
+            </div>        
+            <div class="mb-3 form-check form-switch">
+                <InputCheckbox id="isrecurring" @bind-Value="Booking.IsRecurring" class="form-check-input" /> 
+                <label for="isrecurring" class="form-label">Is Recurring</label> 
+            </div>        
+            <div class="mb-3 form-floating">
+                <InputSelect id="pitchid" @bind-Value="Booking!.PitchId" class="form-control form-select" aria-required="true">
+                    @foreach (var pitch in pitchList)
+                    {
+                        <option value="@pitch.Id">@pitch.Name</option> 
+                    }
+                </InputSelect> 
+                <label for="pitchid" class="form-label">Pitch</label>
+                <ValidationMessage For="() => Booking.PitchId" class="text-danger" />  
+            </div>  
+            <a class="btn btn-secondary" href="#" onclick="history.back()">Back</a>
+            <button type="submit" class="btn btn-primary">Create</button> 
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private Booking Booking { get; set; } = new Booking { Start = DateTime.Now.Date.AddHours(9).AddMinutes(30), End = DateTime.Now.Date.AddHours(10).AddMinutes(30), Id = Guid.NewGuid() };
+    private IQueryable<Pitch> pitchList = default!;
+    private EditContext? editContext;
+    private ValidationMessageStore? messageStore;
+    
+    protected override async Task OnInitializedAsync()
+    {
+            using var context = DbFactory.CreateDbContext();
+            pitchList = (await context.Pitch
+            .ToListAsync())
+            .OrderBy(p => p.DisplayOrder)
+            .AsQueryable();        
+
+            editContext = new(Booking);
+            editContext.OnValidationRequested += HandleValidationRequested;
+            messageStore = new(editContext);
+    }
+    // To protect from overposting attacks, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task AddBooking()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Booking.Add(Booking);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/bookings");
+    }  
+
+    @* private async Task HandleSubmit()
+    {
+        if (editContext?.Validate() ?? false)
+        {
+            if (Booking.Start >= Booking.End)
+            {
+                messageStore?.Add(() => Booking.Start, "Start must be before End.");    
+                messageStore?.Add(() => Booking.End, "Start must be before End.");
+            } else {
+                await AddBooking();
+            }
+        }  
+    } *@
+
+    private void HandleValidationRequested(object? sender, ValidationRequestedEventArgs args)
+    {
+        messageStore?.Clear();
+
+        // Custom validation logic
+        if (Booking.Start >= Booking.End)
+        {
+            messageStore?.Add(() => Booking.Start, "Start must be before End.");    
+            messageStore?.Add(() => Booking.End, "Start must be before End.");
+        }
+    }
+}

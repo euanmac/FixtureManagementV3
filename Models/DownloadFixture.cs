@@ -17,7 +17,7 @@ namespace FixtureManagementV3.Models
         public static string AwayTeam = "road-team";
         public static string Score = "score";
 
-        public static IList<DownloadFixture> FromFullTime(Team team)
+        public static async Task<IList<DownloadFixture>> FromFullTimeAsync(Team team)
         {
             List<(Fixture, bool)> fixtureList = new List<(Fixture, bool)>();
             List<DownloadFixture> dFixtures = new List<DownloadFixture>();
@@ -32,7 +32,7 @@ namespace FixtureManagementV3.Models
             //var url = $"https://fulltime.thefa.com/displayTeam.html?divisionseason={team.FullTimeLeagueId}&teamID={team.FullTimeTeamId}";
             var url = String.Format(FullTimeURL, team.FullTimeLeagueId, team.FullTimeTeamId);
             HtmlWeb web = new HtmlWeb();
-            var htmlDoc = web.Load(url);
+            var htmlDoc = await web.LoadFromWebAsync(url);
 
 
             //Get fixture rows
@@ -61,7 +61,7 @@ namespace FixtureManagementV3.Models
                         //int index = link.IndexOf("=") + 1;
                         //string fixtureId = link.Substring(index, link.Length - index);
 
-                        DateTime fdate = DateTime.Parse(date, new CultureInfo("en-GB"));
+                        DateOnly fdate = DateOnly.Parse(date, new CultureInfo("en-GB"));
                         bool isHome = home.ToLower().IndexOf("thame ") >= 0;
                         bool isAway = away.ToLower().IndexOf("thame ") >= 0;
 
@@ -78,7 +78,7 @@ namespace FixtureManagementV3.Models
                         string opponent = isHome ? away : home;
                         FixtureType ftype = GetFixtureType(type);
 
-                        var fixture = new Fixture { Date = DateOnly.FromDateTime(fdate), IsHome = isHome, Opponent = opponent, TeamId = team.Id, Team = team, FixtureType = ftype, Id = Guid.NewGuid() };
+                        var fixture = new Fixture { Date = fdate, IsHome = isHome, Opponent = opponent, TeamId = team.Id, Team = team, FixtureType = ftype, Id = Guid.NewGuid() };
                         var downloadFixture = new DownloadFixture { Id = Guid.NewGuid(), Date = fdate, IsHome = isHome, Opponent = opponent, FixtureType = ftype, Add = true };
 
                         fixtureList.Add((fixture, true));
@@ -101,12 +101,12 @@ namespace FixtureManagementV3.Models
                         bool isPostponed = scoreNode.SelectSingleNode("a[contains(text(),'P')]") != null;
                         if (isPostponed)
                         {
-                            DateTime fdate = DateTime.Parse(date, new CultureInfo("en-GB"));
+                            DateOnly fdate = DateOnly.Parse(date, new CultureInfo("en-GB"));
                             bool isHome = home.ToLower().IndexOf("thame ") >= 0;
                             string opponent = isHome ? away : home;
                             FixtureType ftype = FixtureType.Postponed;
 
-                            var fixture = new Fixture { Date = DateOnly.FromDateTime(fdate), IsHome = isHome, Opponent = opponent, TeamId = team.Id, Team = team, FixtureType = ftype, Id = Guid.NewGuid() };
+                            var fixture = new Fixture { Date = fdate, IsHome = isHome, Opponent = opponent, TeamId = team.Id, Team = team, FixtureType = ftype, Id = Guid.NewGuid() };
                             var downloadFixture = new DownloadFixture { Id = Guid.NewGuid(), Date = fdate, IsHome = isHome, Opponent = opponent, FixtureType = ftype, Add = true };
 
                             fixtureList.Add((fixture, true));
@@ -154,7 +154,7 @@ namespace FixtureManagementV3.Models
     {
         public Guid Id { get; set; }
         [DataType(DataType.Date)]
-        public DateTime Date { get; set; }
+        public DateOnly Date { get; set; }
         [Display(Name = "Home")]
         public bool IsHome { get; set; }
         public string Opponent { get; set; } = "";

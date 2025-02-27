@@ -1,0 +1,78 @@
+@page "/bookings/delete"
+
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+<PageTitle>Delete</PageTitle>
+
+<h1>Delete</h1>
+
+<p>Are you sure you want to delete this?</p>
+<div>
+    <h2>Booking</h2>
+    <hr />
+    @if (booking is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">Title</dt>
+            <dd class="col-sm-10">@booking.Title</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Start</dt>
+            <dd class="col-sm-10">@booking.Start</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">End</dt>
+            <dd class="col-sm-10">@booking.End</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Pitch</dt>
+            <dd class="col-sm-10">@booking!.Pitch!.Name</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Is Recurring</dt>
+            <dd class="col-sm-10">@booking.IsRecurring</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Is Past</dt>
+            <dd class="col-sm-10">@booking.IsPast</dd>
+        </dl>
+
+        <EditForm method="post" Model="booking" OnValidSubmit="DeleteBooking" FormName="delete" Enhance>
+            <a class="btn btn-secondary" href="#" onclick="history.back()">Back</a>
+            <button type="submit" class="btn btn-danger" disabled="@(booking is null)">Delete</button>
+        </EditForm>
+    }
+</div>
+
+@code {
+    private Booking? booking;
+
+    [SupplyParameterFromQuery]
+    private System.Guid Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        booking = await context.Booking
+            .Include(b => b.Pitch)
+            .FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (booking is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    private async Task DeleteBooking()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Booking.Remove(booking!);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/bookings");
+    }
+}

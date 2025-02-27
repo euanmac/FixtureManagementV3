@@ -1,8 +1,8 @@
 @page "/fixtures/delete"
-@using Microsoft.EntityFrameworkCore
-@using FixtureManagementV3.Models
+
 @inject IDbContextFactory<AppDBContext> DbFactory
 @inject NavigationManager NavigationManager
+@attribute [Authorize]
 
 <PageTitle>Delete</PageTitle>
 
@@ -27,7 +27,7 @@
             <dd class="col-sm-10">@fixture.Date</dd>
         </dl>
         <dl class="row">
-            <dt class="col-sm-2">IsHome</dt>
+            <dt class="col-sm-2">Is Home</dt>
             <dd class="col-sm-10">@fixture.IsHome</dd>
         </dl>
         <dl class="row">
@@ -35,12 +35,12 @@
             <dd class="col-sm-10">@fixture.Opponent</dd>
         </dl>
         <dl class="row">
-            <dt class="col-sm-2">FixtureType</dt>
+            <dt class="col-sm-2">Type</dt>
             <dd class="col-sm-10">@fixture.FixtureType</dd>
         </dl>
         <EditForm method="post" Model="fixture" OnValidSubmit="DeleteFixture" FormName="delete" Enhance>
-            <button type="submit" class="btn btn-danger" disabled="@(fixture is null)">Delete</button> |
-            <a href="/fixtures">Back to List</a>
+            <button type="submit" class="btn btn-danger" disabled="@(fixture is null)">Delete</button>
+            <a class="btn btn-secondary" href="/fixtures">Back</a>
         </EditForm>
     }
 </div>

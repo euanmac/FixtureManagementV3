@@ -9,8 +9,9 @@ public static class EventsAPI
     {
         var group = routes.MapGroup("/api/Event").WithTags(nameof(Event));
 
-        group.MapGet("/", async (AppDBContext db) =>
+        group.MapGet("/", async (AppDBContext db, HttpContext context) =>
         {
+            bool IsAuthenticated = context.User?.Identity?.IsAuthenticated ?? false; 
             //Get fixtures
             IQueryable<Fixture> eventFixture = db.Fixture
                 .Include(f => f.Team)
@@ -18,53 +19,28 @@ public static class EventsAPI
                     .ThenInclude(fa => fa!.Pitch)
                 .Include(f => f.FixtureAllocation)
                 .Where(f => (f.FixtureAllocation != null && f.FixtureAllocation.Pitch != null) 
-                        && (f.FixtureAllocation.IsConfirmed || true /*User.Identity.IsAuthenticated*/));
+                        && (f.FixtureAllocation.IsConfirmed || IsAuthenticated));
                         
-            // if (eventId != null)
-            // {
-            //     eventFixture = eventFixture.Where(f => f.Id == eventId);
-            // }
-            // if (resourceId != null)
-            // {
-            //     eventFixture = eventFixture.Where(e => e.FixtureAllocation.PitchId == resourceId);
-            // }
+            
+            List<Event> events = await eventFixture.Select(f => new Event(f, IsAuthenticated)).ToListAsync();
 
-            List<Event> events = await eventFixture.Select(f => new Event(f, true /*User.Identity.IsAuthenticated*/)).ToListAsync();
+            //Get single event bookings and add to event list
+            IQueryable<Booking> eventBookingSingle = db.Booking
+                .Where(b => !b.IsRecurring);
 
-            //Get single event bookings
-            // IQueryable<Booking> eventBookingSingle = _context.Booking
-            //     .Where(b => !b.IsRecurring);
+            events.AddRange(await eventBookingSingle
+                .Select(b => new Event(b))
+                .ToListAsync());
 
-            // if (eventId != null)
-            // {
-            //     eventBookingSingle = eventBookingSingle.Where(b => b.Id == eventId);
-            // }
-            // if (resourceId != null)
-            // {
-            //     eventBookingSingle = eventBookingSingle.Where(b => b.PitchId == resourceId);
-            // }
-            // events.AddRange(await eventBookingSingle
-            //     .Select(b => new RecurringEvent(b))
-            //     .ToListAsync());
+            // //Get recurring bookings and add to event list
+            IQueryable<Booking> eventBookingRecurring = db.Booking
+                .Where(b => b.IsRecurring);
 
-            // //Get recurring bookings
-            // IQueryable<Booking> eventBookingRecurring = _context.Booking
-            //     .Where(b => b.IsRecurring);
+            events.AddRange(await eventBookingRecurring
+                .Select(b => new RecurringEvent(b))
+                .ToListAsync());
 
-            // if (eventId != null)
-            // {
-            //     eventBookingRecurring = eventBookingRecurring.Where(b => b.Id == eventId);
-            // }
-            // if (resourceId != null)
-            // {
-            //     eventBookingRecurring = eventBookingRecurring.Where(b => b.PitchId == resourceId);
-            // }
-            // events.AddRange(await eventBookingRecurring
-            //     .Select(b => new RecurringEvent(b))
-            //     .ToListAsync());
-
-
-            return events;
+            return events.Cast<object>().ToList();
         })
         .WithName("GetAllEvents")
         .WithOpenApi();

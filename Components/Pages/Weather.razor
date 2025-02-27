@@ -1,0 +1,126 @@
+﻿@page "/weather"
+@attribute [StreamRendering]
+
+<PageTitle>Weather</PageTitle>
+
+<h1>Weather</h1>
+
+<p>This component demonstrates showing data.</p>
+
+@if (forecasts is { Count : 0 })
+{
+    <p>
+        <em>Loading...</em>
+    </p>
+}
+else
+{
+    <table class="table">
+        <thead>
+        <tr>
+            <th>Date</th>
+            <th>Temp. (C)</th>
+            <th>Temp. (F)</th>
+            <th>Summary</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var forecast in forecasts.OrderBy(f => f.Date))
+        {
+            <tr>
+                <td>@forecast.Date.ToShortDateString()</td>
+                <td>@forecast.TemperatureC</td>
+                <td>@forecast.TemperatureF</td>
+                <td>@forecast.Summary</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}   
+<div class="mt-5">
+<p>@((TimeOnly.FromDateTime(DateTime.Now) - start).Seconds)</p>
+</div>
+
+@code {
+	//1. the collection we'll be adding to
+    private readonly List<WeatherForecast> forecasts = new();
+    private TimeOnly start = TimeOnly.FromDateTime(DateTime.Now);
+    protected override async Task OnInitializedAsync()
+    {
+        forecasts.Clear();
+        // 2. invoking the IAsyncEnumerable implementation
+        await foreach (var forecast in GetForecasts2())
+        {
+            forecasts.Add(forecast);
+            // 3. Calling StateHasChanged to flush
+            StateHasChanged();
+        }
+    }
+
+    static async IAsyncEnumerable<WeatherForecast> GetForecasts()
+    {
+        var startDate = DateOnly.FromDateTime(DateTime.Now);
+        var summaries = new[]
+        {
+            "Freezing", "Bracing", "Chilly",
+            "Cool", "Mild", "Warm", "Balmy",
+            "Hot", "Sweltering", "Scorching"
+        };
+
+        for (var index = 0; index <= 5; index++)
+        {
+            int delay =  500 * (6 - index);
+            await Task.Delay(delay);
+            yield return new WeatherForecast
+            {
+                Date = startDate.AddDays(index),
+                TemperatureC = Random.Shared.Next(-20, 55),
+                Summary = summaries[Random.Shared.Next(summaries.Length)]
+            };
+        }
+    }
+
+
+    static async IAsyncEnumerable<WeatherForecast> GetForecasts2()
+    {
+        var startDate = DateOnly.FromDateTime(DateTime.Now);
+        var summaries = new[]
+        {
+            "Freezing", "Bracing", "Chilly",
+            "Cool", "Mild", "Warm", "Balmy",
+            "Hot", "Sweltering", "Scorching"
+        };
+        IList<Task> tasks = new List<Task>();
+        IDictionary<Task, WeatherForecast> forecasts = new Dictionary<Task, WeatherForecast>();
+
+        for (var index = 0; index <= 5; index++)
+        {
+            int delay =  500 * (6 - index); //Random.Shared.Next(0, 4000);
+            @* await Task.Delay(delay); *@
+            Task t = Task.Delay(delay);
+            tasks.Add(t);
+            forecasts.Add(t, new WeatherForecast
+            {
+                Date = startDate.AddDays(index),
+                TemperatureC = Random.Shared.Next(-20, 55),
+                Summary = summaries[Random.Shared.Next(summaries.Length)]
+            });
+        }
+
+        while (tasks.Any())
+        {
+            Task finishedTask = await Task.WhenAny(tasks);
+            tasks.Remove(finishedTask);
+            yield return forecasts[finishedTask];
+        }
+    }
+
+    private class WeatherForecast
+    {
+        public DateOnly Date { get; set; }
+        public int TemperatureC { get; set; }
+        public string? Summary { get; set; }
+        public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    }
+
+}
