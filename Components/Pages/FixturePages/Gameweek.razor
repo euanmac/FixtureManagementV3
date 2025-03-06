@@ -13,10 +13,11 @@
 
 <h1>Gameweek</h1>
 <hr>
+
 @if (isAuthenticated) {
-    <p>
-        <a class="btn btn-primary" href="teams/create"> <Icon Type="Icon.IconType.Add"/> Team</a>
-    </p>
+    <div class="mt-5">
+    <p>@((TimeOnly.FromDateTime(DateTime.Now) - start).TotalMilliseconds)</p>
+    </div>
 }
 
 @* <QuickGrid Class="table table-sm table-striped" Items="team" >
@@ -207,6 +208,8 @@
     [SupplyParameterFromQuery]
     private DateOnly? matchDay { get; set; }
 
+    private TimeOnly start = TimeOnly.FromDateTime(DateTime.Now);
+
     protected override async Task OnInitializedAsync()    
     {
 
@@ -225,6 +228,7 @@
         gameWeekStart = matchDay.Value.AddDays(-startOffset);
         gameWeekEnd = matchDay.Value.AddDays(endOffset);
 
+        //Get fixtures for given date
         List<Fixture> fixtures = await context.Fixture
             .Include(f => f.FixtureAllocation)
                 .ThenInclude(fa => fa!.Pitch)
@@ -234,40 +238,53 @@
             .Where(f => f.Date >= gameWeekStart && f.Date <= gameWeekEnd)
             .ToListAsync();
 
-        //Get 
-        @* IList<Task> = _context.Team
-               .Include(t => t.Fixtures)
-                   .ThenInclude(f => f.FixtureAllocation)
-                        .ThenInclude(fa => fa.Pitch)
-               .Include(t => t.Contacts)
-                   .ThenInclude(c => c.Person)
-               .OrderBy(t => t.Gender)
-                   .ThenBy(t => t.AgeGroup)
-                   .ThenBy(t => t.Division)
-               .Select(t => t.Reconcile( GameWeekStart, GameWeekEnd))
-               .ToListAsync(); *@
-                    //Fetch fixture details (and FullTime rows)
-            @* IList<IList<TeamReconiliationRow>> rows = await context.Team
-               .OrderBy(t => t.Gender)
-                   .ThenBy(t => t.AgeGroup)
-                   .ThenBy(t => t.Division)
-               .Select(t => await t.ReconcileAsync( gameWeekStart, gameWeekEnd, fixtures))
-               .ToListAsync(); *@
+        //Get teams
+        List<Team> teams = await context.Team.ToListAsync();
+        
+        //Get placeholder reconciliation rows for each team
+        List<List<TeamReconiliationRow>> rows = teams
+                .Select(t => new List<TeamReconiliationRow> { new TeamReconiliationRow { Team = t, MatchDate = gameWeekStart, RecStatus = FixtureRecMatchType.noFixture }})
+                .ToList();
+        
+        fixtureRecResults = rows
+                .SelectMany(x => x)
+                    .OrderBy(x => x.Team.AgeGroup)
+                        .ThenBy(x => x.Team.Gender)
+                        .ThenBy(x => x.Team.Division)
+                .ToList()
+                .GroupBy(r => r.Team).ToDictionary(g => g.Key, g => g.ToList());
 
-            List<Team> teams = await context.Team.ToListAsync();
+        StateHasChanged();
+
+        //For each team reconcile the fixtures for a given date
+        //Will be asynchronous so update state on each result returned
+        await foreach (var row in GetReconciliationRows(teams, fixtures, gameWeekStart, gameWeekEnd)) {
             
-            List<List<TeamReconiliationRow>> rows = new();
-            await foreach (var row in GetReconciliationRows(teams, fixtures, gameWeekStart, gameWeekEnd)) {
-                rows.Add(row);
-                fixtureRecResults = rows
-                    .SelectMany(x => x)
-                        .OrderBy(x => x.Team.AgeGroup)
-                            .ThenBy(x => x.Team.Gender)
-                            .ThenBy(x => x.Team.Division)
-                    .ToList()
-                    .GroupBy(r => r.Team).ToDictionary(g => g.Key, g => g.ToList());
-                StateHasChanged();
-            }           
+            if (row.Count > 0) {
+                fixtureRecResults[row[0].Team] = row;
+            } else {
+                fixtureRecResults.Remove(row[0].Team);
+            }
+            @* fixtureRecResults = rows
+                .SelectMany(x => x)
+                    .OrderBy(x => x.Team.AgeGroup)
+                        .ThenBy(x => x.Team.Gender)
+                        .ThenBy(x => x.Team.Division)
+                .ToList()
+                .GroupBy(r => r.Team).ToDictionary(g => g.Key, g => g.ToList()); *@
+            StateHasChanged();
+        }           
+
+        @* rows = teams
+                .Select(t => t.Reconcile(gameWeekStart, gameWeekEnd, fixtures))
+                .ToList();
+        fixtureRecResults = rows
+                .SelectMany(x => x)
+                    .OrderBy(x => x.Team.AgeGroup)
+                        .ThenBy(x => x.Team.Gender)
+                        .ThenBy(x => x.Team.Division)
+                .ToList()
+                .GroupBy(r => r.Team).ToDictionary(g => g.Key, g => g.ToList()); *@
 
     }
 
@@ -276,14 +293,24 @@
         List<Task<List<TeamReconiliationRow>>> teamRecTasks = teams
                 .Select(t => t.ReconcileAsync(gameWeekStart, gameWeekEnd, fixtures))
                 .ToList();
-        List<TeamReconiliationRow> rows = new();
-            yield return rows;
 
         while (teamRecTasks.Any())
         {
             var finishedTask = await Task.WhenAny(teamRecTasks);
             teamRecTasks.Remove(finishedTask);
             yield return finishedTask.Result;
+        }
+    }
+
+    static async IAsyncEnumerable<List<TeamReconiliationRow>> GetReconciliationRows2(List<Team> teams, List<Fixture> fixtures, DateOnly gameWeekStart, DateOnly gameWeekEnd)
+    {
+        List<Task<List<TeamReconiliationRow>>> teamRecTasks = teams
+                .Select(t => t.ReconcileAsync(gameWeekStart, gameWeekEnd, fixtures))
+                .ToList();
+
+        foreach (var t in teamRecTasks)
+        {
+            yield return await t;
         }
     }
 

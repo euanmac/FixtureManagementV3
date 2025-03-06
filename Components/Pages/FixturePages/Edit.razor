@@ -37,8 +37,8 @@ else
                     <InputCheckbox id="ishome" @bind-Value="Fixture.IsHome" class="form-check-input" />
                 </div>
                 <div class="mb-3 form-floating">                
-                    <InputText id="opponent" @bind-Value="Fixture.Opponent" class="form-control" aria-required="true"/>
-                    <label for="opponent" class="form-label">Opponent:</label>
+                    <InputText id="opponent" @bind-Value="Fixture.Opponent" class="form-control" placeholder=" " aria-required="true"/>
+                    <label for="opponent" class="form-label">Opponent</label>
                     <ValidationMessage For="() => Fixture.Opponent" class="text-danger" />
                 </div>
                 <button type="submit" class="btn btn-primary">Save</button>
