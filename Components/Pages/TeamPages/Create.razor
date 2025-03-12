@@ -33,7 +33,7 @@
                 <ValidationMessage For="() => Team.AgeGroup" class="text-danger" /> 
             </div>        
             <div class="mb-3">
-                <label for="gender" class="form-label">Gender:</label> 
+                <label for="gender" class="form-label">Gender</label> 
                 <InputSelect @bind-Value="Team.Gender" class="form-control" aria-required="true"> 
                     @foreach (var gender in Enum.GetValues(typeof(Gender)))
                     {
@@ -78,7 +78,7 @@
 </div>
 
 <div>
-    <a href="/teams">Back to List</a>
+    <a href="#" onclick="history.back()" class="btn btn btn-secondary">Back</a>
 </div>
 
 @code {

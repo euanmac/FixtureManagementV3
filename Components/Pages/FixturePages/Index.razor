@@ -45,7 +45,7 @@
               <InputCheckbox  id="isaway" @bind-Value="Filter!.IncludeAway" class="form-check-input"/>  
           </div>
           <div class="col-auto">
-              <button type="submit" value="Filter" class="btn btn btn-outline-primary">Filter</button>
+              <button type="submit" value="Filter" class="btn btn btn-primary">Filter</button>
               <button class="btn btn btn-outline-secondary" onclick="document.getElementById('fixtures').classList.toggle('table-striped')">Reset</button>
           </div>
         </div>
@@ -56,8 +56,8 @@
        <div class="row g-3 align-items-center">
         <div class="col-auto">
             @if (isAuthenticated) {
-                <a href="fixtures/create" class="btn btn btn-primary">Add <Icon Type="Icon.IconType.Add"/></a> 
-                <button class="btn btn btn-primary" onclick="document.getElementById('fixtures').classList.toggle('table-striped')"><Icon Type="Icon.IconType.Download"/> Download</button>
+                <a href="fixtures/create" class="btn btn btn-primary">Add Fixture</a> 
+                <button class="btn btn btn-primary" onclick="document.getElementById('fixtures').classList.toggle('table-striped')">Download</button>
             }
         </div>
       </div>
