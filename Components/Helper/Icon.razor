@@ -53,6 +53,17 @@
         Details,
         Add,
         Download,
-        Week
+        Week,
+        Unmatched
+
+                        @* FixtureRecMatchType.noFixture => "bi bi-x-circle text-danger",
+                FixtureRecMatchType.pending => "bi bi-clock text-warning",
+                FixtureRecMatchType.localFixtureOnly when (!IsAllocated && CanAllocate)  => "bi bi-journal-check text-warning",
+                FixtureRecMatchType.localFixtureOnly => "bi bi-journal-check text-success",
+                FixtureRecMatchType.localFixtureUnmatched => "bi bi-journal-x text-danger",
+                FixtureRecMatchType.fullTimeUnmatched => "bi bi-cloud-slash text-danger",
+                FixtureRecMatchType.fullTimematched when (!IsAllocated && CanAllocate) => "bi bi-cloud-check text-warning",
+                FixtureRecMatchType.fullTimematched => "bi bi-cloud-check text-success", *@
+
     }
 }

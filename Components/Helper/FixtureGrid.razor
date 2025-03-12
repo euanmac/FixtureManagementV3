@@ -1,3 +1,5 @@
+@preservewhitespace true
+
 @using Microsoft.AspNetCore.Components.QuickGrid
 @using Microsoft.EntityFrameworkCore
 @using FixtureManagementV3.Models
@@ -22,11 +24,11 @@
         <TemplateColumn Context="fixture">
             @if(CanEdit)
             {
-                <a class ="px-1" href="@($"fixtures/edit?id={fixture.Id}")"><Icon Type="Icon.IconType.Edit"/></a>
+                <a href="@($"fixtures/edit?id={fixture.Id}")"><Icon Type="Icon.IconType.Edit"/></a>
+                <a href="@($"fixtures/delete?id={fixture.Id}")"><Icon Type="Icon.IconType.Delete"/></a>        
                 @if (fixture.IsHome) {
                     <a href="@($"fixtures/allocate?id={fixture.Id}")"><Icon Type="Icon.IconType.Schedule"/></a>
                 }
-                <a class ="px-1" href="@($"fixtures/delete?id={fixture.Id}")"><Icon Type="Icon.IconType.Delete"/></a>        
             }
         </TemplateColumn>
     </QuickGrid>

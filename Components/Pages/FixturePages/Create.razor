@@ -12,7 +12,8 @@
 <hr />
 <div class="row">
     <div class="col-md-3">
-        <EditForm method="post" Model="Fixture" OnSubmit="AddFixture" FormName="create" Enhance>
+        <EditForm method="post" Model="Fixture" OnValidSubmit="AddFixture" FormName="create" Enhance>
+            <input type="hidden" name="Fixture.Id" @bind-value="@Fixture!.Id" />
             <DataAnnotationsValidator />
             <div class="mb-3 form-floating">
                 <InputSelect id="teamid" @bind-Value="Fixture.TeamId" class="form-control form-select">
@@ -30,9 +31,18 @@
             <div class="mb-2 form-check">
                 <label for="ishome" class="form-label">Home</label> 
                 <InputCheckbox id="ishome" @bind-Value="Fixture.IsHome" class="form-check-input" /> 
-            </div>        
+            </div>
             <div class="mb-3 form-floating">
-                <InputText id="opponent" @bind-Value="Fixture.Opponent" class="form-control"  placeholder=" " aria-required="true"/>                     
+                <InputSelect id="fixturetype" @bind-Value="Fixture.FixtureType" class="form-control form-select"> 
+                    @foreach (var ftype in Enum.GetValues(typeof(FixtureType)))
+                    {
+                        <option value="@ftype">@ftype</option>
+                    }
+                </InputSelect>
+                <label for="fixturetype" class="form-label">Fixture Type</label>
+            </div>  
+            <div class="mb-3 form-floating">
+                <InputText id="opponent" autofocus @bind-Value="Fixture.Opponent" class="form-control"  placeholder="" aria-required="true"/>                     
                 <label for="opponent" class="form-label">Opponent</label> 
                 <ValidationMessage For="() => Fixture.Opponent" class="text-danger" /> 
             </div> 
@@ -54,7 +64,7 @@
 
 @code {
     [SupplyParameterFromForm]
-    private Fixture Fixture { get; set; } = new();
+    private Fixture? Fixture { get; set; }
 
     private IQueryable<Team> teamList = default!;
         
@@ -69,8 +79,8 @@
             .ThenBy(t => t.Name)
             .AsQueryable();
 
-            if (teamList.Count() != 0) {
-                Fixture = new Fixture { TeamId = teamList.First().Id, Date = DateOnly.FromDateTime(DateTime.Now), FixtureType = FixtureType.League, IsHome = true, Opponent="" };
+            if (Fixture is null && teamList.Count() != 0) {
+                Fixture = new Fixture { Id = Guid.NewGuid(),  TeamId = teamList.First().Id, Date = DateOnly.FromDateTime(DateTime.Now), FixtureType = FixtureType.League, IsHome = true, Opponent="" };
             }
 
     }
@@ -80,7 +90,7 @@
     {
 
         using var context = DbFactory.CreateDbContext();
-        context.Fixture.Add(Fixture);
+        context.Fixture.Add(Fixture!);
         await context.SaveChangesAsync();
         NavigationManager.NavigateTo("/fixtures");
     }

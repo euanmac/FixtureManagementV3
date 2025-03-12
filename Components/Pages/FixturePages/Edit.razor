@@ -28,7 +28,7 @@ else
                 <input type="hidden" name="Fixture.TeamId" @bind-value="@Fixture.TeamId" />
                 <input type="hidden" name="Fixture.Id" @bind-value="@Fixture.Id" @/>
                 <div class="mb-3 form-floating">
-                    <InputDate id="date" @bind-Value="Fixture.Date" class="form-control" />
+                    <InputDate id="date" autofocus @bind-Value="Fixture.Date" class="form-control" />
                     <label for="date" class="form-label">Date</label>
                     <ValidationMessage For="() => Fixture.Date" class="text-danger" />
                 </div>
@@ -36,6 +36,15 @@ else
                     <label for="ishome" class="form-label">Home</label>
                     <InputCheckbox id="ishome" @bind-Value="Fixture.IsHome" class="form-check-input" />
                 </div>
+                <div class="mb-3 form-floating">
+                    <InputSelect id="fixturetype" @bind-Value="Fixture.FixtureType" class="form-control form-select"> 
+                        @foreach (var ftype in Enum.GetValues(typeof(FixtureType)))
+                        {
+                            <option value="@ftype">@ftype</option>
+                        }
+                    </InputSelect>
+                    <label for="fixturetype" class="form-label">Fixture Type</label>
+                </div> 
                 <div class="mb-3 form-floating">                
                     <InputText id="opponent" @bind-Value="Fixture.Opponent" class="form-control" placeholder=" " aria-required="true"/>
                     <label for="opponent" class="form-label">Opponent</label>

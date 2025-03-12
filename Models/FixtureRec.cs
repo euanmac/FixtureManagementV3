@@ -6,7 +6,7 @@ namespace FixtureManagementV3.Models
 {
     public class TeamReconiliationRow
     {
-        public required Team Team { get; set; }
+        public required Guid TeamId { get; set; }
         public Guid Id { get; set; }
         public FixtureRecMatchType RecStatus { get; set; }
         [DataType(DataType.Date)]
@@ -29,6 +29,7 @@ namespace FixtureManagementV3.Models
             return RecStatus switch
             {
                 FixtureRecMatchType.noFixture => "bi bi-x-circle text-danger",
+                FixtureRecMatchType.pending => "spinner-border spinner-border-sm text-dark",
                 FixtureRecMatchType.localFixtureOnly when (!IsAllocated && CanAllocate)  => "bi bi-journal-check text-warning",
                 FixtureRecMatchType.localFixtureOnly => "bi bi-journal-check text-success",
                 FixtureRecMatchType.localFixtureUnmatched => "bi bi-journal-x text-danger",
@@ -55,5 +56,6 @@ namespace FixtureManagementV3.Models
         fullTimeUnmatched,
         [Display(Name = "Matched on FullTime")]
         fullTimematched,
+        pending
     }
 }

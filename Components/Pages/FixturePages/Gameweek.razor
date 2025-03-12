@@ -9,7 +9,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 @attribute [StreamRendering]
-<PageTitle>Teams</PageTitle>
+<PageTitle>Gameweek</PageTitle>
 
 <h1>Gameweek</h1>
 <hr>
@@ -19,191 +19,174 @@
     <p>@((TimeOnly.FromDateTime(DateTime.Now) - start).TotalMilliseconds)</p>
     </div>
 }
-
-@* <QuickGrid Class="table table-sm table-striped" Items="team" >
-
-    <TemplateColumn Context="team" title="Name" >
-        <a href="@($"teams/details?id={team.Id}")">@team.DisplayName</a>
-    </TemplateColumn>
-    <PropertyColumn Property="team => team.Gender" />
-    <PropertyColumn Property="@(t => Utilities.GetAttributeOfType<DisplayAttribute>(t.League)!.Name ?? "")" Title="League"/>
-    <PropertyColumn Property="team => team.Division" />
-        <TemplateColumn Context="team" title="Contacts">
-            @if (isLoaded) {
-                foreach (var contact in team.Contacts.OrderBy(c => c.ContactType))
-                    {
-                        @contact.Person!.FirstName @:  @contact.Person.LastName <br />
-                    }                
+<EditForm Model="DownloadFixtures" OnSubmit="DownloadAllFixtures">
+    <input type="hidden" name="DownloadFixtures"  @value="DownloadFixtures" />
+    <button type="submit" class="btn btn-primary">Download All</button>
+</EditForm>
+    <table class="table table-sm table-stripedx quickgrid">
+        <thead>
+            <tr>
+                <th>
+                    Team
+                </th>
+                <th>
+                    Date
+                </th>
+                <th>
+                    Status
+                </th>
+                <th>
+                    Venue
+                </th>
+                <th>
+                    Type
+                </th>
+                <th>
+                    Opponent
+                </th>
+                <th>
+                    Pitch
+                </th>
+                <th>
+                    Start
+                </th>
+                <th>
+                    Confirmed
+                </th>
+                @if (isAuthenticated)
+                {
+                    <th></th>
                 }
-        </TemplateColumn>
-        <PropertyColumn Property="team => team.Division" />
-    <TemplateColumn Context="team" title="Contacts">
-        @if (isLoadedAgain) {
-            foreach (var contact in team.Contacts.OrderBy(c => c.ContactType))
+            </tr>
+        </thead>
+        <tbody>
+            @{stripe = false;}
+            @foreach (var team in fixtureRecResults.Keys)
+            {
+                var rowColour = stripe ? bgTableBgStriped : bgTableBg;
+                var newRow = true;
+                stripe = !stripe;
+                @foreach (var item in fixtureRecResults[team])
                 {
-                    @contact.Person!.FirstName @:  @contact.Person.LastName <br />
-                }                
-            }
-    </TemplateColumn>
-    
-</QuickGrid> *@
-
-        <table class="table table-sm table-striped quickgrid">
-            <thead>
-                <tr>
-                    <th>
-                        Team
-                    </th>
-                    <th>
-                        Date
-                    </th>
-                    <th>
-                        Status
-                    </th>
-                    <th>
-                        Venue
-                    </th>
-                    <th>
-                        Type
-                    </th>
-                    <th>
-                        Opponent
-                    </th>
-                    <th>
-                        Pitch
-                    </th>
-                    <th>
-                        Start
-                    </th>
-                    <th>
-                        Confirmed
-                    </th>
-                    @if (isAuthenticated)
-                    {
-                        <th></th>
-                    }
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var team in fixtureRecResults.Keys)
-                {
-                    var newRow = true;
-                    @foreach (var item in fixtureRecResults[team])
-                    {
-                        <tr>
-                            <td>
-                                @*@Html.DisplayFor(modelItem => item.GroupDescription)*@
-                                @if (newRow)
-                                {
-                                    <a asp-page="./Details" asp-route-id="@item.Team.Id">@item.Team.DisplayName</a>
-                                }
-                            </td>
-                            <td>
-                                @item.MatchDate.ToShortDateString()
-                            </td>
-                            <td>
-                                <i class="@item.GetRecIcon() h6" data-toggle="tooltip" data-original-title="@item.RecStatus"></i>
-                            </td>
-                            @if (item.RecStatus != Models.FixtureRecMatchType.noFixture)
+                    <tr>
+                        <td style="@($"background-color: var({rowColour})")">
+                            @*@Html.DisplayFor(modelItem => item.GroupDescription)*@
+                            @if (newRow)
                             {
-                                <td>
-                                    @item.Venue
+                                <a href="@($"teams/details?id={team.Id}")">@team.DisplayName</a>
+                            }
+                        </td>
+                        <td style="@($"background-color: var({rowColour})")">
+                            @item.MatchDate.ToShortDateString()
+                        </td>
+                        <td class="text-center align-middle" style="@($"background-color: var({rowColour})")">
+                            <i class="@item.GetRecIcon() align-middle" data-toggle="tooltip" data-original-title="@item.RecStatus"></i>
+                        </td>
+                        @if (item.RecStatus != Models.FixtureRecMatchType.noFixture && item.RecStatus != Models.FixtureRecMatchType.pending)
+                        {
+                            <td style="@($"background-color: var({rowColour})")">
+                                @item.Venue
+                            </td>
+                            <td style="@($"background-color: var({rowColour})")">
+                                @item.FixtureType
+                            </td>
+                            <td style="@($"background-color: var({rowColour})")">
+                                @item.Opponent
+                            </td>
+                            @if (item.IsAllocated)
+                            {
+                                <td style="@($"background-color: var({rowColour})")">
+                                    @item.Pitch
                                 </td>
-                                <td>
-                                    @item.FixtureType
+                                <td style="@($"background-color: var({rowColour})")">
+                                    @(item.Start.ToShortTimeString())
                                 </td>
-                                <td>
-                                    @item.Opponent
+                                <td style="@($"background-color: var({rowColour})")">
+                                    @(item.IsAllocated && item.IsConfirmed ? "Yes" : "No")
                                 </td>
-                                @if (item.IsAllocated)
-                                {
-                                    <td>
-                                        @item.Pitch
-                                    </td>
-                                    <td>
-                                        @(item.Start.ToShortTimeString())
-                                    </td>
-                                    <td>
-                                        @(item.IsAllocated && item.IsConfirmed ? "Yes" : "No")
-                                    </td>
-                                }
-                                else
-                                {
-                                    <td />
-                                    <td />
-                                    <td />
-                                }
                             }
                             else
                             {
-                                <td />
-                                <td />
-                                <td />
-                                <td />
-                                <td />
-                                <td />
+                                <td style="@($"background-color: var({rowColour})")"/>
+                                <td style="@($"background-color: var({rowColour})")"/>
+                                <td style="@($"background-color: var({rowColour})")"/>
                             }
+                        }
+                        else
+                        {
+                            <td style="@($"background-color: var({rowColour})")"/>
+                            <td style="@($"background-color: var({rowColour})")"/>
+                            <td style="@($"background-color: var({rowColour})")"/>
+                            <td style="@($"background-color: var({rowColour})")"/>
+                            <td style="@($"background-color: var({rowColour})")"/>
+                            <td style="@($"background-color: var({rowColour})")"/>
+                        }
 
-                            @if (isAuthenticated)
-                            {
-                                <td>
+                        @if (isAuthenticated)
+                        {
+                            <td style="@($"background-color: var({rowColour})")">
 
-                                    @if (item.RecStatus == Models.FixtureRecMatchType.fullTimeUnmatched)
+                                @if (item.RecStatus == Models.FixtureRecMatchType.fullTimeUnmatched)
+                                {
+                                    @*Hidden fields for bulk download*@
+                                    @* <input type="hidden" name="DownloadFixtures.Index" value="@item.Id" />
+                                    <input type="hidden" name="DownloadFixtures[@item.Id].Id" value="@item.Id" />
+                                    <input type="hidden" name="DownloadFixtures[@item.Id].Date" value="@item.MatchDate" />
+                                    <input type="hidden" name="DownloadFixtures[@item.Id].IsHome" value="@(item.Venue == "H") " />
+                                    <input type="hidden" name="DownloadFixtures[@item.Id].Opponent" value="@item.Opponent" />
+                                    <input type="hidden" name="DownloadFixtures[@item.Id].FixtureType" value="@item.FixtureType" />
+                                    <input type="hidden" name="DownloadFixtures[@item.Id].TeamId" value="@team.Id" /> *@
+                                    @* <button type="submit" name="D" value="C" class="btn btn-link btn-sm p-0" asp-route-teamId="@item.Team.Id" asp-route-opponent="@item.Opponent"
+                                            asp-route-matchDate="@(item.MatchDate.ToString("dd-MMM-yyyy"))" asp-route-venue="@item.Venue"
+                                            asp-route-fixturetype="@( (int) item.FixtureType)" asp-route-gameweekStart="@(gameWeekStart.ToString("dd-MMM-yyyy"))">
+                                        <i class="bi bi-cloud-arrow-down h6"></i>
+                                    </button> *@
+                                }
+                                @if (item.RecStatus != Models.FixtureRecMatchType.fullTimeUnmatched && item.RecStatus != Models.FixtureRecMatchType.noFixture)
+                                {
+    @* 
+                                    <a asp-page="../Fixtures/Edit" asp-route-id="@item.Id"></a>
+                                    <a asp-page="../Fixtures/Delete" asp-route-id="@item.Id"><i class="bi bi-trash"></i></a> *@
+                                    @if (item.IsAllocated)
                                     {
-                                        @*Hidden fields for bulk download*@
-                                        <input type="hidden" name="DownloadFixtures.Index" value="@item.Id" />
-                                        <input type="hidden" name="DownloadFixtures[@item.Id].Id" value="@item.Id" />
-                                        <input type="hidden" name="DownloadFixtures[@item.Id].Date" value="@item.MatchDate" />
-                                        <input type="hidden" name="DownloadFixtures[@item.Id].IsHome" value="@(item.Venue == "H") " />
-                                        <input type="hidden" name="DownloadFixtures[@item.Id].Opponent" value="@item.Opponent" />
-                                        <input type="hidden" name="DownloadFixtures[@item.Id].FixtureType" value="@item.FixtureType" />
-                                        <input type="hidden" name="DownloadFixtures[@item.Id].TeamId" value="@team.Id" />
-                                        <button type="submit" name="D" value="C" class="btn btn-link btn-sm p-0" asp-route-teamId="@item.Team.Id" asp-route-opponent="@item.Opponent"
-                                                asp-route-matchDate="@(item.MatchDate.ToString("dd-MMM-yyyy"))" asp-route-venue="@item.Venue"
-                                                asp-route-fixturetype="@( (int) item.FixtureType)" asp-route-gameweekStart="@(gameWeekStart.ToString("dd-MMM-yyyy"))">
-                                            <i class="bi bi-cloud-arrow-down h6"></i>
-                                        </button>
+                                        @*Hidden fields for bulk confirmation*@
+                                        <input type="hidden" name="ConfirmAllocations.Index" value="@item.AllocationId" />
+                                        <input type="hidden" name="ConfirmAllocations[@item.AllocationId]" value="@item.AllocationId" />
                                     }
-                                    @if (item.RecStatus != Models.FixtureRecMatchType.fullTimeUnmatched && item.RecStatus != Models.FixtureRecMatchType.noFixture)
+                                    else if (item.CanAllocate)
                                     {
-
-                                        <a asp-page="../Fixtures/Edit" asp-route-id="@item.Id"></a>
-                                        <a asp-page="../Fixtures/Delete" asp-route-id="@item.Id"><i class="bi bi-trash"></i></a>
-                                        @if (item.IsAllocated)
-                                        {
-                                            @*Hidden fields for bulk confirmation*@
-                                            <input type="hidden" name="ConfirmAllocations.Index" value="@item.AllocationId" />
-                                            <input type="hidden" name="ConfirmAllocations[@item.AllocationId]" value="@item.AllocationId" />
-                                        }
-                                        else if (item.CanAllocate)
-                                        {
-                                            <a href="@($"fixtures/allocate?id={item.Id}")"><Icon Type="Icon.IconType.Schedule"/></a>
-                                        }
+                                        <a href="@($"fixtures/allocate?id={item.Id}")"><Icon Type="Icon.IconType.Schedule"/></a>
                                     }
+                                }
 
-                                    @*|*@
-                                    @*<a asp-page="./Delete" asp-route-id="@item.Team.Id"><i class="bi bi-trash"></i></a>*@
-                                </td>
-                            }
-                            @{newRow = false;}
-                        </tr>
-                    }
+                                @*|*@
+                                @*<a asp-page="./Delete" asp-route-id="@item.Team.Id"><i class="bi bi-trash"></i></a>*@
+                            </td>
+                        }
+                        @{newRow = false;}
+                    </tr>
                 }
-            </tbody>
-        </table>
+            }
+        </tbody>
+    </table>
+@* </EditForm> *@
 
 @code {
+    [SupplyParameterFromForm]
+    public List<Fixture> DownloadFixtures { get; set; } = new();
+
     private AppDBContext context = default!;
     private IQueryable<Team> team = default!; 
     private bool isAuthenticated = false;
-    private bool isLoaded = false;
-    
-    private bool isLoadedAgain = false;
+    private bool stripe = false;
+    private string bgTableBg = "--bs-table-bg";
+    private string bgTableBgStriped = "--bs-table-striped-bg";
 
-    private Dictionary<Team, List<TeamReconiliationRow>> fixtureRecResults = new();
+    [SupplyParameterFromForm]
+    public Dictionary<Team, List<TeamReconiliationRow>>? fixtureRecResults {get; set;}
 
-    private DateOnly gameWeekStart;
     private DateOnly gameWeekEnd;
+    private DateOnly gameWeekStart;
 
     [SupplyParameterFromQuery]
     private DateOnly? matchDay { get; set; }
@@ -228,6 +211,10 @@
         gameWeekStart = matchDay.Value.AddDays(-startOffset);
         gameWeekEnd = matchDay.Value.AddDays(endOffset);
 
+        //If rec results already populated then just return
+        if (fixtureRecResults is not null)
+            return;
+
         //Get fixtures for given date
         List<Fixture> fixtures = await context.Fixture
             .Include(f => f.FixtureAllocation)
@@ -243,7 +230,7 @@
         
         //Get placeholder reconciliation rows for each team
         List<List<TeamReconiliationRow>> rows = teams
-                .Select(t => new List<TeamReconiliationRow> { new TeamReconiliationRow { Team = t, MatchDate = gameWeekStart, RecStatus = FixtureRecMatchType.noFixture }})
+                .Select(t => new List<TeamReconiliationRow> { new TeamReconiliationRow { Team = t, MatchDate = gameWeekStart, RecStatus = FixtureRecMatchType.pending }})
                 .ToList();
         
         fixtureRecResults = rows
@@ -262,30 +249,15 @@
             
             if (row.Count > 0) {
                 fixtureRecResults[row[0].Team] = row;
+                row.Where(fr => fr.RecStatus == FixtureRecMatchType.fullTimeUnmatched).ToList()
+                    .ForEach(fr => DownloadFixtures.Add(
+                        new Fixture {Id = Guid.NewGuid(), TeamId= fr.Team.Id, Opponent = fr.Opponent, Date = fr.MatchDate, FixtureType = fr.FixtureType, IsHome = fr.Venue == "H" }
+                    ));
             } else {
                 fixtureRecResults.Remove(row[0].Team);
             }
-            @* fixtureRecResults = rows
-                .SelectMany(x => x)
-                    .OrderBy(x => x.Team.AgeGroup)
-                        .ThenBy(x => x.Team.Gender)
-                        .ThenBy(x => x.Team.Division)
-                .ToList()
-                .GroupBy(r => r.Team).ToDictionary(g => g.Key, g => g.ToList()); *@
             StateHasChanged();
-        }           
-
-        @* rows = teams
-                .Select(t => t.Reconcile(gameWeekStart, gameWeekEnd, fixtures))
-                .ToList();
-        fixtureRecResults = rows
-                .SelectMany(x => x)
-                    .OrderBy(x => x.Team.AgeGroup)
-                        .ThenBy(x => x.Team.Gender)
-                        .ThenBy(x => x.Team.Division)
-                .ToList()
-                .GroupBy(r => r.Team).ToDictionary(g => g.Key, g => g.ToList()); *@
-
+        }
     }
 
     static async IAsyncEnumerable<List<TeamReconiliationRow>> GetReconciliationRows(List<Team> teams, List<Fixture> fixtures, DateOnly gameWeekStart, DateOnly gameWeekEnd)
@@ -314,5 +286,10 @@
         }
     }
 
+    public void DownloadAllFixtures()
+    {
+        //Download fixtures
+        Console.WriteLine(DownloadFixtures);
+    }
     public async ValueTask DisposeAsync() => await context.DisposeAsync();
 }
