@@ -1,6 +1,7 @@
 @page "/contacts/create"
 @inject IDbContextFactory<AppDBContext> DbFactory
 @inject NavigationManager NavigationManager
+@inject IHttpContextAccessor HttpContextAccessor
 @attribute [Authorize]
 
 <PageTitle>Create</PageTitle>

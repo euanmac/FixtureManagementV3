@@ -56,12 +56,52 @@ export function onLoad() {
                 "displayOrder": 6
             },
             {
-                "id": "ff4b08c8-dc9a-4f4a-9ec1-bada343145b9",     
+                "id": "ff4b08c8-dc9a-4f4a-9ec1-bada343145b9",        
                 "title": "Small Astro",
                 "displayOrder": 0
             }],
             resourceOrder: 'displayOrder',
-            events: 'api/event'
+            events: 'api/event',
+            eventDrop: async function (info) {
+                alert(JSON.stringify(info.event, null, 4));
+
+                let ev = info.event;
+                let eventData = `{"id": "${ev.id}", "title": "${ev.title}","start": "${ev.start.toJSON()}","end": "${ev.end.toJSON()}","resourceId": "${ev.getResources()[0].id}"}`
+                let reqOptions = {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+
+                }
+                
+                const response = await fetch('/api/Event/' + info.event.id, {
+                    method: 'PUT', // *GET, POST, PUT, DELETE, etc.
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: eventData // body data type must match "Content-Type" header
+                });
+            
+                if (!response.ok) {
+                    const message = `An error has occurred: ${response.statusText}`;
+                    throw new Error(message);
+                }
+
+                // $.ajax({
+                //     url: '/api/Event/' + info.event.id,
+                //     type: 'PUT',
+                //     dataType: 'application/json',
+                //     contentType: 'application/json',
+                //     data: eventData,
+                //     success: function (data, textStatus, xhr) {
+                //         console.log(data);
+                //     },
+                //     error: function (xhr, textStatus, errorThrown) {
+                //         info.revert();
+                //     }
+                // });
+            },
 
         });
 

@@ -1,4 +1,5 @@
 @page "/gameweek"
+@preservewhitespace true
 @using Microsoft.AspNetCore.Components.QuickGrid
 @using System.ComponentModel.DataAnnotations
 @using FixtureManagementV3.Components.Helper
@@ -7,22 +8,57 @@
 @inject IDbContextFactory<AppDBContext> DbFactory
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject FullTimeReconciliationService FullTimeReconciliationService;
+@inject PageHistoryService PageHistoryService;
 
 @attribute [StreamRendering]
 <PageTitle>Gameweek</PageTitle>
 
 <h1>Gameweek</h1>
 <hr>
-
-@if (isAuthenticated) {
-    <div class="mt-5">
-    <p>@((TimeOnly.FromDateTime(DateTime.Now) - start).TotalMilliseconds)</p>
+@* <div class="container"> *@
+    <div class="row">
+        <div class="col">
+            <h3>@(gameWeekStart.ToString("dddd, d MMMM yyyy")) to @(gameWeekEnd.ToString("dddd, d MMMM yyyy"))</h3>
+        </div>
+        <div class="col text-end">
+                <button class="btn btn-secondary" type="button" onclick="location.href='./gameweek'">today</button>
+                <div class="btn-group">
+                    <button class="btn btn-dark" type="button" aria-label="prevSat" onclick="location.href='./gameweek?matchday=@(gameWeekStart.AddDays(-7).ToString("dd-MMM-yyyy"))'">
+                        <i class="bi bi-chevron-left align-middle" data-toggle="tooltip" data-original-title=""></i>
+                    </button>
+                    <button class="btn btn-dark" type="button" aria-label="nextSat" onclick="location.href='./gameweek?matchday=@(gameWeekStart.AddDays(+7).ToString("dd-MMM-yyyy"))'">
+                        <i class="bi bi-chevron-right align-middle" data-toggle="tooltip" data-original-title=""></i>
+                    </button>
+                </div>
+        </div>
     </div>
-}
-<EditForm Model="DownloadFixtures" OnSubmit="DownloadAllFixtures">
-    <input type="hidden" name="DownloadFixtures"  @value="DownloadFixtures" />
-    <button type="submit" class="btn btn-primary">Download All</button>
-</EditForm>
+    @if (isAuthenticated) 
+    {
+        <div class="row my-2 g-1">
+            <div class="col-auto">
+                <EditForm OnSubmit="FixturesAction" FormName="Action" Model="fixtureRecResults" enhance>
+                    @* <input type="hidden" name="DownloadFixtures"  @value="DownloadFixtures" /> *@
+                    <button type="submit" class="btn btn-primary" disabled="@(buttonsDisabled || (downloadCount == 0))" value="@Action.Download">Download @(downloadCount)</button>
+                    <button type="submit" class="btn btn-primary" disabled="@(buttonsDisabled || (unconfirmedCount == 0))" name="FormAction" value="@Action.Confirm">Confirm @(unconfirmedCount)</button>
+                    <button type="submit" class="btn btn-primary" disabled="@(buttonsDisabled || (unmatchedCount ==0))" name="FormAction" value="@Action.Delete">Delete Unmatched</button>
+                    <button type="submit" class="btn btn-primary" disabled="@buttonsDisabled" name="FormAction" value="@Action.Update">Update</button>
+
+                </EditForm>
+            </div>
+            <div class="col-auto">
+                <EditForm OnSubmit="ClearCache" FormName="ClearCache" Model="this" enhance>
+                </EditForm>
+            </div>
+        
+        @* <div class="col">
+            @if (isAuthenticated) {            
+                @((TimeOnly.FromDateTime(DateTime.Now) - start).TotalMilliseconds)                
+            }
+        </div> *@
+        </div>
+    }
+@* </div> *@
     <table class="table table-sm table-stripedx quickgrid">
         <thead>
             <tr>
@@ -128,35 +164,37 @@
 
                                 @if (item.RecStatus == Models.FixtureRecMatchType.fullTimeUnmatched)
                                 {
-                                    @*Hidden fields for bulk download*@
-                                    @* <input type="hidden" name="DownloadFixtures.Index" value="@item.Id" />
-                                    <input type="hidden" name="DownloadFixtures[@item.Id].Id" value="@item.Id" />
-                                    <input type="hidden" name="DownloadFixtures[@item.Id].Date" value="@item.MatchDate" />
-                                    <input type="hidden" name="DownloadFixtures[@item.Id].IsHome" value="@(item.Venue == "H") " />
-                                    <input type="hidden" name="DownloadFixtures[@item.Id].Opponent" value="@item.Opponent" />
-                                    <input type="hidden" name="DownloadFixtures[@item.Id].FixtureType" value="@item.FixtureType" />
-                                    <input type="hidden" name="DownloadFixtures[@item.Id].TeamId" value="@team.Id" /> *@
-                                    @* <button type="submit" name="D" value="C" class="btn btn-link btn-sm p-0" asp-route-teamId="@item.Team.Id" asp-route-opponent="@item.Opponent"
-                                            asp-route-matchDate="@(item.MatchDate.ToString("dd-MMM-yyyy"))" asp-route-venue="@item.Venue"
-                                            asp-route-fixturetype="@( (int) item.FixtureType)" asp-route-gameweekStart="@(gameWeekStart.ToString("dd-MMM-yyyy"))">
-                                        <i class="bi bi-cloud-arrow-down h6"></i>
-                                    </button> *@
+                                    <EditForm method="post" Model="item" OnSubmit="DownloadFixture" FormName="@(item.Id.ToString())" Enhance>
+                                        <input type="hidden" name="downloadFixture.Id" value="@item.Id" />
+                                        <input type="hidden" name="downloadFixture.Date" value="@item.MatchDate.ToString("yyyy-MMM-dd")" />
+                                        <input type="hidden" name="downloadFixture.IsHome" value="@(item.Venue == "H") " />
+                                        <input type="hidden" name="downloadFixture.Opponent" value="@item.Opponent" />
+                                        <input type="hidden" name="downloadFixture.FixtureType" value="@item.FixtureType" />
+                                        <input type="hidden" name="downloadFixture.TeamId" value="@team.Id" />
+                                        @* <button type="submit" class="btn btn-link">
+                                            <i class="bi bi-cloud-arrow-down"></i>
+                                        </button>s *@
+                                        <button type="submit" style="border: none; background-color: transparent" class="btn-link">
+                                            <i class ="bi bi-cloud-arrow-down"/>   
+                                        </button>
+                                    </EditForm>
                                 }
-                                @if (item.RecStatus != Models.FixtureRecMatchType.fullTimeUnmatched && item.RecStatus != Models.FixtureRecMatchType.noFixture)
+                                @if (item.RecStatus != Models.FixtureRecMatchType.fullTimeUnmatched && item.RecStatus != Models.FixtureRecMatchType.noFixture && item.RecStatus != Models.FixtureRecMatchType.pending)
                                 {
-    @* 
-                                    <a asp-page="../Fixtures/Edit" asp-route-id="@item.Id"></a>
-                                    <a asp-page="../Fixtures/Delete" asp-route-id="@item.Id"><i class="bi bi-trash"></i></a> *@
+
+
+                                    <a href="@(ActionURL("edit", item.Id))"><Icon Type="Icon.IconType.Edit"/></a>
+                                    <a href="@(ActionURL("delete", item.Id))"><Icon Type="Icon.IconType.Delete"/></a>        
+                                    @if (item.CanAllocate) {
+                                        <a href="@(ActionURL("allocate", item.Id))"><Icon Type="Icon.IconType.Schedule"/></a>
+                                    }
                                     @if (item.IsAllocated)
                                     {
                                         @*Hidden fields for bulk confirmation*@
                                         <input type="hidden" name="ConfirmAllocations.Index" value="@item.AllocationId" />
                                         <input type="hidden" name="ConfirmAllocations[@item.AllocationId]" value="@item.AllocationId" />
                                     }
-                                    else if (item.CanAllocate)
-                                    {
-                                        <a href="@($"fixtures/allocate?id={item.Id}")"><Icon Type="Icon.IconType.Schedule"/></a>
-                                    }
+ 
                                 }
 
                                 @*|*@
@@ -169,30 +207,40 @@
             }
         </tbody>
     </table>
-@* </EditForm> *@
 
 @code {
+
+    private enum Action { 
+        Download, 
+        Delete, 
+        Update,
+        Confirm
+    }
+
     [SupplyParameterFromForm]
-    public List<Fixture> DownloadFixtures { get; set; } = new();
+    private Action FormAction {get; set;}= Action.Update;
+    [SupplyParameterFromForm]
+    private Fixture? downloadFixture {get; set;}
 
     private AppDBContext context = default!;
-    private IQueryable<Team> team = default!; 
     private bool isAuthenticated = false;
     private bool stripe = false;
     private string bgTableBg = "--bs-table-bg";
     private string bgTableBgStriped = "--bs-table-striped-bg";
+    private bool buttonsDisabled = true;
+    private int downloadCount;
+    private int unconfirmedCount;
+    private int unmatchedCount;
 
-    [SupplyParameterFromForm]
-    public Dictionary<Team, List<TeamReconiliationRow>>? fixtureRecResults {get; set;}
+ 
+    public Dictionary<Team, List<TeamReconiliationRow>> fixtureRecResults {get; set;} = new();
 
     private DateOnly gameWeekEnd;
     private DateOnly gameWeekStart;
 
     [SupplyParameterFromQuery]
     private DateOnly? matchDay { get; set; }
-
-    private TimeOnly start = TimeOnly.FromDateTime(DateTime.Now);
-
+    
     protected override async Task OnInitializedAsync()    
     {
 
@@ -211,10 +259,6 @@
         gameWeekStart = matchDay.Value.AddDays(-startOffset);
         gameWeekEnd = matchDay.Value.AddDays(endOffset);
 
-        //If rec results already populated then just return
-        if (fixtureRecResults is not null)
-            return;
-
         //Get fixtures for given date
         List<Fixture> fixtures = await context.Fixture
             .Include(f => f.FixtureAllocation)
@@ -228,11 +272,12 @@
         //Get teams
         List<Team> teams = await context.Team.ToListAsync();
         
+        
         //Get placeholder reconciliation rows for each team
         List<List<TeamReconiliationRow>> rows = teams
                 .Select(t => new List<TeamReconiliationRow> { new TeamReconiliationRow { Team = t, MatchDate = gameWeekStart, RecStatus = FixtureRecMatchType.pending }})
                 .ToList();
-        
+
         fixtureRecResults = rows
                 .SelectMany(x => x)
                     .OrderBy(x => x.Team.AgeGroup)
@@ -245,51 +290,101 @@
 
         //For each team reconcile the fixtures for a given date
         //Will be asynchronous so update state on each result returned
-        await foreach (var row in GetReconciliationRows(teams, fixtures, gameWeekStart, gameWeekEnd)) {
+        await foreach (var row in FullTimeReconciliationService.Reconcile(teams, fixtures, gameWeekStart, gameWeekEnd)) {
             
             if (row.Count > 0) {
                 fixtureRecResults[row[0].Team] = row;
-                row.Where(fr => fr.RecStatus == FixtureRecMatchType.fullTimeUnmatched).ToList()
-                    .ForEach(fr => DownloadFixtures.Add(
-                        new Fixture {Id = Guid.NewGuid(), TeamId= fr.Team.Id, Opponent = fr.Opponent, Date = fr.MatchDate, FixtureType = fr.FixtureType, IsHome = fr.Venue == "H" }
-                    ));
+
             } else {
                 fixtureRecResults.Remove(row[0].Team);
             }
+
+            downloadCount = fixtureRecResults.Values.SelectMany(x => x).Count(f => f.RecStatus == FixtureRecMatchType.fullTimeUnmatched);
+            unconfirmedCount = fixtureRecResults.Values.SelectMany(x => x).Count(f => f.IsAllocated && !f.IsConfirmed);
+            unmatchedCount = fixtureRecResults.Values.SelectMany(x => x).Count(f => f.RecStatus == FixtureRecMatchType.localFixtureUnmatched);
             StateHasChanged();
         }
+        buttonsDisabled = false;
     }
 
-    static async IAsyncEnumerable<List<TeamReconiliationRow>> GetReconciliationRows(List<Team> teams, List<Fixture> fixtures, DateOnly gameWeekStart, DateOnly gameWeekEnd)
-    {
-        List<Task<List<TeamReconiliationRow>>> teamRecTasks = teams
-                .Select(t => t.ReconcileAsync(gameWeekStart, gameWeekEnd, fixtures))
-                .ToList();
+    public void ClearCache() {
+        FullTimeReconciliationService.ClearCache();
+        NavigationManager.NavigateTo($"/gameweek?matchday={matchDay!.Value.ToString("dd-MMM-yyyy")}");
+    }
 
-        while (teamRecTasks.Any())
+    public void FixturesAction()
+    {
+        using var context = DbFactory.CreateDbContext();
+        
+        switch (FormAction) 
         {
-            var finishedTask = await Task.WhenAny(teamRecTasks);
-            teamRecTasks.Remove(finishedTask);
-            yield return finishedTask.Result;
+            case Action.Download:
+                //Download fixtures
+                DownloadAllFixtures();
+                break;
+
+            case Action.Delete:
+                //Delete unmatched fixtures
+                DeleteUnmatchedFixtures();
+                break;
+            
+            case Action.Update:
+                FullTimeReconciliationService.ClearCache();
+                break;
+
+            case Action.Confirm:
+                //Confirm all allocations
+                ConfirmAll();
+                break;
+        }
+        NavigationManager.NavigateTo($"/gameweek?matchday={matchDay!.Value.ToString("dd-MMM-yyyy")}");
+    }
+
+    private void DeleteUnmatchedFixtures()
+    {
+        using var context = DbFactory.CreateDbContext();
+        foreach (TeamReconiliationRow rec in fixtureRecResults.Values.SelectMany(x => x).Where(f => f.RecStatus == FixtureRecMatchType.localFixtureUnmatched)) {
+            context.Fixture.Remove(new Fixture {Id = rec.Id});
+            context.SaveChangesAsync();
+        }
+
+    }
+
+    private void ConfirmAll()
+    {
+        using var context = DbFactory.CreateDbContext();
+        foreach (TeamReconiliationRow rec in fixtureRecResults.Values.SelectMany(x => x).Where(f => (f.IsAllocated && !f.IsConfirmed))) {
+            context.FixtureAllocation.Where(fa => fa.Id == rec.AllocationId).First().IsConfirmed = true;
+            context.SaveChangesAsync();
+        }
+
+    }
+
+    private void DownloadAllFixtures() {
+        using var context = DbFactory.CreateDbContext();
+
+        foreach (TeamReconiliationRow rec in fixtureRecResults.Values.SelectMany(x => x).Where(f => f.RecStatus == FixtureRecMatchType.fullTimeUnmatched)) {
+
+            context.Fixture.Add((new Fixture {Id = Guid.NewGuid(), Date = rec.MatchDate, IsHome = rec.Venue == "H", Opponent = rec.Opponent, FixtureType = rec.FixtureType, TeamId = rec.Team.Id}));
+            context.SaveChangesAsync();
+        }
+    }
+    
+    private async Task DownloadFixture()
+    {
+        if (downloadFixture is not null)
+        {
+            using var context = DbFactory.CreateDbContext();
+            context.Fixture.Add(downloadFixture!);
+            await context.SaveChangesAsync();
+            NavigationManager.NavigateTo($"/gameweek?matchday={matchDay!.Value.ToString("dd-MMM-yyyy")}");
         }
     }
 
-    static async IAsyncEnumerable<List<TeamReconiliationRow>> GetReconciliationRows2(List<Team> teams, List<Fixture> fixtures, DateOnly gameWeekStart, DateOnly gameWeekEnd)
-    {
-        List<Task<List<TeamReconiliationRow>>> teamRecTasks = teams
-                .Select(t => t.ReconcileAsync(gameWeekStart, gameWeekEnd, fixtures))
-                .ToList();
+    private string ActionURL(string action, Guid id) => $"fixtures/{action}?id={id.ToString()}&returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}";
 
-        foreach (var t in teamRecTasks)
-        {
-            yield return await t;
-        }
-    }
-
-    public void DownloadAllFixtures()
+    public async ValueTask DisposeAsync() 
     {
-        //Download fixtures
-        Console.WriteLine(DownloadFixtures);
+        await context.DisposeAsync();
     }
-    public async ValueTask DisposeAsync() => await context.DisposeAsync();
 }

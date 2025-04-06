@@ -13,55 +13,59 @@
 
 <h1>Bookings</h1>
 <hr/>
-<p>
-    <a class="btn btn-primary" href="bookings/create">Add Booking</a>
-    @* <input type="checkbox" class="btn-check" id="btn-check" autocomplete="off">
-    <label class="btn btn-check-primary" for="btn-check">Single toggle</label> *@
-    @* <input type="checkbox" class="btn-check" id="btn-check-outlined" autocomplete="off">
-    @* <label class="btn btn-outline-primary" for="btn-check-outlined">Single toggle</label><br> *@
-    @* <input type="checkbox" class="btn-check" id="btn-check" autocomplete="off" onclick="FilterDate()">
-    <label>Show Past</label> *@ 
-</p>
+<div class="row align-items-center mb-3"
+    <div class="col-auto">
+        @if (isAuthenticated)  {
+                <a class="btn btn-primary" href="bookings/create">Add Booking</a>
+                @* <input type="checkbox" class="btn-check" id="btn-check" autocomplete="off">
+                <label class="btn btn-check-primary" for="btn-check">Single toggle</label> *@
+                @* <input type="checkbox" class="btn-check" id="btn-check-outlined" autocomplete="off">
+                @* <label class="btn btn-outline-primary" for="btn-check-outlined">Single toggle</label><br> *@
+                @* <input type="checkbox" class="btn-check" id="btn-check" autocomplete="off" onclick="FilterDate()">
+                <label>Show Past</label> *@             
+        }
+    </div>
+    <div class="col-auto">
+        <input type="checkbox" id="show-past" onclick="ToggleRows(!this.checked)" class="form-check-input"/>
+        <label>Show Past</label>
+    </div>
+</div
 
-<QuickGrid Class="table" Items="context.Booking.Include(b => b.Pitch)" ItemKey="@(c => $"{c.Id}:{c.IsPast.ToString()}")">
+<QuickGrid Class="table" Items="context.Booking.Include(b => b.Pitch)">
     <PropertyColumn Property="booking => booking.Title" />
     <PropertyColumn Property="booking => booking.Start" />
     <PropertyColumn Property="booking => booking.End" />
     <PropertyColumn Property="booking => booking.Pitch!.Name" title="Pitch"/>
     <TemplateColumn Context="booking"  title="Recurring" Align="Align.Center">
-        <InputCheckbox @bind-Value="booking.IsRecurring" disabled />
+        <InputCheckbox @bind-Value="booking.IsRecurring" disabled class="@{booking.IsPast ? "past": ""}"/>
     </TemplateColumn>
     @if (isAuthenticated) {
         <TemplateColumn Context="booking">
-            <a href="@($"bookings/edit?id={booking.Id}")"><Icon Type="Icon.IconType.Edit"/></a> |
+            <a href="@($"bookings/edit?id={booking.Id}")"><Icon Type="Icon.IconType.Edit"/></a>
             <a href="@($"bookings/delete?id={booking.Id}")"><Icon Type="Icon.IconType.Delete"/></a>
         </TemplateColumn>
     }
 </QuickGrid>
 
 <script>
+    function HideRows(node) {
+        node.parentElement.parentElement.hidden = true;
+    }
+    function ShowRows(node) {
+        node.parentElement.parentElement.hidden = false;
+    }
 
-function FilterDate(){
-    // Get the current date
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Set to midnight to compare only the date part
+    function ToggleRows(hidden){
 
-    // Get all rows of the table
-    const rows = document.querySelectorAll('table tbody tr');
+        // Get all rows of the table
+        const rows = document.querySelectorAll('.past');
 
-    rows.forEach(row => {
-        // Get the date from the specified date column (assuming it's the second column, index 1)
-        const dateCell = row.cells[3];
-        const dateText = dateCell.textContent.trim();
-        const rowDate = new Date(dateText);
+        rows.forEach(row => {
+            row.parentElement.parentElement.hidden = hidden;
+        });
+    }
 
-        // Compare the date from the column with the current date
-        if (rowDate < today) {
-            // Hide the row if the date is less than today
-            row.style.display = 'none';
-        }
-    });
-}
+    ToggleRows(true);
 </script>
 
 @code {

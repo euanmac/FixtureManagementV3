@@ -1,5 +1,5 @@
 @page "/fixtures/allocate"
-
+@attribute [Authorize]
 @inject IDbContextFactory<AppDBContext> DbFactory
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -93,6 +93,8 @@
 
     [SupplyParameterFromForm]
     string Action { get; set; } = "update";
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -169,7 +171,7 @@
         }
         
         await context.SaveChangesAsync();
-        NavigationManager.NavigateTo("/fixtures");
+        NavigationManager.NavigateTo(ReturnUrl ?? "/fixtures");
     }
 
 }

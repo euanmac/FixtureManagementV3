@@ -119,9 +119,7 @@ namespace FixtureManagementV3.Models
 
             }
 
-            
-
-            catch (Exception e)
+            catch
             {
                 Console.WriteLine($"Error getting fixtures for team {team.Id}");
             }
@@ -234,10 +232,8 @@ namespace FixtureManagementV3.Models
                 }
 
             }
-
             
-
-            catch (Exception e)
+            catch
             {
                 Console.WriteLine($"Error getting fixtures for team {team.Id}");
             }

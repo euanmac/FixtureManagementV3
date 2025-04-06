@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using FixtureManagementV3.Components;
 using FixtureManagementV3.Components.Account;
 using FixtureManagementV3.Data;
+using FixtureManagementV3.Services;
+using FixtureManagementV3;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,6 +43,8 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+builder.Services.AddSingleton<FullTimeReconciliationService>();
+builder.Services.AddScoped<PageHistoryService>();
 
 var app = builder.Build();
 
