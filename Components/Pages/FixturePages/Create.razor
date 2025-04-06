@@ -4,6 +4,7 @@
 @using FixtureManagementV3.Data
 @inject IDbContextFactory<AppDBContext> DbFactory
 @inject NavigationManager NavigationManager
+@inject IHttpContextAccessor HttpContextAccessor
 @attribute [Authorize]
 
 <PageTitle>Create</PageTitle>
@@ -77,18 +78,36 @@
             .OrderBy(t => t.AgeGroup)
             .ThenBy(t => t.Gender)
             .ThenBy(t => t.Name)
-            .AsQueryable();
+            .AsQueryable(); 
 
             if (Fixture is null && teamList.Count() != 0) {
                 Fixture = new Fixture { Id = Guid.NewGuid(),  TeamId = teamList.First().Id, Date = DateOnly.FromDateTime(DateTime.Now), FixtureType = FixtureType.League, IsHome = true, Opponent="" };
             }
-
     }
 
+    private IDisposable? registration;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            registration = NavigationManager.RegisterLocationChangingHandler(LocationChangingHandler);
+        }
+    }
+
+    private ValueTask LocationChangingHandler(LocationChangingContext arg)
+    {
+        Console.WriteLine("Location is changing...");
+        return ValueTask.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        registration?.Dispose();
+    }
     // To protect from overposting attacks, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
     private async Task AddFixture()
     {
-
         using var context = DbFactory.CreateDbContext();
         context.Fixture.Add(Fixture!);
         await context.SaveChangesAsync();

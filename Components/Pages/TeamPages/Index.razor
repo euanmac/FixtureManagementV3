@@ -10,11 +10,13 @@
 
 <h1>Teams</h1>
 <hr>
-@if (isAuthenticated) {
-    <p>
-        <a class="btn btn-primary" href="teams/create">Add Team</a>
-    </p>
-}
+<div class="row align-items-center mb-3">
+    <div class="col-auto">
+        @if (isAuthenticated) {
+            <a class="btn btn-primary" href="teams/create">Add Team</a>
+        }
+    </div>
+</div>
 
 <QuickGrid Class="table table-sm table-striped" Items="team" >
     @* <PropertyColumn Property="team => team.AgeGroup" Title="Age Group"/> *@

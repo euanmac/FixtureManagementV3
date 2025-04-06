@@ -65,7 +65,8 @@ else
 
     [SupplyParameterFromForm]
     private Fixture? Fixture { get; set; }
- 
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
     protected override async Task OnInitializedAsync()
     {
         using var context = DbFactory.CreateDbContext();
@@ -101,7 +102,7 @@ else
             }
         }
 
-        NavigationManager.NavigateTo("/fixtures");
+        NavigationManager.NavigateTo(ReturnUrl ?? "/fixtures");
     }
 
     private bool FixtureExists(System.Guid id)

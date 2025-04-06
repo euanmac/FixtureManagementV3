@@ -6,7 +6,7 @@ namespace FixtureManagementV3.Models
 {
     public class TeamReconiliationRow
     {
-        public required Guid TeamId { get; set; }
+        public required Team Team { get; set; }
         public Guid Id { get; set; }
         public FixtureRecMatchType RecStatus { get; set; }
         [DataType(DataType.Date)]

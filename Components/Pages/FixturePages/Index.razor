@@ -103,6 +103,7 @@ function Filter() {
     [SupplyParameterFromForm (FormName="FilterFixtures")]
     private FilterContext? Filter {get; set;}
     private bool isAuthenticated = false;
+    private IDisposable? registration;
 
     protected override async Task OnInitializedAsync()    
     {
@@ -124,12 +125,26 @@ function Filter() {
                 .ToListAsync())
                 .Select(f => new FixtureViewModel(f, true))
                 .AsQueryable();
+        
+        NavigationManager.LocationChanged += OnLocationChanged;
+            registration = NavigationManager.RegisterLocationChangingHandler(LocationChangingHandler);
+
+    }
+
+    private ValueTask LocationChangingHandler(LocationChangingContext arg)
+    {
+        Console.WriteLine("Location is changing...");
+        return ValueTask.CompletedTask;
     }
 
     private void FilterFixtures() {
     }
 
-    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+    public async ValueTask DisposeAsync() 
+    {
+      await context.DisposeAsync();
+      registration?.Dispose();
+    }
 
     public class FilterContext {
         public bool IncludeHome {get; set;} = true;
@@ -137,4 +152,12 @@ function Filter() {
         public DateOnly StartDate { get; set; }
         public DateOnly EndDate {get; set;}
     }    
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        var currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        Console.WriteLine(currentUrl);
+        StateHasChanged();
+    }
 }
+
