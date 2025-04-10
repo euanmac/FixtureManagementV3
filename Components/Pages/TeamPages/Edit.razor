@@ -19,76 +19,72 @@ else
     <div class="row">
         <div class="col-md-4">
             <EditForm method="post" Model="Team" OnValidSubmit="UpdateTeam" FormName="edit" Enhance>
-                
                 <DataAnnotationsValidator />
-                <ValidationSummary role="alert"/>
-                <input type="hidden" name="Team.Id" value="@Team.Id" />
-                
-                <div class="mb-3">
-                                <span class="text-danger">*</span>
-                                <label for="name" class="form-label">Name:</label> 
-                                <InputText id="name" @bind-Value="Team.Name" class="form-control" aria-required="true"/> 
-                                <ValidationMessage For="() => Team.Name" class="text-danger" /> 
+                <input type="hidden" name="Team.Id" value="@Team.Id" />                
+                <div class="mb-3 form-floating">
+                    <InputText id="name" @bind-Value="Team.Name" class="form-control" aria-required="true"/> 
+                    <label for="name" class="form-label">Name</label> 
+                    <ValidationMessage For="() => Team.Name" class="text-danger" /> 
                 </div>        
-                <div class="mb-3">
-                    <span class="text-danger">*</span>
-                    <label for="agegroup" class="form-label">Age Group:</label> 
-                    <InputSelect id="agegroup" @bind-Value="Team.AgeGroup" class="form-control" aria-required="true"> 
+                <div class="mb-3 form-floating">
+                    <InputSelect id="agegroup" @bind-Value="Team.AgeGroup" class="form-control form-select" aria-required="true"> 
                         @foreach (var ag in Enum.GetValues(typeof(AgeGroup)))
                         {
                             <option value="@ag">@ag</option>
                         }
                     </InputSelect>
+                    <label for="agegroup" class="form-label">Age Group:</label> 
+
                     <ValidationMessage For="() => Team.AgeGroup" class="text-danger" /> 
                 </div>        
-                <div class="mb-3">
-                    <label for="gender" class="form-label">Gender:</label> 
-                    <InputSelect @bind-Value="Team.Gender" class="form-control" aria-required="true"> 
+                <div class="mb-3 form-floating">
+                    <InputSelect @bind-Value="Team.Gender" class="form-control form-select" aria-required="true"> 
                         @foreach (var gender in Enum.GetValues(typeof(Gender)))
                         {
                             <option value="@gender">@gender</option>
                         }
                     </InputSelect>
+                    <label for="gender" class="form-label">Gender</label> 
                     <ValidationMessage For="() => Team.Gender" class="text-danger" /> 
                 </div>        
-                <div class="mb-3">
-                    <label for="league" class="form-label">League:</label> 
-                    <InputSelect @bind-Value="Team.League" class="form-control" aria-required="true"> 
+                <div class="mb-3 form-floating">
+                    <InputSelect @bind-Value="Team.League" class="form-control form-select" aria-required="true"> 
                         @foreach (var league in Enum.GetValues(typeof(League)))
                         {
                             <option value="@league">@league</option>
                         }
                     </InputSelect>
+                    <label for="league" class="form-label">League</label> 
                     <ValidationMessage For="() => Team.League" class="text-danger" /> 
                 </div>        
-                <div class="mb-3">
-                    <label for="division" class="form-label">Division:</label> 
-                    <InputSelect @bind-Value="Team.Division" class="form-control" aria-required="true"> 
+                <div class="mb-3 form-floating">
+                    <InputSelect @bind-Value="Team.Division" class="form-control form-select" aria-required="true"> 
                         @foreach (var division in Enum.GetValues(typeof(Division)))
                         {
                             <option value="@division">@division</option>
                         }
                     </InputSelect>
+                    <label for="division" class="form-label">Division</label> 
                     <ValidationMessage For="() => Team.Division" class="text-danger" /> 
                 </div>        
-                <div class="mb-3">
-                    <label for="fulltimeteamid" class="form-label">FullTimeTeamId:</label> 
+                <div class="mb-3 form-floating">
                     <InputText id="fulltimeteamid" @bind-Value="Team.FullTimeTeamId" class="form-control" /> 
+                    <label for="fulltimeteamid" class="form-label">FullTimeTeamId</label> 
                     <ValidationMessage For="() => Team.FullTimeTeamId" class="text-danger" /> 
                 </div>        
-                <div class="mb-3">
-                    <label for="fulltimeleagueid" class="form-label">FullTimeLeagueId:</label> 
+                <div class="mb-3 form-floating">
                     <InputText id="fulltimeleagueid" @bind-Value="Team.FullTimeLeagueId" class="form-control" /> 
+                    <label for="fulltimeleagueid" class="form-label">FullTimeLeagueId</label> 
                     <ValidationMessage For="() => Team.FullTimeLeagueId" class="text-danger" /> 
                 </div>           
                 <button type="submit" class="btn btn-primary">Save</button>
+                <a href="#" onclick="history.back()" class="btn btn btn-secondary">Back</a>
             </EditForm>
         </div>
     </div>
 }
 
 <div>
-    <a href="#" onclick="history.back()" class="btn btn btn-secondary">Back</a>
 </div>
 
 @code {
