@@ -13,13 +13,13 @@
         <PropertyColumn Property="fixture => fixture.Date" />
         @if (!@TeamHidden)
         {
-            <TemplateColumn Context="fixture">
+            <TemplateColumn Context="fixture" title="Team">
                 <a href="@($"teams/details?id={fixture.TeamId}")">@fixture.Team</a>
             </TemplateColumn>
         }
         <PropertyColumn Title="H/A" Property='fixture => (fixture.IsHome ? "H" : "A")'/>
         <PropertyColumn Property="fixture => fixture.Opponent" />
-        <PropertyColumn Property="fixture => fixture.Type" />
+        <PropertyColumn Property="fixture => fixture.Type" Class="d-none d-sm-table-cell"/>
         <PropertyColumn Property="fixture => fixture.Start" />
         <PropertyColumn Property="fixture => fixture.Pitch" />
         <TemplateColumn Context="fixture">
