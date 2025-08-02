@@ -17,7 +17,7 @@
 <div>
     @if (team is null)
     {
-        <h2>Fixture</h2>
+        <h2>Team</h2>
         <hr />
         <p><em>Loading...</em></p>
     }
@@ -84,7 +84,7 @@
             <a href="#" onclick="history.back()" class="btn btn btn-secondary">Back</a>
         </div>
         <br>
-        <FixtureGrid CanEdit="true" Fixtures="@fixture" TeamHidden="true"/>
+        <FixtureGrid CanEdit="@isAuthenticated" Fixtures="@fixture" TeamHidden="true"/>
     }
 </div>
 

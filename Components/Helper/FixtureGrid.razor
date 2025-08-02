@@ -18,6 +18,9 @@
             </TemplateColumn>
         }
         <PropertyColumn Title="H/A" Property='fixture => (fixture.IsHome ? "H" : "A")'/>
+        <TemplateColumn Context="fixture" title="Opponent">
+            <a href="@($"fixtures/{(CanEdit ? "edit" : "details")}?id={fixture.Id}")">@fixture.Opponent</a>
+        </TemplateColumn>
         <PropertyColumn Property="fixture => fixture.Opponent" />
         <PropertyColumn Property="fixture => fixture.Type" Class="d-none d-sm-table-cell"/>
         <PropertyColumn Property="fixture => fixture.Start" />
