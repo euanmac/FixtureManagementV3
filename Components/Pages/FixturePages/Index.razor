@@ -8,11 +8,14 @@
 @using FixtureManagementV3.Data
 @using FixtureManagementV3.Components.Helper
 @using System.Linq
+@using Microsoft.AspNetCore.Identity;
 
 @implements IAsyncDisposable
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IDbContextFactory<AppDBContext> DbFactory
 @inject NavigationManager NavigationManager
+@inject RoleManager<IdentityRole> roleManager
+@inject UserManager<ApplicationUser> userManager
 
 <PageTitle>Fixtures</PageTitle>
 
@@ -108,12 +111,15 @@ function Filter() {
     protected override async Task OnInitializedAsync()    
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        isAuthenticated = (user.Identity is not null && user.Identity.IsAuthenticated);
+        var authUser = authState.User;
+        isAuthenticated = (authUser.Identity is not null && authUser.Identity.IsAuthenticated);
+        @* bool isAdmin = user.IsInRole("Admin"); *@
+        @* await roleManager.CreateAsync(new IdentityRole("Admin")); *@
+        @* var user = await userManager.FindByNameAsync(authUser.Identity!.Name!);
+        await userManager.AddToRoleAsync(user!, "Admin"); *@
 
         context = DbFactory.CreateDbContext();
         Filter ??= new FilterContext{StartDate = DateOnly.FromDateTime(DateTime.Now), EndDate = DateOnly.FromDateTime(DateTime.Now).AddDays(14)};
-
         fixturesVM = (await context.Fixture
                 .Include(f => f.Team)
                 .Include(f => f.FixtureAllocation)
