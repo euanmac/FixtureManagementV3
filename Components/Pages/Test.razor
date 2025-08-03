@@ -1,5 +1,6 @@
 ﻿@page "/test"
-<h3>Test</h3>
+@attribute [Authorize(Roles = "Admin")]
+<h3>Settings</h3>
 
 <EditForm Model="model">
     <label>Input Date</label>

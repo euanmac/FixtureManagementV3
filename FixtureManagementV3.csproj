@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <None Update="Data\app.db" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />  
-    <None Update="Local\app.db" CopyToOutputDirectory="Never" ExcludeFromSingleFile="true" />
+    <None Update="Data\local.db" CopyToOutputDirectory="Never" ExcludeFromSingleFile="true" />
   </ItemGroup>
 
   <ItemGroup>
