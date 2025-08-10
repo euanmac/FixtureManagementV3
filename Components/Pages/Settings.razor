@@ -1,0 +1,59 @@
+﻿@page "/settings"
+@attribute [Authorize(Roles = "Admin")]
+@inject IDbContextFactory<AppDBContext> DbFactory
+@using CsvHelper
+@using System.Globalization
+
+<PageTitle>Settings</PageTitle>
+
+<h1>Settings</h1>
+
+    <form @formname="delete" @onsubmit="RemoveFixtures"   method="post" Model="model" FormName="remove" Enhance>
+        @* <EditForm onsubmit="return confirm('Are you sure you want to submit?');" action="#" method="post" Model="model" OnValidSubmit="RemoveFixtures" FormName="remove" Enhance> *@
+            <div class="mb-3 ">
+                <label for="date" class="form-label">Delete fixtures from</label> 
+                <InputDate id="date" @bind-Value="model.date" class="form-control" /> 
+            </div>   
+            <button onclick="return confirm('Are you sure you want to delete?');" type="submit" class="btn btn-danger">Delete</button>
+
+
+        @* </EditForm> *@
+
+        <AntiforgeryToken/>
+    </form>
+
+    <form @formname="roll" @onsubmit="RollTeams" method="post" Enhance>
+        <button type="submit" class="btn btn-primary mt-2">Roll Teams</button>
+        <AntiforgeryToken/>
+    </form>
+
+@code {
+    [SupplyParameterFromForm(FormName = "delete")]
+    public Model model {get; set;} = new Model {date = new DateOnly(2025, 01, 10)};
+    [SupplyParameterFromForm(FormName = "upload")]
+    IFormFile? File { get; set; }
+
+    public void RemoveFixtures() {
+        using var context = DbFactory.CreateDbContext();
+        List<Fixture> fixtures = context.Fixture
+            .Where(f => f.Date > model.date)
+            .ToList();
+        context.RemoveRange(fixtures);
+        context.SaveChanges();
+    }
+
+
+    public record Model {
+        public DateOnly date {get; set; } = new DateOnly(2025, 01, 10);
+    }
+
+    public void RollTeams() {
+        using var context = DbFactory.CreateDbContext();
+        context.Team.Where(t => (t.AgeGroup <= AgeGroup.U17))
+            .ToList()
+            .ForEach(t => t.RollAgeGroup());
+        context.SaveChanges();
+    }
+
+}
+

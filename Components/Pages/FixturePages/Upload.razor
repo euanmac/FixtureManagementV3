@@ -1,0 +1,203 @@
+﻿@page "/fixtures/upload"
+@attribute [Authorize]
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+
+@using CsvHelper
+@using System.Globalization
+
+<PageTitle>Upload Fixtures</PageTitle>
+
+<h1>Upload Fixtures</h1>
+<hr />
+    <h3>@team!.DisplayName</h3>
+<hr />
+    <form @formname="upload" @onsubmit="LoadFile" method="post" enctype="multipart/form-data" Enhance>
+    @* `   <div class="mb-3 form-floating">
+            <select name="teamid" value="@TeamId" class="form-control form-select">
+                @foreach (var team in teamList)
+                {
+                    <option value="@team.Id">@team.DisplayName</option>
+                }
+            </select> 
+            <label for="teamid" class="form-label">Team</label>                 
+        </div>         *@
+        <input type="file" name="file" class="form-control mt"/>
+        <input type="hidden" name="teamiUploadTeamId" value="@UploadTeamId" />
+        <button type="submit" class="btn btn-primary mt-2">Load</button>
+        <a href="#" onclick="history.back()" class="btn btn btn-secondary mt-2">Back</a>
+
+        <AntiforgeryToken/>
+    </form>
+
+
+    <form method="post" @formname="create" @onsubmit="CreateFixtures">
+        @if (Fixtures.Count > 0) 
+        {
+        <table class="quickgrid table table-striped table-sm mt-4">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Venue</th>
+                    <th>Opponent</th>
+                    <th>Type</th>
+                    <th><input id="select-all" value="true" checked type="checkbox" /></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var fixture in Fixtures)
+                {
+                    //FixtureManager.Models.Fixture fixture = item;
+                    <tr>
+                        <td>
+                            <input type="hidden" name="UploadFixtures.Index" value="@fixture.Id" />
+                            <input type="hidden" name="UploadFixtures[@fixture.Id].Id" value="@fixture.Id" />
+                            <input type="hidden" name="UploadFixtures[@fixture.Id].Date" value="@fixture.Date.ToString("dd-MMM-yyyy")" />
+                            <input type="hidden" name="UploadFixtures[@fixture.Id].TeamId" value="@fixture.TeamId" />
+                            <input type="hidden" name="UploadFixtures[@fixture.Id].IsHome" value="@fixture.IsHome.ToString()" />
+                            <input type="hidden" name="UploadFixtures[@fixture.Id].Opponent" value="@fixture.Opponent"/>
+                            <input type="hidden" name="UploadFixtures[@fixture.Id].FixtureType" value="@fixture.FixtureType"/>
+                            
+                            @fixture.Date
+                        </td>
+                        <td>
+                            @(fixture.IsHome ? "Home" : "Away")
+                        </td>
+                        <td>
+                            @fixture.Opponent
+                        </td>
+                        <td>
+                            @fixture.FixtureType
+                            @* <input type="hidden" name="UploadFixtures[@fixture.Id].Fixture.FixtureType" value="@fixture.FixtureType" /> *@
+                        </td>
+                        <td>
+                            <input name="UploadSelection[@fixture.Id]" checked value="true" type="checkbox" class="add-fixture"/>
+                        </td>
+
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+
+        }
+    <AntiforgeryToken/>
+    </form>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            document.getElementById("select-all").addEventListener("click", function () {
+                const checked = this.checked;
+                document.querySelectorAll(".add-fixture").forEach(function (el) {
+                    el.checked = checked;
+                });
+            });
+        });
+    </script>
+@code {
+
+    [CascadingParameter]
+    private FormMappingContext FormMappingContext { get; set; } = default!;
+
+    [SupplyParameterFromForm(FormName = "upload")]
+    IFormFile? File { get; set; }
+
+    [SupplyParameterFromQuery]
+    @* [SupplyParameterFromForm(FormName = "upload")] *@
+    Guid TeamId { get; set; }
+    @* [SupplyParameterFromForm(FormName = "upload")] *@
+    [SupplyParameterFromForm(FormName = "upload")]
+    Guid UploadTeamId {get; set;}
+
+    List<Fixture> Fixtures { get; set; }= new List<Fixture>();
+    [SupplyParameterFromForm(FormName = "create")]
+    Dictionary<Guid, Fixture>  UploadFixtures { get; set; } = new ();
+    [SupplyParameterFromForm(FormName = "create")]
+    Dictionary<Guid, bool> UploadSelection { get; set; } = new ();
+    private IQueryable<Team> teamList = default!;
+    private Team? team { get; set; }
+
+  protected override async Task OnInitializedAsync() {
+            using var context = DbFactory.CreateDbContext();
+
+            teamList = (await context.Team
+            .ToListAsync())
+            .OrderBy(t => t.AgeGroup)
+            .ThenBy(t => t.Gender)
+            .ThenBy(t => t.Name)
+            .AsQueryable(); 
+
+            team ??= await context.Team.FirstOrDefaultAsync(m => m.Id == TeamId);
+            
+            if (team is null)
+            {
+                NavigationManager.NavigateTo("notfound");
+                return;
+            }
+            UploadTeamId = team.Id;
+            var errors = FormMappingContext.GetAllErrors();
+
+
+
+  }
+    
+    public void LoadFile() {
+        if (File is null) {
+            Console.WriteLine("No file uploaded.");
+            return;
+        }
+        else {
+            using (var csv = new CsvReader(new StreamReader(File.OpenReadStream()), CultureInfo.InvariantCulture))
+            {
+                try {
+                    IEnumerable<FixtureFile> records = csv.GetRecords<FixtureFile>();
+                    Fixtures = records.Select(r => new Fixture {
+                        Id = Guid.NewGuid(),
+                        TeamId = UploadTeamId,
+                        Opponent = r.Opponent,
+                        IsHome = r.Venue.Substring(0,1) == "H",
+                        Date = r.Date,
+                        FixtureType = FixtureType.League,
+                    }).ToList();
+                
+                    Console.WriteLine($"File: {File.Name}, Records: {records}");
+                }
+                catch (Exception ex) {
+                    Console.WriteLine($"Error registering class map: {ex.Message}");
+                    return;
+                }
+            }
+            return;
+        }
+
+    
+    }
+
+    public void CreateFixtures() {
+
+        //Check if any fixtures are selected for upload
+        if (UploadSelection is not null) {
+            var fixtures = UploadFixtures
+                .Where(f => UploadSelection.ContainsKey(f.Key) && UploadSelection[f.Key])
+                .Select(f => f.Value);
+
+            using var context = DbFactory.CreateDbContext();
+            context.Fixture.AddRange(fixtures);
+            context.SaveChanges();  
+        }
+            NavigationManager.NavigateTo($"teams/details?id={UploadTeamId}");
+    }
+
+    public record FixtureFile{
+        public required string Opponent { get; set; }
+        public required string Venue {get; set; }
+        public DateOnly Date { get; set; }
+
+    }
+
+    public record UploadFixture {
+        public required Fixture Fixture {get; set;}
+        public bool Upload {get; set;}}
+}
+
