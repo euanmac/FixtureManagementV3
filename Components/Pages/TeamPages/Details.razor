@@ -80,6 +80,8 @@
             @if (isAuthenticated) {
                 <a class="btn btn-primary btn mr-2" href="@($"/teams/edit?id={team.Id}")">Edit</a>
                 <a class="btn btn-primary btn mr-2 " href="@($"/teamcontacts/create?teamid={team.Id}")">Add Contact</a>
+                <a class="btn btn-primary btn mr-2" href="@($"/fixtures/upload?teamid={team.Id}")">Upload</a>
+
             }  
             <a href="#" onclick="history.back()" class="btn btn btn-secondary">Back</a>
         </div>

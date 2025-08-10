@@ -77,5 +77,5 @@ app.MapRazorComponents<App>()
 app.MapAdditionalIdentityEndpoints();
 
 app.MapEventEndpoints();
-
+app.MapFixtureEndpoints();
 app.Run();
