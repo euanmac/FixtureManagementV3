@@ -1,0 +1,121 @@
+﻿@page "/screenshots"
+
+<style>
+    .lightbox-wrapper {
+        position: relative;
+    }
+
+    .lightbox-toggle {
+        display: none;
+    }
+
+    .lightbox-toggle:checked ~ .lightbox {
+        display: flex;
+    }
+
+    .lightbox {
+        display: none;
+        position: fixed;
+        z-index: 1050;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.85);
+        justify-content: center;
+        align-items: center;
+    }
+
+    .lightbox img {
+        max-width: 90%;
+        max-height: 90%;
+        border-radius: 8px;
+        box-shadow: 0 0 20px rgba(255,255,255,0.3);
+    }
+
+    .lightbox-close {
+        position: absolute;
+        top: 2rem;
+        right: 2rem;
+        font-size: 2rem;
+        color: white;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .card-img-top {
+        cursor: pointer;
+        transition: transform 0.2s ease;
+    }
+
+    .card-img-top:hover {
+        transform: scale(1.02);
+    }
+</style>
+
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold">FixtureManagement Screenshots</h1>
+        <p class="lead text-muted">Click any image to view it full-size in a CSS-powered lightbox.</p>
+    </div>
+
+    <div class="row g-4">
+        @foreach (var image in ScreenshotImages)
+        {
+            <div class="col-md-6 col-lg-4">
+                <div class="lightbox-wrapper">
+                    <input type="checkbox" class="lightbox-toggle" id="toggle@image.Id" />
+                    
+                    <div class="card shadow-sm">
+                        <label for="toggle@image.Id">
+                            <img src="@image.Url" class="card-img-top" alt="@image.AltText">
+                        </label>
+                        <div class="card-body">
+                            <p class="card-text">@image.Caption</p>
+                        </div>
+                    </div>
+
+                    <div class="lightbox">
+                        <label for="toggle@image.Id" class="lightbox-close">&times;</label>
+                        <img src="@image.Url" alt="@image.AltText">
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<ScreenshotImage> ScreenshotImages = new()
+    {
+        new ScreenshotImage
+        {
+            Id = "1",
+            Url = "/images/gameweek.png",
+            AltText = "Gameweek View",
+            Caption = "📆 Gameweek View: A full week of fixtures across U7–U14 teams, with status, venue, pitch, and confirmation tracking."
+        },
+        new ScreenshotImage
+        {
+            Id = "2",
+            Url = "/images/schedule.png",
+            AltText = "Pitch Map Schedule",
+            Caption = "🗺️ Pitch Map: Sunday 14 Sept 2025 visualised by pitch and time—every slot, every team, every clash resolved."
+        },
+        new ScreenshotImage
+        {
+            Id = "3",
+            Url = "/images/fixtures.png",
+            AltText = "Fixture Table View",
+            Caption = "📋 Fixture Table: Filterable, auditable fixture list with home/away status, opponent, type, and pitch assignment."
+        }
+    };
+
+    private class ScreenshotImage
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Url { get; set; } = string.Empty;
+        public string AltText { get; set; } = string.Empty;
+        public string Caption { get; set; } = string.Empty;
+    }
+}

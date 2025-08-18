@@ -81,7 +81,11 @@
                 <a class="btn btn-primary btn mr-2" href="@($"/teams/edit?id={team.Id}")">Edit</a>
                 <a class="btn btn-primary btn mr-2 " href="@($"/teamcontacts/create?teamid={team.Id}")">Add Contact</a>
                 <a class="btn btn-primary btn mr-2" href="@($"/fixtures/upload?teamid={team.Id}")">Upload</a>
-
+                <form method="post" @onsubmit="DeleteFixtures" class="d-inline" @formname="DeleteFixtures" enhance>
+                    <button type="submit" class="btn btn-danger btn mr-2" onclick="return confirm('Are you sure you want to delete all fixtures?')">Delete Fixtures</button>
+                    <AntiforgeryToken />
+                    <input type="hidden" name="DeleteFixturesId" value="@team.Id" />
+                </form>
             }  
             <a href="#" onclick="history.back()" class="btn btn btn-secondary">Back</a>
         </div>
@@ -95,6 +99,8 @@
     private IQueryable<FixtureViewModel> fixture = default!; 
     [SupplyParameterFromQuery]
     private System.Guid Id { get; set; }
+    [SupplyParameterFromForm(FormName = "DeleteFixtures")]
+    private System.Guid DeleteFixturesId { get; set; }
     private bool isAuthenticated = false;
     private Dictionary<ContactType, List<TeamContact>> teamContactGroupedByType { get; set; } = default!;
  
@@ -146,4 +152,12 @@
         }
     }
 
+    private async Task DeleteFixtures()
+    {
+        using var context = DbFactory.CreateDbContext();
+        var fixtures = context.Fixture.Where(f => f.TeamId == DeleteFixturesId);
+        context.Fixture.RemoveRange(fixtures);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo(NavigationManager.Uri, true);
+    }
 }
