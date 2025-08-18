@@ -119,7 +119,7 @@ function Filter() {
         await userManager.AddToRoleAsync(user!, "Admin"); *@
 
         context = DbFactory.CreateDbContext();
-        Filter ??= new FilterContext{StartDate = DateOnly.FromDateTime(DateTime.Now), EndDate = DateOnly.FromDateTime(DateTime.Now).AddDays(14)};
+        Filter ??= new FilterContext{StartDate = DateOnly.FromDateTime(DateTime.Now), EndDate = DateOnly.FromDateTime(DateTime.Now).AddDays(30)};
         fixturesVM = (await context.Fixture
                 .Include(f => f.Team)
                 .Include(f => f.FixtureAllocation)
