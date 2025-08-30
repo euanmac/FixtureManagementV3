@@ -128,7 +128,7 @@ else
             }
         }
 
-        NavigationManager.NavigateTo("/teams");
+        NavigationManager.NavigateTo($"/teams/details?id={Team!.Id}");
     }
 
     private bool TeamExists(System.Guid id)
