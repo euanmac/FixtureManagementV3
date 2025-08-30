@@ -15,36 +15,50 @@
         <EditForm method="post" Model="TeamContactVM" OnValidSubmit="AddTeamContact" FormName="create" Enhance>
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert"/>
-            <div class="mb-3">
-                <label for="teamid" class="form-label">Team :</label> 
-                <InputSelect id="teamid" @bind-Value="TeamContactVM.TeamId" class="form-control">
-                    @foreach (var team in teams)
-                    {
-                        <option value="@team.Id">@team.DisplayName</option>
-                    }
-                </InputSelect> 
+            
+            @if (team is not null) {
+                <div class="mb-3 form-floating">
+                    <input id="teamname" class="form-control" value="@team.DisplayName" disabled /> 
+                    <label for="teamname">Team</label>
+                    <input type="hidden" name="TeamContactVM.TeamId" value="@team.Id" />
+                </div>
 
-                <ValidationMessage For="() => TeamContactVM.TeamId" class="text-danger" /> 
-            </div>
-            <div class="mb-3">
-                <label for="contacttype" class="form-label">Contact Type:</label> 
-                <InputSelect @bind-Value="TeamContactVM.TeamContactType" class="form-control" aria-required="true"> 
+            }
+            else 
+            {
+
+                
+                <div class="mb-3 form-floating">
+                    <InputSelect id="teamid" @bind-Value="TeamContactVM.TeamId" class="form-control form-select" placeholder="Select Team">
+                        @foreach (var team in teams)
+                        {
+                            <option value="@team.Id">@team.DisplayName</option>
+                        }
+                    </InputSelect>
+                    <label for="teamid">Team</label>
+                    <ValidationMessage For="() => TeamContactVM.TeamId" class="text-danger" />
+                </div>
+            }
+            <div class="mb-3 form-floating">
+                <InputSelect @bind-Value="TeamContactVM.TeamContactType" class="form-contro form-select" aria-required="true"> 
                     @foreach (var ct in Enum.GetValues(typeof(ContactType)))
                     {
                         <option value="@ct">@ct</option>
                     }
                 </InputSelect>
+                <label for="contacttype">Contact Type</label> 
+
                 <ValidationMessage For="() => TeamContactVM.TeamContactType" class="text-danger" /> 
             </div>  
-            <div class="mb-3">
-                <label for="personid" class="form-label">Person :</label> 
-                <InputSelect id="personid" @bind-Value="TeamContactVM.PersonId" class="form-control">
+            <div class="mb-3 form-floating">
+   
+                <InputSelect id="personid" @bind-Value="TeamContactVM.PersonId" class="form-control form-select">
                     @foreach (var person in contacts)
                     {
                         <option value="@person.Id">@person.FullName</option>
                     }
                 </InputSelect> 
-
+                <label for="personid">Person</label> 
                 <ValidationMessage For="() => TeamContactVM.TeamId" class="text-danger" /> 
             </div>      
 
@@ -83,6 +97,8 @@
             .OrderBy(t => t.AgeGroup)
             .ToListAsync();
 
+        team = teams.FirstOrDefault(t => t.Id == TeamId);
+
     }
 
     // To protect from overposting attacks, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
@@ -101,7 +117,6 @@
             context.TeamContact.Add(tc);
             await context.SaveChangesAsync();
             NavigationManager.NavigateTo($"teams/details?id={tc.TeamId}");
-        
         }
     }
 

@@ -39,7 +39,7 @@ public class FullTimeReconciliationService : IFixtureReconciliationService
         cacheRefreshDateTime = null;
     }
 
-    public async IAsyncEnumerable<List<TeamReconiliationRow>> Reconcile(List<Team> teams, List<Fixture> fixtures, DateOnly gameWeekStart, DateOnly gameWeekEnd)
+    public async IAsyncEnumerable<List<TeamReconiliationRow>>   Reconcile(List<Team> teams, List<Fixture> fixtures, DateOnly gameWeekStart, DateOnly gameWeekEnd)
     {
         List<Task<List<TeamReconiliationRow>>> teamRecTasks = teams
                 .Select(t => ReconcileAsync(t, gameWeekStart, gameWeekEnd, fixtures))

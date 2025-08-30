@@ -271,8 +271,9 @@
 
         //Get teams
         List<Team> teams = await context.Team.ToListAsync();
-        
-        
+        //teams = teams.Where(t => t.AgeGroup == AgeGroup.U18 
+            //&& t.Gender == Gender.Male).ToList();
+//            ).ToList();
         //Get placeholder reconciliation rows for each team
         List<List<TeamReconiliationRow>> rows = teams
                 .Select(t => new List<TeamReconiliationRow> { new TeamReconiliationRow { Team = t, MatchDate = gameWeekStart, RecStatus = FixtureRecMatchType.pending }})

@@ -2,9 +2,10 @@
 @attribute [Authorize]
 @inject IDbContextFactory<AppDBContext> DbFactory
 @inject NavigationManager NavigationManager
-
+@inject FullTimeReconciliationService FullTimeReconciliationService
 @using CsvHelper
 @using System.Globalization
+@using System.ComponentModel.DataAnnotations
 
 <PageTitle>Upload Fixtures</PageTitle>
 
@@ -12,23 +13,37 @@
 <hr />
     <h3>@team!.DisplayName</h3>
 <hr />
-    <form @formname="upload" @onsubmit="LoadFile" method="post" enctype="multipart/form-data" Enhance>
-    @* `   <div class="mb-3 form-floating">
-            <select name="teamid" value="@TeamId" class="form-control form-select">
-                @foreach (var team in teamList)
-                {
-                    <option value="@team.Id">@team.DisplayName</option>
-                }
-            </select> 
-            <label for="teamid" class="form-label">Team</label>                 
-        </div>         *@
-        <input type="file" name="file" class="form-control mt"/>
-        <input type="hidden" name="teamiUploadTeamId" value="@UploadTeamId" />
-        <button type="submit" class="btn btn-primary mt-2">Load</button>
-        <a href="#" onclick="history.back()" class="btn btn btn-secondary mt-2">Back</a>
-
+    <form @formname="upload" @onsubmit="LoadFile" method="post" enctype="multipart/form-data" class="form-inline" Enhance>
+        <div class="row">
+            <div class="col-auto">
+                <div class="d-flex align-items-end gap-2">
+                    <div>
+                        <label for="file" class="form-label">Select CSV File</label>
+                        <input type="file" name="file" class="form-control mt"/>
+                    </div>
+                    <input type="hidden" name="teamiUploadTeamId" value="@UploadTeamId" />
+                    <button type="submit" class="btn btn-primary mt-2">Load</button>
+                </div>
+            </div
+        </div>
         <AntiforgeryToken/>
     </form>
+    @if (team is not null && team.IsOnFullTime)
+    {
+        <form @formname="fromfulltime" @onsubmit="LoadFromFullTimeAsync" method="post" class="form-inline" Enhance>
+            <div class="row">
+                <div class="col-auto">
+                    <div class="d-flex align-items-end gap-2">
+                        <a href="@team.FixtureURL">@(Utilities.GetAttributeOfType<DisplayAttribute>(@team.League)!.Name ?? "")</a>
+                        <input type="hidden" name="teamiUploadTeamId" value="@UploadTeamId" />
+                        <button type="submit" class="btn btn-primary mt-2">Load</button>
+                    </div>
+                </div
+            </div>
+            <AntiforgeryToken/>
+        </form>
+    }
+    <a href="#" onclick="history.back()" class="btn btn btn-secondary mt-2">Back</a>
 
 
     <form method="post" @formname="create" @onsubmit="CreateFixtures">
@@ -83,7 +98,7 @@
         </div>
 
         }
-    <AntiforgeryToken/>
+        <AntiforgeryToken/>
     </form>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
@@ -172,6 +187,27 @@
         }
 
     
+    }
+    public async Task LoadFromFullTimeAsync() {
+        if (team is null) {
+            Console.WriteLine("Team is not loaded.");
+            return;
+        }
+        try {
+            var fulltimeFixtures = await FullTimeReconciliationService.FromFullTimeAsync(team);
+            Fixtures = fulltimeFixtures.Select(ff => new Fixture {
+                        Id = Guid.NewGuid(),
+                        TeamId = UploadTeamId,
+                        Opponent = ff.Opponent,
+                        IsHome = ff.IsHome,
+                        Date = ff.Date,
+                        FixtureType = ff.FixtureType
+                    }).ToList();
+        }
+        catch (Exception ex) {
+            Console.WriteLine($"Error loading from FullTime: {ex.Message}");
+            return;
+        }
     }
 
     public void CreateFixtures() {
