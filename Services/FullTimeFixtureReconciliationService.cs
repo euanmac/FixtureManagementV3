@@ -41,6 +41,8 @@ public class FullTimeReconciliationService : IFixtureReconciliationService
 
     public async IAsyncEnumerable<List<TeamReconiliationRow>>   Reconcile(List<Team> teams, List<Fixture> fixtures, DateOnly gameWeekStart, DateOnly gameWeekEnd)
     {
+        await Task.Delay(100);
+        var teams2 = teams.Where(t => t.AgeGroup == AgeGroup.U13 && t.Gender == Gender.Female).ToList();
         List<Task<List<TeamReconiliationRow>>> teamRecTasks = teams
                 .Select(t => ReconcileAsync(t, gameWeekStart, gameWeekEnd, fixtures))
                 .ToList();
@@ -178,8 +180,8 @@ public class FullTimeReconciliationService : IFixtureReconciliationService
         //var url = $"https://fulltime.thefa.com/fixtures.html?selectedSeason={team.FullTimeLeagueId}&selectedFixtureGroupKey=&selectedDateCode=all&selectedClub=&selectedTeam={Team.FullTimeTeamId}&selectedRelatedFixtureOption=2&selectedFixtureDateStatus=&selectedFixtureStatus=&previousSelectedFixtureGroupAgeGroup=&previousSelectedFixtureGroupKey=&previousSelectedClub=&itemsPerPage=100";
         //var url = $"https://fulltime.thefa.com/displayTeam.html?divisionseason={team.FullTimeLeagueId}&teamID={team.FullTimeTeamId}";
         var url = String.Format(FullTimeURL, team.FullTimeLeagueId, team.FullTimeTeamId);
-        HtmlWeb web = new HtmlWeb();
-        var htmlDoc = await web.LoadFromWebAsync(url);
+        HtmlWeb web = new();
+        var htmlDoc =  web.Load(url);
 
 
         //Get fixture rows
