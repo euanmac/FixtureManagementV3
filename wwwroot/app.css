@@ -3,18 +3,43 @@ html, body {
 }
 
 a, .btn-link {
-    color: #006bb7;
+    color: #b21818;
     text-decoration: none;
+}
+
+.form-check-input:checked {
+    background-color: #b21818;
+    border-color: #5e0707;
+
 }
 
 .btn-primary {
     color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+    background-color: #011222;
+    border-color: #03162a;
+    
+}
+
+.btn-primary:hover {
+    background-color: #7a7777;
+    border-color: #484645;
+}
+
+.btn-primary:focus, .btn-primary:active:focus {
+    background-color: #7a7777;
+}
+
+.btn-primary:active  {
+    background-color: #7a7777;
+}
+
+.btn-primary:disabled {
+    background-color: #bdb7b7;
+    border-color: #928c8a;
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #9a9998ad;
 }
 
 .content {
@@ -26,7 +51,7 @@ h1:focus {
 }
 
 .valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
+    outline: 1px solid #b04626;
 }
 
 .invalid {

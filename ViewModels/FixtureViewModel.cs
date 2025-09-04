@@ -10,7 +10,8 @@
         public String Opponent {get; set;} = "";
         public DateOnly Date {get; set;}
         public bool IsHome {get; set;}
-        public String Pitch {get; set;} = "";
+        public bool IsConfirmed {get; set;}
+        public String Pitch { get; set; } = "";
         public String Start {get; set;} = "";
         public String End {get; set;} = "";
         public string Type {get; set;} = "";
@@ -24,14 +25,14 @@
             this.IsHome = fixture.IsHome;
             this.Type = fixture.FixtureType.FixtureTypeShortName();
             this.Date = fixture.Date;
-            if (fixture.IsAllocated && (fixture.FixtureAllocation!.IsConfirmed || IsAuthenticated)) 
+            if (fixture.IsAllocated && (fixture.FixtureAllocation!.IsConfirmed || IsAuthenticated))
             {
                 this.IsAllocated = true;
                 this.Pitch = fixture.FixtureAllocation!.Pitch!.Name;
                 this.Start = fixture.FixtureAllocation!.Start.ToString("hh:mm");
                 this.End = fixture.FixtureAllocation!.End.ToString("hh:mm");
+                this.IsConfirmed = fixture.FixtureAllocation!.IsConfirmed;    
             }
         }
         
-
     }

@@ -21,9 +21,18 @@
         <TemplateColumn Context="fixture" title="Opponent">
             <a href="@($"fixtures/{(CanEdit ? "edit" : "details")}?id={fixture.Id}")">@fixture.Opponent</a>
         </TemplateColumn>
-        <PropertyColumn Property="fixture => fixture.Type" Class="d-none d-sm-table-cell"/>
-        <PropertyColumn Property="fixture => fixture.Start" />
-        <PropertyColumn Property="fixture => fixture.Pitch" />
+        <TemplateColumn Context="fixture" Title="Start">
+            @if (fixture.IsConfirmed || CanEdit)
+            {
+                @fixture.Start
+            }
+        </TemplateColumn>
+        <TemplateColumn Context="fixture" Title="Pitch">
+            @if (fixture.IsConfirmed || CanEdit)
+            {
+                @fixture.Pitch
+            }
+        </TemplateColumn>
         <TemplateColumn Context="fixture">
             @if(CanEdit)
             {
