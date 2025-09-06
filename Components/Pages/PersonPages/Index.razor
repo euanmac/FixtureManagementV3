@@ -12,11 +12,13 @@
 
 <h1>Contacts</h1>
 <hr>
-@if (isAuthenticated)  {
-    <p>
+<div class="mt-2 mb-2">
+    @if (isAuthenticated)  {    
         <a class="btn btn-primary" href="contacts/create">Add Contact</a>
-    </p>
-}
+        <a class="btn btn-primary" href="mailto:@emailContacts">Email All</a>
+    }
+</div>
+
 
 <QuickGrid Class="table table-striped" Items="person">
     <PropertyColumn Property="person => person.FirstName" Title="First Name" />
@@ -50,6 +52,8 @@
     private IQueryable<Person> person = default!; 
     private bool isAuthenticated = false;
     private List<TeamContact> teamContact = default!;
+    private string emailContacts = "";
+
     protected override async Task OnInitializedAsync()    {
         context = DbFactory.CreateDbContext();
         person = context.Person
@@ -66,7 +70,14 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         isAuthenticated = (user.Identity is not null && user.Identity.IsAuthenticated);
-  
+    
+            emailContacts = context.Person
+                    .Where(p => (p.Email != null && p.Email.Length > 0) )
+                    .ToList()
+                    .Where(p => teamContact.Any(tc => tc.PersonId == p.Id))
+                    .Select(p => p.Email)
+                    .Aggregate("", (all, next) => all + "," + next);
+
     }
 
     public async ValueTask DisposeAsync() => await context.DisposeAsync();
