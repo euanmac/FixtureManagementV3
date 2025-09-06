@@ -23,7 +23,7 @@
     <TemplateColumn Context="team" title="Name" >
         <a href="@($"teams/details?id={team.Id}")">@team.DisplayName</a>
     </TemplateColumn>
-    <PropertyColumn Property="team => team.Gender" />
+    <PropertyColumn Property="team => team.Gender" Class="d-none d-sm-table-cell"/>
     <PropertyColumn Property="@(t => Utilities.GetAttributeOfType<DisplayAttribute>(t.League)!.Name ?? "")" Title="League"/>
     <PropertyColumn Property="team => team.Division" />
     <TemplateColumn Context="team" title="Contacts">
