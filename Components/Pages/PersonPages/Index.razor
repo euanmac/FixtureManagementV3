@@ -74,7 +74,7 @@
             emailContacts = context.Person
                     .Where(p => (p.Email != null && p.Email.Length > 0) )
                     .ToList()
-                    .Where(p => teamContact.Any(tc => tc.PersonId == p.Id))
+                    .Where(p => teamContact.Any(tc => tc.PersonId == p.Id) || p.IsRef)
                     .Select(p => p.Email)
                     .Aggregate("", (all, next) => all + "," + next);
 
