@@ -68,7 +68,10 @@
     private Fixture? Fixture { get; set; }
 
     private IQueryable<Team> teamList = default!;
-        
+    
+    [SupplyParameterFromQuery]
+    private Guid? teamId {get; set;}
+    
     protected override async Task OnInitializedAsync()
     {
             using var context = DbFactory.CreateDbContext();
@@ -81,7 +84,7 @@
             .AsQueryable(); 
 
             if (Fixture is null && teamList.Count() != 0) {
-                Fixture = new Fixture { Id = Guid.NewGuid(),  TeamId = teamList.First().Id, Date = DateOnly.FromDateTime(DateTime.Now), FixtureType = FixtureType.League, IsHome = true, Opponent="" };
+                Fixture = new Fixture { Id = Guid.NewGuid(),  TeamId = teamId ?? teamList.First().Id, Date = DateOnly.FromDateTime(DateTime.Now), FixtureType = FixtureType.League, IsHome = true, Opponent="" };
             }
     }
 
