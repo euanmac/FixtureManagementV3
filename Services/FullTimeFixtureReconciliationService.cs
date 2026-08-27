@@ -266,9 +266,10 @@ public class FullTimeReconciliationService : IFixtureReconciliationService
             }
         }
 
-        catch
+        catch (Exception e)
         {
-            Console.WriteLine($"Error getting fixtures for team {team.Id}");
+            Console.WriteLine($"Error getting fixtures for team {team.Id}: {e.Message}");
+            throw new Exception($"Error getting fixtures for team {team.Id}: {e.Message}");
         }
 
         return dFixtures;
@@ -381,6 +382,7 @@ public class FullTimeReconciliationService : IFixtureReconciliationService
         catch (Exception e)
         {
             Console.WriteLine($"Error getting fixtures for team {team.Id}");
+            throw new Exception($"Error getting fixtures for team {team.Id}: {e.Message}");
         }
 
         return dFixtures;
