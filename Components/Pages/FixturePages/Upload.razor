@@ -197,7 +197,7 @@
             return;
         }
         try {
-            var fulltimeFixtures = await FullTimeReconciliationService.FromFullTimeAsync(team);
+            var fulltimeFixtures =  FullTimeReconciliationService.FromFullTime(team);
             Fixtures = fulltimeFixtures.Select(ff => new Fixture {
                         Id = Guid.NewGuid(),
                         TeamId = UploadTeamId,
