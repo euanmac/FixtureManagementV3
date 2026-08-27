@@ -12,6 +12,7 @@
 <h1>Upload Fixtures</h1>
 <hr />
     <h3>@team!.DisplayName</h3>
+    <p class="text-danger">@errorMessage</p>
 <hr />
     <form @formname="upload" @onsubmit="LoadFile" method="post" enctype="multipart/form-data" class="form-inline" Enhance>
         <div class="row">
@@ -132,6 +133,7 @@
     Dictionary<Guid, bool> UploadSelection { get; set; } = new ();
     private IQueryable<Team> teamList = default!;
     private Team? team { get; set; }
+    private string? errorMessage { get; set; }
 
   protected override async Task OnInitializedAsync() {
             using var context = DbFactory.CreateDbContext();
@@ -191,6 +193,7 @@
     public async Task LoadFromFullTimeAsync() {
         if (team is null) {
             Console.WriteLine("Team is not loaded.");
+            errorMessage = "Team is not loaded.";
             return;
         }
         try {
@@ -206,6 +209,7 @@
         }
         catch (Exception ex) {
             Console.WriteLine($"Error loading from FullTime: {ex.Message}");
+            errorMessage = $"Error loading from FullTime: {ex.Message}";
             return;
         }
     }
