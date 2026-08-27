@@ -37,7 +37,7 @@
         <TemplateColumn Context="fixture">
             @if(CanEdit)
             {
-                <a href="@(ActionURL("edit", fixture.Id))"><Icon Type="Icon.IconType.Edit"/></a>
+                <a data-enhance-nav="false" href="@(ActionURL("edit", fixture.Id))"><Icon Type="Icon.IconType.Edit"/></a>
                 <a href="@(ActionURL("delete", fixture.Id))"><Icon Type="Icon.IconType.Delete"/></a>        
                 @if (fixture.IsHome) {
                     <a href="@(ActionURL("allocate", fixture.Id))"><Icon Type="Icon.IconType.Schedule"/></a>
