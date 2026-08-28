@@ -1,0 +1,167 @@
+﻿@page "/fixtures/upload2"
+@attribute [Authorize]
+@inject IDbContextFactory<AppDBContext> DbFactory
+@inject NavigationManager NavigationManager
+@inject FullTimeReconciliationService FullTimeReconciliationService
+@using CsvHelper
+@using System.Globalization
+@using System.ComponentModel.DataAnnotations
+@using HtmlAgilityPack
+@using Microsoft.AspNetCore.Http.Connections
+@using Microsoft.VisualBasic
+
+<PageTitle>Upload Fixtures</PageTitle>
+
+<h1>Upload Fixtures</h1>
+<hr />
+    <p class="text-danger">@errorMessage</p>
+<hr />
+<p>
+    @htmlDoc.DocumentNode.InnerHtml;
+</p>
+ @* @foreach (var row  in htmlRows)
+{
+   <p>row.InnerHtml</p>
+}     *@
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            document.getElementById("select-all").addEventListener("click", function () {
+                const checked = this.checked;
+                document.querySelectorAll(".add-fixture").forEach(function (el) {
+                    el.checked = checked;
+                });
+            });
+        });
+    </script>
+@code {
+
+    [CascadingParameter]
+    private FormMappingContext FormMappingContext { get; set; } = default!;
+
+    [SupplyParameterFromForm(FormName = "upload")]
+    IFormFile? File { get; set; }
+
+    [SupplyParameterFromQuery]
+    @* [SupplyParameterFromForm(FormName = "upload")] *@
+    Guid TeamId { get; set; }
+    @* [SupplyParameterFromForm(FormName = "upload")] *@
+    [SupplyParameterFromForm(FormName = "upload")]
+    Guid UploadTeamId {get; set;}
+
+    List<Fixture> Fixtures { get; set; }= new List<Fixture>();
+    [SupplyParameterFromForm(FormName = "create")]
+    Dictionary<Guid, Fixture>  UploadFixtures { get; set; } = new ();
+    [SupplyParameterFromForm(FormName = "create")]
+    Dictionary<Guid, bool> UploadSelection { get; set; } = new ();
+    private IQueryable<Team> teamList = default!;
+    private Team? team { get; set; }
+    private string? errorMessage { get; set; }
+    private HtmlDocument htmlDoc { get; set; }
+    public const string Table_Fixtures = "fixtures-table";
+
+  protected override async Task OnInitializedAsync() {
+
+
+            using var context = DbFactory.CreateDbContext();
+
+            teamList = (await context.Team
+            .ToListAsync())
+            .OrderBy(t => t.AgeGroup)
+            .ThenBy(t => t.Gender)
+            .ThenBy(t => t.Name)
+            .AsQueryable(); 
+
+            string url = "https://fulltime.thefa.com/displayTeam.html?divisionseason=929815794&teamID=557639613";
+            
+
+            HtmlWeb web = new();
+            htmlDoc = web.Load(url);
+
+            //Get fixture rows
+            var rows = htmlDoc.DocumentNode.SelectNodes($"//div[contains(@class,'{Table_Fixtures}')]/table/tbody/tr");
+
+
+  }
+    
+    public void LoadFile() {
+        if (File is null) {
+            Console.WriteLine("No file uploaded.");
+            return;
+        }
+        else {
+            using (var csv = new CsvReader(new StreamReader(File.OpenReadStream()), CultureInfo.InvariantCulture))
+            {
+                try {
+                    IEnumerable<FixtureFile> records = csv.GetRecords<FixtureFile>();
+                    Fixtures = records.Select(r => new Fixture {
+                        Id = Guid.NewGuid(),
+                        TeamId = UploadTeamId,
+                        Opponent = r.Opponent,
+                        IsHome = r.Venue.Substring(0,1) == "H",
+                        Date = r.Date,
+                        FixtureType = FixtureType.League,
+                    }).ToList();
+                
+                    Console.WriteLine($"File: {File.Name}, Records: {records}");
+                }
+                catch (Exception ex) {
+                    Console.WriteLine($"Error registering class map: {ex.Message}");
+                    return;
+                }
+            }
+            return;
+        }
+
+    
+    }
+    public async Task LoadFromFullTimeAsync() {
+        if (team is null) {
+            Console.WriteLine("Team is not loaded.");
+            errorMessage = "Team is not loaded.";
+            return;
+        }
+        try {
+            var fulltimeFixtures =  FullTimeReconciliationService.FromFullTime(team);
+            Fixtures = fulltimeFixtures.Select(ff => new Fixture {
+                        Id = Guid.NewGuid(),
+                        TeamId = UploadTeamId,
+                        Opponent = ff.Opponent,
+                        IsHome = ff.IsHome,
+                        Date = ff.Date,
+                        FixtureType = ff.FixtureType
+                    }).ToList();
+        }
+        catch (Exception ex) {
+            Console.WriteLine($"Error loading from FullTime: {ex.Message}");
+            errorMessage = $"Error loading from FullTime: {ex.Message}";
+            return;
+        }
+    }
+
+    public void CreateFixtures() {
+
+        //Check if any fixtures are selected for upload
+        if (UploadSelection is not null) {
+            var fixtures = UploadFixtures
+                .Where(f => UploadSelection.ContainsKey(f.Key) && UploadSelection[f.Key])
+                .Select(f => f.Value);
+
+            using var context = DbFactory.CreateDbContext();
+            context.Fixture.AddRange(fixtures);
+            context.SaveChanges();  
+        }
+            NavigationManager.NavigateTo($"teams/details?id={UploadTeamId}");
+    }
+
+    public record FixtureFile{
+        public required string Opponent { get; set; }
+        public required string Venue {get; set; }
+        public DateOnly Date { get; set; }
+
+    }
+
+    public record UploadFixture {
+        public required Fixture Fixture {get; set;}
+        public bool Upload {get; set;}}
+}
+
