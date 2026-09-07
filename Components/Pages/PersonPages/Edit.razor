@@ -56,7 +56,7 @@ else
                             @item.ContactType
                         </dt>
                         <dd class="col-sm-10">
-                            @item.Team.DisplayName
+                            @(item.Team != null ? item.Team.DisplayName : string.Empty)
                         </dd>
                         @if (isAuthenticated)
                         {
@@ -88,8 +88,8 @@ else
         Person ??= await context.Person.FirstOrDefaultAsync(m => m.Id == Id);
         teamContacts = await context.TeamContact
             .Include(tc => tc.Team)
-            .Where(tc => tc.PersonId == Id)
-            .OrderBy(tc => tc.Team.AgeGroup)
+            .Where(tc => tc.PersonId == Id && tc.Team != null)
+            .OrderBy(tc => tc.Team != null ? tc.Team.AgeGroup : default)
             .ToListAsync();
 
         if (Person is null)

@@ -1,0 +1,115 @@
+@using System
+@using FixtureManagementV3.Client.Services
+
+@* 
+@if (Rows.Count == 0)
+{
+    <p>No fixtures loaded.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Venue</th>
+                <th>Opponent</th>
+                <th>Type</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Rows)
+            {
+                <tr>
+                    <td>@row.Date.ToString("dd-MMM-yyyy")</td>
+                    <td>@(row.IsHome ? "Home" : "Away")</td>
+                    <td>@row.Opponent</td>
+                    <td>@row.FixtureType</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+} *@
+@if (Rows.Count > 0) 
+{
+    <table class="quickgrid table table-striped table-sm mt-4">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Venue</th>
+                <th>Opponent</th>
+                <th>Type</th>
+                <th><input id="select-all" value="true" checked type="checkbox" /></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var fixture in Rows)
+            {
+                //FixtureManager.Models.Fixture fixture = item;
+                <tr>
+                    <td>
+                        <input type="hidden" name="UploadFixtures.Index" value="@fixture.Id" />
+                        <input type="hidden" name="UploadFixtures[@fixture.Id].Id" value="@fixture.Id" />
+                        <input type="hidden" name="UploadFixtures[@fixture.Id].Date" value="@fixture.Date.ToString("dd-MMM-yyyy")" />
+                        <input type="hidden" name="UploadFixtures[@fixture.Id].TeamId" value="@TeamId" />
+                        <input type="hidden" name="UploadFixtures[@fixture.Id].IsHome" value="@fixture.IsHome.ToString()" />
+                        <input type="hidden" name="UploadFixtures[@fixture.Id].Opponent" value="@fixture.Opponent"/>
+                        <input type="hidden" name="UploadFixtures[@fixture.Id].FixtureType" value="@fixture.FixtureType"/>
+                        
+                        @fixture.Date
+                    </td>
+                    <td>
+                        @(fixture.IsHome ? "Home" : "Away")
+                    </td>
+                    <td>
+                        @fixture.Opponent
+                    </td>
+                    <td>
+                        @fixture.FixtureType
+                        @* <input type="hidden" name="UploadFixtures[@fixture.Id].Fixture.FixtureType" value="@fixture.FixtureType" /> *@
+                    </td>
+                    <td>
+                        <input name="UploadSelection[@fixture.Id]" checked value="true" type="checkbox" class="add-fixture"/>
+                    </td>
+
+                </tr>
+            }
+        </tbody>
+    </table>
+
+}
+
+@code {
+    [Parameter]
+    public string FullTimeTeamId { get; set; } = string.Empty;
+    [Parameter]
+    public string FullTimeLeagueId { get; set; } = string.Empty;
+    [Parameter]
+    public string TeamName { get; set; } = string.Empty;
+    [Parameter]
+    public Guid TeamId { get; set; } = Guid.Empty;
+    [Parameter]
+    public EventCallback<int> FixtureCountChanged { get; set; }
+
+
+    private FullTimeDownload FullTimeDownload { get; set; } = new FullTimeDownload();
+
+    private IList<FullTimeDownload.DownloadFixture> Rows { get; set; } = new List<FullTimeDownload.DownloadFixture>();
+    protected override async Task OnInitializedAsync()    
+    {
+        Rows = await FullTimeDownload.FromFullTimeAsync(FullTimeLeagueId, FullTimeTeamId, TeamName);
+        await FixtureCountChanged.InvokeAsync(Rows?.Count ?? 0);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        @* Rows = await FullTimeDownload.FromFullTimeAsync(LeagueID, TeamID, TeamName);
+        await FixtureCountChanged.InvokeAsync(Rows?.Count ?? 0); *@
+    }
+
+    public int FixtureCount
+    {
+        get => Rows.Count;
+    
+    }
+}

@@ -63,7 +63,8 @@
 
         teamContact = await context.TeamContact
             .Include(tc => tc.Team)
-            .OrderBy(tc => tc.Team.AgeGroup)
+            .Where(tc => tc.Team != null)
+            .OrderBy(tc => tc.Team != null ? tc.Team.AgeGroup : default)
             .ToListAsync();
 
         //Check whether authenticated

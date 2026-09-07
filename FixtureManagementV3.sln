@@ -5,6 +5,8 @@ VisualStudioVersion = 17.5.002.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FixtureManagementV3", "FixtureManagementV3.csproj", "{549A4968-1608-4A52-9E32-27AA3FB07D9F}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FixtureManagementV3.Client", "FixtureManagementV3.Client\FixtureManagementV3.Client.csproj", "{7D356E6C-B07C-41A2-9AD1-86F80EEAC9BB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{549A4968-1608-4A52-9E32-27AA3FB07D9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{549A4968-1608-4A52-9E32-27AA3FB07D9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{549A4968-1608-4A52-9E32-27AA3FB07D9F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7D356E6C-B07C-41A2-9AD1-86F80EEAC9BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D356E6C-B07C-41A2-9AD1-86F80EEAC9BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D356E6C-B07C-41A2-9AD1-86F80EEAC9BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D356E6C-B07C-41A2-9AD1-86F80EEAC9BB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

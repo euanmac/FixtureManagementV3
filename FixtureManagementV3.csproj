@@ -13,8 +13,20 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="FixtureManagementV3.Client/**/*.cs" />
+    <Compile Remove="FixtureManagementV3.Client/**/*.razor" />
+    <Content Remove="FixtureManagementV3.Client/**" />
+    <None Remove="FixtureManagementV3.Client/**" />
+
+    <Compile Remove="FixtureManagementV3.Wasm/**/*.cs" />
+    <Compile Remove="FixtureManagementV3.Wasm/**/*.razor" />
+    <Content Remove="FixtureManagementV3.Wasm/**" />
+    <None Remove="FixtureManagementV3.Wasm/**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="CsvHelper" Version="33.0.1" />
-    <PackageReference Include="HtmlAgilityPack" Version="1.11.72" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.13.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.QuickGrid.EntityFrameworkAdapter" Version="9.0.7" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="9.0.7" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.7" />
@@ -24,6 +36,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.7" />
+    <ProjectReference Include="FixtureManagementV3.Client\FixtureManagementV3.Client.csproj" />
   </ItemGroup>
 
 </Project>

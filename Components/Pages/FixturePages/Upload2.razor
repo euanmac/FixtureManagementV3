@@ -56,7 +56,7 @@
     private IQueryable<Team> teamList = default!;
     private Team? team { get; set; }
     private string? errorMessage { get; set; }
-    private HtmlDocument htmlDoc { get; set; }
+    private HtmlDocument htmlDoc { get; set; } = new();
     public const string Table_Fixtures = "fixtures-table";
 
   protected override async Task OnInitializedAsync() {
