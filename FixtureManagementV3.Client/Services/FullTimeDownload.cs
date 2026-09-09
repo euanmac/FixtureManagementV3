@@ -38,12 +38,33 @@ public class FullTimeDownload
             return dFixtures;
         }
 
+        var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Add(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36");
+
         //var url = $"https://fulltime.thefa.com/fixtures.html?selectedSeason={team.FullTimeLeagueId}&selectedFixtureGroupKey=&selectedDateCode=all&selectedClub=&selectedTeam={Team.FullTimeTeamId}&selectedRelatedFixtureOption=2&selectedFixtureDateStatus=&selectedFixtureStatus=&previousSelectedFixtureGroupAgeGroup=&previousSelectedFixtureGroupKey=&previousSelectedClub=&itemsPerPage=100";
         //var url = $"https://fulltime.thefa.com/displayTeam.html?divisionseason={team.FullTimeLeagueId}&teamID={team.FullTimeTeamId}";
         var url = String.Format(FullTimeURL, LeagueId, TeamId);
-        HtmlWeb web = new();
-        var htmlDoc =  web.Load(url);
+    //    var html = await httpClient.GetStringAsync(url);
 
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Clear();
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+        request.Headers.Add("User-Agent",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15");
+
+        request.Headers.Add("Accept",
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+
+        request.Headers.Add("Accept-Language", "en-GB,en;q=0.9");
+        request.Headers.Referrer = new Uri("https://www.google.com/");
+
+        var response = await client.SendAsync(request);
+        var html = await response.Content.ReadAsStringAsync();
+        var htmlDoc = new HtmlDocument();
+        htmlDoc.LoadHtml(html);
 
         //Get fixture rows
         var rows = htmlDoc.DocumentNode.SelectNodes($"//div[contains(@class,'{Table_Fixtures}')]/table/tbody/tr");
