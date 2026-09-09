@@ -22,7 +22,8 @@ public class FullTimeReconciliationService : IFixtureReconciliationService
     public const string HomeTeam = "home-team";
     public  const string AwayTeam = "road-team";
     public const string Score = "score";
-
+    public string html {get; set; } = "";
+    
     public TimeSpan CacheAge {    
         get 
         {
@@ -198,7 +199,7 @@ public class FullTimeReconciliationService : IFixtureReconciliationService
         request.Headers.Referrer = new Uri("https://www.google.com/");
 
         var response = await client.SendAsync(request);
-        var html = await response.Content.ReadAsStringAsync();
+        html = await response.Content.ReadAsStringAsync();
         var htmlDoc = new HtmlDocument();
         htmlDoc.LoadHtml(html);
 
