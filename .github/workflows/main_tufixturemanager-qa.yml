@@ -26,6 +26,9 @@ jobs:
       - name: Build with dotnet
         run: dotnet build FixtureManagement.Server/FixtureManagement.Server.csproj --configuration Release
 
+      - name: Run tests
+        run: dotnet test FixtureManagement.Tests/FixtureManagement.Tests.csproj --configuration Release
+
       - name: dotnet publish
         run: dotnet publish FixtureManagement.Server/FixtureManagement.Server.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
 
