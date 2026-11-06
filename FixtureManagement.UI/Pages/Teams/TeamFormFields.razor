@@ -1,0 +1,65 @@
+@* The team fields shared by the Create and Edit pages. Must sit inside an EditForm whose model is Team. *@
+<div class="mb-3 form-floating">
+    <InputText id="name" @bind-Value="Team.Name" class="form-control" aria-required="true"/>
+    <label for="name" class="form-label">Name</label>
+    <ValidationMessage For="() => Team.Name" class="text-danger" />
+</div>
+<div class="mb-3 form-floating">
+    <InputSelect id="agegroup" @bind-Value="Team.AgeGroup" class="form-control form-select" aria-required="true">
+        @foreach (var ag in Enum.GetValues<AgeGroup>())
+        {
+            <option value="@ag">@ag</option>
+        }
+    </InputSelect>
+    <label for="agegroup" class="form-label">Age Group</label>
+    <ValidationMessage For="() => Team.AgeGroup" class="text-danger" />
+</div>
+<div class="mb-3 form-floating">
+    <InputSelect id="gender" @bind-Value="Team.Gender" class="form-control form-select" aria-required="true">
+        @foreach (var gender in Enum.GetValues<Gender>())
+        {
+            <option value="@gender">@gender</option>
+        }
+    </InputSelect>
+    <label for="gender" class="form-label">Gender</label>
+    <ValidationMessage For="() => Team.Gender" class="text-danger" />
+</div>
+<div class="mb-3 form-floating">
+    <InputSelect id="league" @bind-Value="Team.League" class="form-control form-select" aria-required="true">
+        @foreach (var league in Enum.GetValues<League>())
+        {
+            <option value="@league">@league</option>
+        }
+    </InputSelect>
+    <label for="league" class="form-label">League</label>
+    <ValidationMessage For="() => Team.League" class="text-danger" />
+</div>
+<div class="mb-3 form-floating">
+    <InputSelect id="division" @bind-Value="Team.Division" class="form-control form-select" aria-required="true">
+        @foreach (var division in Enum.GetValues<Division>())
+        {
+            <option value="@division">@division</option>
+        }
+    </InputSelect>
+    <label for="division" class="form-label">Division</label>
+    <ValidationMessage For="() => Team.Division" class="text-danger" />
+</div>
+<div class="mb-3 form-floating">
+    <InputText id="fulltimeteamid" @bind-Value="Team.FullTimeTeamId" class="form-control" />
+    <label for="fulltimeteamid" class="form-label">FullTime Team Id</label>
+    <ValidationMessage For="() => Team.FullTimeTeamId" class="text-danger" />
+</div>
+<div class="mb-3 form-floating">
+    <InputText id="fulltimeleagueid" @bind-Value="Team.FullTimeLeagueId" class="form-control" />
+    <label for="fulltimeleagueid" class="form-label">FullTime League Id</label>
+    <ValidationMessage For="() => Team.FullTimeLeagueId" class="text-danger" />
+</div>
+<div class="mb-3 form-check">
+    <InputCheckbox id="refrequired" @bind-Value="Team.RefRequired" class="form-check-input" />
+    <label for="refrequired" class="form-check-label">Club Ref Required</label>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public required TeamDto Team { get; set; }
+}

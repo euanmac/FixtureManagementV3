@@ -1,18 +1,17 @@
-@page "/fixtures"
+﻿@page "/fixtures"
 @page "/"
 
 @using Microsoft.AspNetCore.Components.QuickGrid
 @using Microsoft.EntityFrameworkCore
 @using FixtureManagement.Server.Models
-@using FixtureManagement.Server.ViewModels
 @using FixtureManagement.Server.Data
 @using FixtureManagement.Server.Components.Helper
 @using System.Linq
 @using Microsoft.AspNetCore.Identity;
 
-@implements IAsyncDisposable
+@implements IDisposable
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject IDbContextFactory<AppDBContext> DbFactory
+@inject IFixtureService FixtureService
 @inject NavigationManager NavigationManager
 @inject RoleManager<IdentityRole> roleManager
 @inject UserManager<ApplicationUser> userManager
@@ -72,7 +71,7 @@
 
 <hr/>
 <div class="mt-2">
-    <FixtureGrid CanEdit="@isAuthenticated" Fixtures="@fixturesVM" TeamHidden="false"/>
+    <FixtureGrid CanEdit="@isAuthenticated" Fixtures="@fixtures" TeamHidden="false"/>
 </div>
 
 @* <script>
@@ -100,8 +99,7 @@ function Filter() {
 </script> *@
 @code {
 
-    private AppDBContext context = default!;
-    private IQueryable<FixtureViewModel> fixturesVM = default!; //Enumerable.Empty<FixtureViewModel>().AsQueryable();
+    private IReadOnlyList<FixtureDto> fixtures = [];
     
     [SupplyParameterFromForm (FormName="FilterFixtures")]
     private FilterContext? Filter {get; set;}
@@ -118,19 +116,10 @@ function Filter() {
         @* var user = await userManager.FindByNameAsync(authUser.Identity!.Name!);
         await userManager.AddToRoleAsync(user!, "Admin"); *@
 
-        context = DbFactory.CreateDbContext();
         Filter ??= new FilterContext{StartDate = DateOnly.FromDateTime(DateTime.Now), EndDate = DateOnly.FromDateTime(DateTime.Now).AddDays(30)};
-        fixturesVM = (await context.Fixture
-                .Include(f => f.Team)
-                .Include(f => f.FixtureAllocation)
-                    .ThenInclude(fa => fa!.Pitch)
-                .OrderBy(f => f.Date)
-                    .ThenBy(f => f.Team!.AgeGroup)
-                .Where(f => (f.Date >= Filter.StartDate && f.Date <= Filter.EndDate))
+        fixtures = (await FixtureService.GetFixturesAsync(new FixtureQuery { From = Filter.StartDate, To = Filter.EndDate }))
                 .Where(f => f.IsHome == Filter.IncludeHome || f.IsHome != Filter.IncludeAway)
-                .ToListAsync())
-                .Select(f => new FixtureViewModel(f, true))
-                .AsQueryable();
+                .ToList();
         
         NavigationManager.LocationChanged += OnLocationChanged;
             registration = NavigationManager.RegisterLocationChangingHandler(LocationChangingHandler);
@@ -146,9 +135,8 @@ function Filter() {
     private void FilterFixtures() {
     }
 
-    public async ValueTask DisposeAsync() 
+    public void Dispose()
     {
-      await context.DisposeAsync();
       registration?.Dispose();
     }
 

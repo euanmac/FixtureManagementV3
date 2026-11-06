@@ -1,0 +1,133 @@
+@page "/teams/details"
+@preservewhitespace true
+@inject ITeamService TeamService
+@inject ITeamContactService TeamContactService
+@inject IFixtureService FixtureService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    @if (team is null)
+    {
+        <h2>Team</h2>
+        <hr />
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <hr />
+            <h3>@team.DisplayName</h3>
+        <hr />
+        <dl class="row">
+            <dt class="col-sm-2">Gender</dt>
+            <dd class="col-sm-4">@team.Gender</dd>
+            <dt class="col-sm-2">Age Group</dt>
+            <dd class="col-sm-4">@team.GroupDescription</dd>
+            <dt class="col-sm-2">League</dt>
+            @if (team.FixtureURL.Length > 0) {
+                <dd class="col-sm-4"><a href="@team.FixtureURL">@team.LeagueName</a></dd>
+            } else {
+                <dd class="col-sm-4">@team.LeagueName</dd>
+            }
+            <dt class="col-sm-2">Match Day</dt>
+            <dd class="col-sm-4">@team.MatchDay</dd>
+            <dt class="col-sm-2">Division</dt>
+            <dd class="col-sm-10">@team.Division</dd>
+
+                @foreach (var group in team.Contacts.GroupBy(c => c.ContactType))
+                {
+                    var contacts = group.ToList();
+                    <dt class="col-sm-2">@(group.Key.ToString() + (contacts.Count > 1 ? "s" : ""))</dt>
+                    <dd class="col-sm-10">
+                    @foreach (var (index, contact) in contacts.Index())
+                    {
+                        <EditForm method="post" Model="contact" OnSubmit="RemoveContact" FormName="@($"{group.Key}{index}")" Enhance>
+                        <input type="hidden" name="RemoveContactId" value="@contact.Id" />
+
+                        @if (isAuthenticated)
+                        {
+                            <span>
+                                @contact.FullName
+                                (<a href="mailto:@contact.Email">@contact.Email</a>)
+                                <button type="submit" style="border: none; background-color: transparent" class="btn-link">
+                                    <Icon Type="Icon.IconType.Delete"/>
+                                </button>
+                            </span>
+                        }
+                        else
+                        {
+                            <dd class="col-sm-4">
+                                @contact.FullName
+                            </dd>
+                        }
+                        </EditForm>
+                    }
+                    </dd>
+                }
+        </dl>
+        <div>
+            @if (isAuthenticated) {
+                <a class="btn btn-primary btn mr-2" href="@($"/teams/edit?id={team.Id}")">Edit Team </a>
+                <a class="btn btn-primary btn mr-2" href="@($"/fixtures/create?teamid={team.Id}")">Add Fixture</a>
+                <a class="btn btn-primary btn mr-2 " href="@($"/teamcontacts/create?teamid={team.Id}")">Add Contact</a>
+                <a class="btn btn-primary btn mr-2" href="@($"/fixtures/upload2?teamid={team.Id}")">Upload</a>
+                <form method="post" @onsubmit="DeleteFixtures" class="d-inline" @formname="DeleteFixtures" enhance>
+                    <button type="submit" class="btn btn-danger btn mr-2" onclick="return confirm('Are you sure you want to delete all fixtures?')">Delete Fixtures</button>
+                    <AntiforgeryToken />
+                    <input type="hidden" name="DeleteFixturesId" value="@team.Id" />
+                </form>
+            }
+            <a href="#" onclick="history.back()" class="btn btn btn-secondary">Back</a>
+        </div>
+        <br>
+        <FixtureGrid CanEdit="@isAuthenticated" Fixtures="@fixtures" TeamHidden="true"/>
+    }
+</div>
+
+@code {
+    private TeamDto? team;
+    private IReadOnlyList<FixtureDto> fixtures = [];
+    private bool isAuthenticated;
+
+    [SupplyParameterFromQuery]
+    private Guid Id { get; set; }
+
+    [SupplyParameterFromForm(FormName = "DeleteFixtures")]
+    private Guid DeleteFixturesId { get; set; }
+
+    // Posted by any of the per-contact remove forms.
+    [SupplyParameterFromForm]
+    private Guid? RemoveContactId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+
+        team = await TeamService.GetTeamAsync(Id);
+        if (team is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+        fixtures = await FixtureService.GetFixturesAsync(new FixtureQuery { TeamId = Id });
+    }
+
+    private async Task RemoveContact()
+    {
+        // The forms render for everyone, so check here rather than trusting the button being hidden.
+        if (!isAuthenticated || RemoveContactId is not { } contactId) return;
+        await TeamContactService.DeleteTeamContactAsync(contactId);
+        NavigationManager.NavigateTo(NavigationManager.Uri, true);
+    }
+
+    private async Task DeleteFixtures()
+    {
+        if (!isAuthenticated || DeleteFixturesId == Guid.Empty) return;
+        await FixtureService.DeleteFixturesAsync(DeleteFixturesId, after: null);
+        NavigationManager.NavigateTo(NavigationManager.Uri, true);
+    }
+}

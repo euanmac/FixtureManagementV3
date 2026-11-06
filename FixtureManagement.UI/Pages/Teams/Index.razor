@@ -1,0 +1,51 @@
+@page "/teams"
+@inject ITeamService TeamService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Teams</PageTitle>
+
+<h1>Teams</h1>
+<hr>
+<div class="row align-items-center mb-3">
+    <div class="col-auto">
+        @if (isAuthenticated) {
+            <a class="btn btn-primary" href="teams/create">Add Team</a>
+        }
+    </div>
+</div>
+
+<QuickGrid Class="table table-sm table-striped" Items="teams">
+    <TemplateColumn Context="team" title="Name">
+        <a href="@($"teams/details?id={team.Id}")">@team.DisplayName</a>
+    </TemplateColumn>
+    <PropertyColumn Property="team => team.Gender" Class="d-none d-sm-table-cell"/>
+    <PropertyColumn Property="team => team.LeagueName" Title="League"/>
+    <PropertyColumn Property="team => team.Division" />
+    <TemplateColumn Context="team" title="Contacts">
+        @foreach (var contact in team.Contacts)
+        {
+            @contact.FullName <br />
+        }
+    </TemplateColumn>
+    @if (isAuthenticated) {
+        <TemplateColumn Context="team">
+            <a href="@($"teams/details?id={team.Id}")"><Icon Type="Icon.IconType.Details"/></a>
+            <a href="@($"teams/edit?id={team.Id}")"><Icon Type="Icon.IconType.Edit"/></a>
+            <a href="@($"teams/delete?id={team.Id}")"><Icon Type="Icon.IconType.Delete"/></a>
+        </TemplateColumn>
+    }
+</QuickGrid>
+
+@code {
+    private IQueryable<TeamDto> teams = Enumerable.Empty<TeamDto>().AsQueryable();
+    private bool isAuthenticated;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+
+        // Already ordered by age group, gender, division; contacts by contact type.
+        teams = (await TeamService.GetTeamsAsync()).AsQueryable();
+    }
+}

@@ -1,0 +1,33 @@
+@page "/teams/create"
+@attribute [Authorize]
+@inject ITeamService TeamService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<h1>Add</h1>
+
+<h2>Team</h2>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Team" OnValidSubmit="AddTeam" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <TeamFormFields Team="Team" />
+            <button type="submit" class="btn btn-primary">Create</button>
+            <a href="#" onclick="history.back()" class="btn btn btn-secondary">Back</a>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private TeamDto Team { get; set; } = new();
+
+    private async Task AddTeam()
+    {
+        // The service only copies the editable fields, so posted extras (Id, Contacts) are ignored.
+        await TeamService.CreateTeamAsync(Team);
+        NavigationManager.NavigateTo("/teams");
+    }
+}

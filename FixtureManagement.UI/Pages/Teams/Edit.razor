@@ -1,0 +1,58 @@
+@page "/teams/edit"
+@attribute [Authorize]
+@inject ITeamService TeamService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+<h2>Team</h2>
+<hr />
+@if (Team is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Team" OnValidSubmit="UpdateTeam" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <TeamFormFields Team="Team" />
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a href="#" onclick="history.back()" class="btn btn btn-secondary">Back</a>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery]
+    private Guid Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private TeamDto? Team { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // On a post, Team is already filled from the form; otherwise load it.
+        Team ??= await TeamService.GetTeamAsync(Id);
+
+        if (Team is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    private async Task UpdateTeam()
+    {
+        // The id comes from the URL, not the form.
+        if (!await TeamService.UpdateTeamAsync(Id, Team!))
+        {
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+        NavigationManager.NavigateTo($"/teams/details?id={Id}");
+    }
+}
