@@ -65,4 +65,5 @@ jobs:
           app-name: 'euanblazortest2'
           slot-name: 'Production'
           package: .
+          clean: true
           

@@ -65,4 +65,5 @@ jobs:
           app-name: 'TUFixtureManager-QA'
           slot-name: 'Production'
           package: .
+          clean: true
           
