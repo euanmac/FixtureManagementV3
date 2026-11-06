@@ -70,9 +70,7 @@
         isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
 
         Filter ??= new FilterContext{StartDate = DateOnly.FromDateTime(DateTime.Now), EndDate = DateOnly.FromDateTime(DateTime.Now).AddDays(30)};
-        fixtures = (await FixtureService.GetFixturesAsync(new FixtureQuery { From = Filter.StartDate, To = Filter.EndDate }))
-                .Where(f => f.IsHome == Filter.IncludeHome || f.IsHome != Filter.IncludeAway)
-                .ToList();
+        await LoadAsync();
 
         NavigationManager.LocationChanged += OnLocationChanged;
         registration = NavigationManager.RegisterLocationChangingHandler(LocationChangingHandler);
@@ -84,7 +82,21 @@
         return ValueTask.CompletedTask;
     }
 
-    private void FilterFixtures() {
+    private async Task LoadAsync()
+    {
+        fixtures = (await FixtureService.GetFixturesAsync(new FixtureQuery { From = Filter!.StartDate, To = Filter.EndDate }))
+                .Where(f => f.IsHome == Filter.IncludeHome || f.IsHome != Filter.IncludeAway)
+                .ToList();
+    }
+
+    // Static site: the posted filter is applied when the page loads, so nothing to do here.
+    // Interactive (desktop): the page stays loaded, so reload with the new filter.
+    private async Task FilterFixtures()
+    {
+        if (RendererInfo.IsInteractive)
+        {
+            await LoadAsync();
+        }
     }
 
     public void Dispose()

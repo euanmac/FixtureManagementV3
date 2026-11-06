@@ -1,4 +1,4 @@
-@page "/fixtures/allocate"
+﻿@page "/fixtures/allocate"
 @attribute [Authorize]
 @inject IFixtureService FixtureService
 @inject IPitchService PitchService
@@ -55,9 +55,10 @@
 
                 </fieldset>
                 @if (isAuthenticated) {
-                    <button type="submit" class="btn btn-primary me-1" name="Action" value="@(isNew ? "add" : "update")">Save</button>
+                    @* Static site: the button's name/value is posted as Action. Interactive (desktop): the click records it. *@
+                    <button type="submit" class="btn btn-primary me-1" name="Action" value="@(isNew ? "add" : "update")" @onclick='() => clickedAction = isNew ? "add" : "update"'>Save</button>
                     @if (!isNew) {
-                        <button type="submit" class="btn btn-danger me-1" name="Action" value="delete" >Delete</button>
+                        <button type="submit" class="btn btn-danger me-1" name="Action" value="delete" @onclick='() => clickedAction = "delete"'>Delete</button>
                     }
                 }
                 <a class="btn btn-secondary" href="#" onclick="history.back()">Back</a>
@@ -74,8 +75,10 @@
     [SupplyParameterFromQuery (Name="id")]
     private Guid FixtureId { get; set; }
 
+    // Which button was pressed: posted on the static site, recorded by the click when interactive.
     [SupplyParameterFromForm]
-    private string Action { get; set; } = "update";
+    private string? Action { get; set; }
+    private string? clickedAction;
 
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
@@ -124,7 +127,8 @@
 
     private async Task SaveChanges()
     {
-        if (Action == "delete")
+        var action = Action ?? clickedAction ?? "update";
+        if (action == "delete")
         {
             await FixtureService.RemoveAllocationAsync(FixtureId);
         }

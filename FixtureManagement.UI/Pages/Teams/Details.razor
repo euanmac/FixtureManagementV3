@@ -52,7 +52,9 @@
                             <span>
                                 @contact.FullName
                                 (<a href="mailto:@contact.Email">@contact.Email</a>)
-                                <button type="submit" style="border: none; background-color: transparent" class="btn-link">
+                                @* Static site: the hidden RemoveContactId is posted. Interactive (desktop): the click records it. *@
+                                <button type="submit" style="border: none; background-color: transparent" class="btn-link"
+                                        @onclick="() => clickedContactId = contact.Id">
                                     <Icon Type="Icon.IconType.Delete"/>
                                 </button>
                             </span>
@@ -77,7 +79,6 @@
                 <form method="post" @onsubmit="DeleteFixtures" class="d-inline" @formname="DeleteFixtures" enhance>
                     <button type="submit" class="btn btn-danger btn mr-2" onclick="return confirm('Are you sure you want to delete all fixtures?')">Delete Fixtures</button>
                     <AntiforgeryToken />
-                    <input type="hidden" name="DeleteFixturesId" value="@team.Id" />
                 </form>
             }
             <a href="#" onclick="history.back()" class="btn btn btn-secondary">Back</a>
@@ -95,18 +96,22 @@
     [SupplyParameterFromQuery]
     private Guid Id { get; set; }
 
-    [SupplyParameterFromForm(FormName = "DeleteFixtures")]
-    private Guid DeleteFixturesId { get; set; }
-
-    // Posted by any of the per-contact remove forms.
+    // Posted by any of the per-contact remove forms (static site only).
     [SupplyParameterFromForm]
     private Guid? RemoveContactId { get; set; }
+
+    // Set by the remove button's click when the page is interactive (desktop app), where nothing is posted.
+    private Guid? clickedContactId;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        await LoadAsync();
+    }
 
+    private async Task LoadAsync()
+    {
         team = await TeamService.GetTeamAsync(Id);
         if (team is null)
         {
@@ -119,15 +124,31 @@
     private async Task RemoveContact()
     {
         // The forms render for everyone, so check here rather than trusting the button being hidden.
-        if (!isAuthenticated || RemoveContactId is null) return;
-        await TeamContactService.DeleteTeamContactAsync(RemoveContactId.Value);
-        NavigationManager.NavigateTo(NavigationManager.Uri, true);
+        var contactId = RemoveContactId ?? clickedContactId;
+        if (!isAuthenticated || contactId is null) return;
+        await TeamContactService.DeleteTeamContactAsync(contactId.Value);
+        await ShowChangesAsync();
     }
 
     private async Task DeleteFixtures()
     {
-        if (!isAuthenticated || DeleteFixturesId == Guid.Empty) return;
-        await FixtureService.DeleteFixturesAsync(DeleteFixturesId, after: null);
-        NavigationManager.NavigateTo(NavigationManager.Uri, true);
+        // Always this page's team (from the URL), so nothing needs to be posted.
+        if (!isAuthenticated || Id == Guid.Empty) return;
+        await FixtureService.DeleteFixturesAsync(Id, after: null);
+        await ShowChangesAsync();
+    }
+
+    // Static site: reload the page (post-redirect-get). Interactive: just reload the data in place.
+    private async Task ShowChangesAsync()
+    {
+        if (RendererInfo.IsInteractive)
+        {
+            clickedContactId = null;
+            await LoadAsync();
+        }
+        else
+        {
+            NavigationManager.NavigateTo(NavigationManager.Uri, true);
+        }
     }
 }

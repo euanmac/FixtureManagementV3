@@ -19,14 +19,14 @@
             <h3>@(gameWeekStart.ToString("dddd, d MMMM yyyy")) to @(gameWeekEnd.ToString("dddd, d MMMM yyyy"))</h3>
         </div>
         <div class="col text-end">
-                <button class="btn btn-secondary" type="button" onclick="location.href='./gameweek'">today</button>
+                <a class="btn btn-secondary" href="gameweek" data-enhance-nav="false">today</a>
                 <div class="btn-group">
-                    <button class="btn btn-dark" type="button" aria-label="prevSat" onclick="location.href='./gameweek?matchday=@(gameWeekStart.AddDays(-7).ToString("dd-MMM-yyyy"))'">
+                    <a class="btn btn-dark" aria-label="prevSat" href="@($"gameweek?matchday={gameWeekStart.AddDays(-7).ToString("dd-MMM-yyyy")}")" data-enhance-nav="false">
                         <i class="bi bi-chevron-left align-middle" data-toggle="tooltip" data-original-title=""></i>
-                    </button>
-                    <button class="btn btn-dark" type="button" aria-label="nextSat" onclick="location.href='./gameweek?matchday=@(gameWeekStart.AddDays(+7).ToString("dd-MMM-yyyy"))'">
+                    </a>
+                    <a class="btn btn-dark" aria-label="nextSat" href="@($"gameweek?matchday={gameWeekStart.AddDays(7).ToString("dd-MMM-yyyy")}")" data-enhance-nav="false">
                         <i class="bi bi-chevron-right align-middle" data-toggle="tooltip" data-original-title=""></i>
-                    </button>
+                    </a>
                 </div>
         </div>
     </div>
@@ -36,10 +36,11 @@
             <div class="col-auto">
                 <EditForm OnSubmit="FixturesAction" FormName="Action" Model="fixtureRecResults" enhance>
                     @* <input type="hidden" name="DownloadFixtures"  @value="DownloadFixtures" /> *@
-                    <button type="submit" class="btn btn-primary" disabled="@(buttonsDisabled || (downloadCount == 0))" value="@Action.Download">Download @(downloadCount)</button>
-                    <button type="submit" class="btn btn-primary" disabled="@(buttonsDisabled || (unconfirmedCount == 0))" name="FormAction" value="@Action.Confirm">Confirm @(unconfirmedCount)</button>
-                    <button type="submit" class="btn btn-primary" disabled="@(buttonsDisabled || (unmatchedCount ==0))" name="FormAction" value="@Action.Delete">Delete Unmatched</button>
-                    <button type="submit" class="btn btn-primary" disabled="@buttonsDisabled" name="FormAction" value="@Action.Update">Update</button>
+                    @* Static site: the pressed button's name/value is posted as FormAction. Interactive (desktop): the click records it. *@
+                    <button type="submit" class="btn btn-primary" disabled="@(buttonsDisabled || (downloadCount == 0))" name="FormAction" value="@Action.Download" @onclick="() => clickedAction = Action.Download">Download @(downloadCount)</button>
+                    <button type="submit" class="btn btn-primary" disabled="@(buttonsDisabled || (unconfirmedCount == 0))" name="FormAction" value="@Action.Confirm" @onclick="() => clickedAction = Action.Confirm">Confirm @(unconfirmedCount)</button>
+                    <button type="submit" class="btn btn-primary" disabled="@(buttonsDisabled || (unmatchedCount ==0))" name="FormAction" value="@Action.Delete" @onclick="() => clickedAction = Action.Delete">Delete Unmatched</button>
+                    <button type="submit" class="btn btn-primary" disabled="@buttonsDisabled" name="FormAction" value="@Action.Update" @onclick="() => clickedAction = Action.Update">Update</button>
 
                 </EditForm>
             </div>
@@ -163,16 +164,17 @@
                                 {
                                     <EditForm method="post" Model="item" OnSubmit="DownloadFixture" FormName="@(item.Id.ToString())" Enhance>
                                         <input type="hidden" name="downloadFixture.Id" value="@item.Id" />
-                                        <input type="hidden" name="downloadFixture.Date" value="@item.MatchDate.ToString("yyyy-MMM-dd")" />
-                                        <input type="hidden" name="downloadFixture.IsHome" value="@(item.Venue == "H") " />
+                                        <input type="hidden" name="downloadFixture.Date" value="@item.MatchDate.ToString("yyyy-MM-dd")" />
+                                        @* ToString() matters: Blazor drops/empties bool attribute values, which would post IsHome as blank. *@
+                                        <input type="hidden" name="downloadFixture.IsHome" value="@((item.Venue == "H").ToString())" />
                                         <input type="hidden" name="downloadFixture.Opponent" value="@item.Opponent" />
                                         <input type="hidden" name="downloadFixture.FixtureType" value="@item.FixtureType" />
                                         <input type="hidden" name="downloadFixture.TeamId" value="@team.Id" />
                                         @* <button type="submit" class="btn btn-link">
                                             <i class="bi bi-cloud-arrow-down"></i>
                                         </button>s *@
-                                        <button type="submit" style="border: none; background-color: transparent" class="btn-link">
-                                            <i class ="bi bi-cloud-arrow-down"/>   
+                                        <button type="submit" style="border: none; background-color: transparent" class="btn-link" @onclick="() => clickedRow = item">
+                                            <i class ="bi bi-cloud-arrow-down"/>
                                         </button>
                                     </EditForm>
                                 }
@@ -214,10 +216,15 @@
         Confirm
     }
 
+    // Which bulk button was pressed: posted on the static site, recorded by the click when interactive.
     [SupplyParameterFromForm]
-    private Action FormAction {get; set;}= Action.Update;
+    private Action? FormAction {get; set;}
+    private Action? clickedAction;
+
+    // Per-row download: the row's fields are posted on the static site; the clicked row is used when interactive.
     [SupplyParameterFromForm]
     private FixtureDto? downloadFixture {get; set;}
+    private TeamReconiliationRow? clickedRow;
 
     private bool isAuthenticated = false;
     private bool stripe = false;
@@ -232,26 +239,41 @@
 
     private DateOnly gameWeekEnd;
     private DateOnly gameWeekStart;
+    private DateOnly? loadedDay;
 
     [SupplyParameterFromQuery]
     private DateOnly? matchDay { get; set; }
 
     private IEnumerable<TeamReconiliationRow> AllRows => fixtureRecResults.Values.SelectMany(x => x);
 
-    protected override async Task OnInitializedAsync()    
+    protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+    }
 
-        //If not provided default matchday to today
-        matchDay ??= DateOnly.FromDateTime(DateTime.Now);
-        DayOfWeek dayOfWeek = matchDay.Value.DayOfWeek;
+    // Loads here rather than in OnInitialized so that, when interactive, following the previous/next week
+    // links (same page, new ?matchday) reloads the table. On the static site this runs once per request.
+    protected override async Task OnParametersSetAsync()
+    {
+        var day = matchDay ?? DateOnly.FromDateTime(DateTime.Now);
+        if (loadedDay != day)
+        {
+            loadedDay = day;
+            await LoadWeekAsync(day);
+        }
+    }
+
+    private async Task LoadWeekAsync(DateOnly day)
+    {
+        buttonsDisabled = true;
 
         //Calculate Gameweek Start and end Dates (Monday to Sunday)
+        DayOfWeek dayOfWeek = day.DayOfWeek;
         int startOffset = (dayOfWeek == DayOfWeek.Sunday) ? 6 : (int)dayOfWeek - 1;
         int endOffset = (dayOfWeek == DayOfWeek.Sunday) ? 0 : 7 - (int)dayOfWeek;
-        gameWeekStart = matchDay.Value.AddDays(-startOffset);
-        gameWeekEnd = matchDay.Value.AddDays(endOffset);
+        gameWeekStart = day.AddDays(-startOffset);
+        gameWeekEnd = day.AddDays(endOffset);
 
         //Get fixtures for the week, and all teams (already ordered by age group, gender, division)
         var fixtures = await FixtureService.GetFixturesAsync(new FixtureQuery { From = gameWeekStart, To = gameWeekEnd });
@@ -261,41 +283,44 @@
         fixtureRecResults = teams.ToDictionary(
             t => t,
             t => new List<TeamReconiliationRow> { new TeamReconiliationRow { Team = t, MatchDate = gameWeekStart, RecStatus = FixtureRecMatchType.pending } });
-
+        UpdateCounts();
         StateHasChanged();
 
         //For each team reconcile the fixtures for a given date
         //Will be asynchronous so update state on each result returned
         await foreach (var row in FullTimeService.Reconcile(teams, fixtures, gameWeekStart, gameWeekEnd)) {
-
             if (row.Count > 0) {
                 fixtureRecResults[row[0].Team] = row;
             }
-
-            downloadCount = AllRows.Count(f => f.RecStatus == FixtureRecMatchType.fullTimeUnmatched);
-            unconfirmedCount = AllRows.Count(f => f.IsAllocated && !f.IsConfirmed);
-            unmatchedCount = AllRows.Count(f => f.RecStatus == FixtureRecMatchType.localFixtureUnmatched);
+            UpdateCounts();
             StateHasChanged();
         }
         buttonsDisabled = false;
     }
 
-    public void ClearCache() {
+    private void UpdateCounts()
+    {
+        downloadCount = AllRows.Count(f => f.RecStatus == FixtureRecMatchType.fullTimeUnmatched);
+        unconfirmedCount = AllRows.Count(f => f.IsAllocated && !f.IsConfirmed);
+        unmatchedCount = AllRows.Count(f => f.RecStatus == FixtureRecMatchType.localFixtureUnmatched);
+    }
+
+    public async Task ClearCache() {
         FullTimeService.ClearCache();
-        NavigationManager.NavigateTo(ThisWeekUrl);
+        await ShowChangesAsync();
     }
 
     public async Task FixturesAction()
     {
         if (!isAuthenticated) return;
 
-        switch (FormAction) 
+        switch (FormAction ?? clickedAction ?? Action.Update) 
         {
             case Action.Download:
                 //Add every FullTime fixture that has no local match, in one save
                 var toAdd = AllRows
                     .Where(f => f.RecStatus == FixtureRecMatchType.fullTimeUnmatched)
-                    .Select(rec => new FixtureDto { TeamId = rec.Team.Id, Date = rec.MatchDate, IsHome = rec.Venue == "H", Opponent = rec.Opponent, FixtureType = rec.FixtureType })
+                    .Select(ToFixture)
                     .ToList();
                 if (toAdd.Count > 0) await FixtureService.CreateFixturesAsync(toAdd);
                 break;
@@ -318,17 +343,42 @@
                 await FixtureService.ConfirmAllocationsAsync(toConfirm);
                 break;
         }
-        NavigationManager.NavigateTo(ThisWeekUrl);
+        await ShowChangesAsync();
     }
 
     private async Task DownloadFixture()
     {
-        if (!isAuthenticated || downloadFixture is null) return;
-        await FixtureService.CreateFixtureAsync(downloadFixture);
-        NavigationManager.NavigateTo(ThisWeekUrl);
+        var fixture = downloadFixture ?? (clickedRow is null ? null : ToFixture(clickedRow));
+        if (!isAuthenticated || fixture is null) return;
+        await FixtureService.CreateFixtureAsync(fixture);
+        await ShowChangesAsync();
     }
 
-    private string ThisWeekUrl => $"/gameweek?matchday={matchDay!.Value.ToString("dd-MMM-yyyy")}";
+    private static FixtureDto ToFixture(TeamReconiliationRow rec) => new()
+    {
+        TeamId = rec.Team.Id,
+        Date = rec.MatchDate,
+        IsHome = rec.Venue == "H",
+        Opponent = rec.Opponent,
+        FixtureType = rec.FixtureType,
+    };
+
+    // Static site: redirect back to this week (post-redirect-get). Interactive: reload the week in place.
+    private async Task ShowChangesAsync()
+    {
+        if (RendererInfo.IsInteractive)
+        {
+            clickedAction = null;
+            clickedRow = null;
+            await LoadWeekAsync(loadedDay!.Value);
+        }
+        else
+        {
+            NavigationManager.NavigateTo(ThisWeekUrl);
+        }
+    }
+
+    private string ThisWeekUrl => $"/gameweek?matchday={loadedDay!.Value.ToString("dd-MMM-yyyy")}";
 
     private string ActionURL(string action, Guid id) => $"fixtures/{action}?id={id.ToString()}&returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}";
 }

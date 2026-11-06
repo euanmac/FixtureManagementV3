@@ -1,4 +1,4 @@
-@page "/teamcontacts/create"
+﻿@page "/teamcontacts/create"
 @attribute [Authorize]
 @inject ITeamContactService TeamContactService
 @inject ITeamService TeamService
@@ -99,6 +99,11 @@
         if (TeamId is not null)
         {
             fixedTeam = teams.FirstOrDefault(t => t.Id == TeamId.Value);
+            if (fixedTeam is not null)
+            {
+                // Also posted as a hidden field on the static site; set it here for the interactive (desktop) case.
+                Contact.TeamId = fixedTeam.Id;
+            }
         }
     }
 

@@ -13,12 +13,20 @@
         }
     </div>
     <div class="col-auto">
-        <input type="checkbox" id="show-past" onclick="ToggleRows(!this.checked)" class="form-check-input"/>
+        @if (RendererInfo.IsInteractive)
+        {
+            @* Interactive (desktop): scripts in components don't run, so filter in C#. *@
+            <input type="checkbox" id="show-past" checked="@showPast" @onchange="e => showPast = e.Value is true" class="form-check-input"/>
+        }
+        else
+        {
+            <input type="checkbox" id="show-past" onclick="ToggleRows(!this.checked)" class="form-check-input"/>
+        }
         <label>Show Past</label>
     </div>
 </div>
 
-<QuickGrid Class="table" Items="bookings">
+<QuickGrid Class="table" Items="VisibleBookings">
     <PropertyColumn Property="booking => booking.Title" />
     <PropertyColumn Property="booking => booking.Start" />
     <PropertyColumn Property="booking => booking.End" />
@@ -35,19 +43,28 @@
     }
 </QuickGrid>
 
-<script>
-    function ToggleRows(hidden){
-        document.querySelectorAll('.past').forEach(row => {
-            row.parentElement.parentElement.hidden = hidden;
-        });
-    }
+@if (!RendererInfo.IsInteractive)
+{
+    @* Static site: hide past rows in the browser; the checkbox toggles them. *@
+    <script>
+        function ToggleRows(hidden){
+            document.querySelectorAll('.past').forEach(row => {
+                row.parentElement.parentElement.hidden = hidden;
+            });
+        }
 
-    ToggleRows(true);
-</script>
+        ToggleRows(true);
+    </script>
+}
 
 @code {
     private IQueryable<BookingDto> bookings = Enumerable.Empty<BookingDto>().AsQueryable();
     private bool isAuthenticated;
+    private bool showPast;
+
+    // Static site: every row is sent and the script hides past ones. Interactive: past rows are left out unless shown.
+    private IQueryable<BookingDto> VisibleBookings =>
+        RendererInfo.IsInteractive && !showPast ? bookings.Where(b => !b.IsPast) : bookings;
 
     protected override async Task OnInitializedAsync()
     {
