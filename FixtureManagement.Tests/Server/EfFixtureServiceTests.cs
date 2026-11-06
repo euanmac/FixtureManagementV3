@@ -248,6 +248,32 @@ public sealed class EfFixtureServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ConfirmAllocations_confirms_only_unconfirmed_allocations_of_the_given_fixtures()
+    {
+        var team = await _db.AddTeamAsync();
+        var pitch = await _db.AddPitchAsync();
+        var fixtures = (await _service.CreateFixturesAsync([
+            NewFixture(team.Id, Nov7, "A"), NewFixture(team.Id, Nov7, "B"),
+            NewFixture(team.Id, Nov7, "C"), NewFixture(team.Id, Nov7, "NoAllocation")])).Value!;
+        var (a, b, c, none) = (fixtures[0].Id, fixtures[1].Id, fixtures[2].Id, fixtures[3].Id);
+        await _service.SetAllocationAsync(a, NewAllocation(pitch.Id));
+        await _service.SetAllocationAsync(b, NewAllocation(pitch.Id));
+        var alreadyConfirmed = NewAllocation(pitch.Id);
+        alreadyConfirmed.IsConfirmed = true;
+        await _service.SetAllocationAsync(c, alreadyConfirmed);
+
+        // a: unconfirmed -> confirmed; c: already confirmed (skipped); none: no allocation (skipped); b: not asked for.
+        var count = await _service.ConfirmAllocationsAsync([a, c, none, Guid.NewGuid()]);
+
+        Assert.Equal(1, count);
+        Assert.True((await _service.GetFixtureAsync(a))!.Allocation!.IsConfirmed);
+        Assert.False((await _service.GetFixtureAsync(b))!.Allocation!.IsConfirmed);
+        Assert.True((await _service.GetFixtureAsync(c))!.Allocation!.IsConfirmed);
+        Assert.Null((await _service.GetFixtureAsync(none))!.Allocation);
+        Assert.Equal(0, await _service.ConfirmAllocationsAsync([]));
+    }
+
+    [Fact]
     public async Task DeleteFixtures_requires_a_filter()
     {
         await Assert.ThrowsAsync<ArgumentException>(() => _service.DeleteFixturesAsync(null, null));

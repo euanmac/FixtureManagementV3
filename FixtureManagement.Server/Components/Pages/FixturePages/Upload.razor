@@ -1,6 +1,7 @@
 ﻿@page "/fixtures/upload"
 @attribute [Authorize]
-@inject IDbContextFactory<AppDBContext> DbFactory
+@inject ITeamService TeamService
+@inject IFixtureService FixtureService
 @inject NavigationManager NavigationManager
 @inject FullTimeReconciliationService FullTimeReconciliationService
 @using CsvHelper
@@ -36,7 +37,7 @@
             <div class="row">
                 <div class="col-auto">
                     <div class="d-flex align-items-end gap-2">
-                        <a href="@team.FixtureURL">@(Utilities.GetAttributeOfType<DisplayAttribute>(@team.League)!.Name ?? "")</a>
+                        <a href="@team.FixtureURL">@team.LeagueName</a>
                         <input type="hidden" name="teamiUploadTeamId" value="@UploadTeamId" />
                         <button type="submit" class="btn btn-primary mt-2">Load</button>
                     </div>
@@ -79,26 +80,16 @@
     [SupplyParameterFromForm(FormName = "upload")]
     Guid UploadTeamId {get; set;}
 
-    List<Fixture> Fixtures { get; set; }= new List<Fixture>();
+    List<FixtureDto> Fixtures { get; set; } = new List<FixtureDto>();
     [SupplyParameterFromForm(FormName = "create")]
-    Dictionary<Guid, Fixture>  UploadFixtures { get; set; } = new ();
+    Dictionary<Guid, FixtureDto> UploadFixtures { get; set; } = new ();
     [SupplyParameterFromForm(FormName = "create")]
     Dictionary<Guid, bool> UploadSelection { get; set; } = new ();
-    private IQueryable<Team> teamList = default!;
-    private Team? team { get; set; }
+        private TeamDto? team { get; set; }
     private string? errorMessage { get; set; }
 
   protected override async Task OnInitializedAsync() {
-            using var context = DbFactory.CreateDbContext();
-
-            teamList = (await context.Team
-            .ToListAsync())
-            .OrderBy(t => t.AgeGroup)
-            .ThenBy(t => t.Gender)
-            .ThenBy(t => t.Name)
-            .AsQueryable(); 
-
-            team ??= await context.Team.FirstOrDefaultAsync(m => m.Id == TeamId);
+            team ??= await TeamService.GetTeamAsync(TeamId);
             
             if (team is null)
             {
@@ -126,7 +117,7 @@
             {
                 try {
                     IEnumerable<FixtureFile> records = csv.GetRecords<FixtureFile>();
-                    Fixtures = records.Select(r => new Fixture {
+                    Fixtures = records.Select(r => new FixtureDto {
                         Id = Guid.NewGuid(),
                         TeamId = UploadTeamId,
                         Opponent = r.Opponent,
@@ -155,7 +146,7 @@
         }
         try {
             @* var fulltimeFixtures =  FullTimeReconciliationService.FromFullTime(team);
-            Fixtures = fulltimeFixtures.Select(ff => new Fixture {
+            Fixtures = fulltimeFixtures.Select(ff => new FixtureDto {
                         Id = Guid.NewGuid(),
                         TeamId = UploadTeamId,
                         Opponent = ff.Opponent,
@@ -172,7 +163,7 @@
         }
     }
 
-    public void CreateFixtures() {
+    public async Task CreateFixtures() {
 
         //Check if any fixtures are selected for upload
         if (UploadSelection is not null) {
@@ -180,9 +171,12 @@
                 .Where(f => UploadSelection.ContainsKey(f.Key) && UploadSelection[f.Key])
                 .Select(f => f.Value);
 
-            using var context = DbFactory.CreateDbContext();
-            context.Fixture.AddRange(fixtures);
-            context.SaveChanges();  
+            var result = await FixtureService.CreateFixturesAsync(fixtures.ToList());
+            if (!result.Succeeded)
+            {
+                errorMessage = string.Join(" ", result.Errors.SelectMany(e => e.Value));
+                return;
+            }  
         }
             NavigationManager.NavigateTo($"teams/details?id={UploadTeamId}");
     }
@@ -195,7 +189,7 @@
     }
 
     public record UploadFixture {
-        public required Fixture Fixture {get; set;}
+        public required FixtureDto Fixture {get; set;}
         public bool Upload {get; set;}}
 }
 

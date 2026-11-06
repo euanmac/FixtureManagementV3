@@ -139,6 +139,22 @@ public class EfFixtureService(IDbContextFactory<AppDBContext> dbFactory) : IFixt
         return true;
     }
 
+    public async Task<int> ConfirmAllocationsAsync(IReadOnlyCollection<Guid> fixtureIds, CancellationToken cancellationToken = default)
+    {
+        if (fixtureIds.Count == 0) return 0;
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var ids = fixtureIds.Distinct().ToList();
+        var allocations = await db.FixtureAllocation
+            .Where(a => ids.Contains(a.FixtureId) && !a.IsConfirmed)
+            .ToListAsync(cancellationToken);
+        foreach (var allocation in allocations)
+        {
+            allocation.IsConfirmed = true;
+        }
+        await db.SaveChangesAsync(cancellationToken);
+        return allocations.Count;
+    }
+
     private static IQueryable<Fixture> WithDetails(IQueryable<Fixture> query) =>
         query.Include(f => f.Team)
             .Include(f => f.FixtureAllocation)

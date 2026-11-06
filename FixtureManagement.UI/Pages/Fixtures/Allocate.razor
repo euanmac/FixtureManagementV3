@@ -1,0 +1,152 @@
+@page "/fixtures/allocate"
+@attribute [Authorize]
+@inject IFixtureService FixtureService
+@inject IPitchService PitchService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Create</PageTitle>
+
+<h1>Schedule Fixture</h1>
+
+<hr />
+@if (fixture is not null && FixtureAllocation is not null)
+{
+    <h4>@fixture.Team.DisplayName</h4>
+    <h5> v </h5>
+    <h4>@fixture.Opponent </h4>
+    <hr />
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" EditContext="editContext" OnValidSubmit="SaveChanges" FormName="create" Enhance>
+                <DataAnnotationsValidator />
+
+                <fieldset disabled="@(!isAuthenticated)" >
+
+                    <div class="mb-3 form-floating">
+                        <InputSelect id="pitchid" @bind-Value="FixtureAllocation.PitchId" class="form-control form-select" aria-required="true">
+                            @foreach (var pitch in pitches)
+                            {
+                                <option value="@pitch.Id">@pitch.Name</option>
+                            }
+                        </InputSelect>
+                        <label for="pitchid" class="form-label">Pitch</label>
+                        <ValidationMessage For="() => FixtureAllocation.PitchId" class="text-danger" />
+                    </div>
+                    <div class="mb-3 form-floating">
+                        <InputDate id="start" @bind-Value="FixtureAllocation.Start"  Type="InputDateType.Time" class="form-control" aria-required="true" />
+                        <label for="start" class="form-label">@($"Start ({fixture.Date.ToString("dd-MMM-yyyy")})") </label>
+                    </div>
+                    <div class="mb-3">
+                        <label for="duration" class="form-label">Duration</label>
+                        <InputSelect id="duration" @bind-Value="FixtureAllocation.Duration" class="form-controlb form-select" aria-required="true">
+                            @foreach (var duration in durations)
+                            {
+                                <option value="@duration">@duration.TotalMinutes</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="() => FixtureAllocation.Duration" class="text-danger" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="isconfirmed" class="form-label">Is Confirmed?</label>
+                        <InputCheckbox id="isconfirmed" @bind-Value="FixtureAllocation.IsConfirmed" class="form-check-input" aria-required="true"/>
+                        <ValidationMessage For="() => FixtureAllocation.IsConfirmed" class="text-danger" />
+                    </div>
+
+                </fieldset>
+                @if (isAuthenticated) {
+                    <button type="submit" class="btn btn-primary me-1" name="Action" value="@(isNew ? "add" : "update")">Save</button>
+                    @if (!isNew) {
+                        <button type="submit" class="btn btn-danger me-1" name="Action" value="delete" >Delete</button>
+                    }
+                }
+                <a class="btn btn-secondary" href="#" onclick="history.back()">Back</a>
+
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromForm]
+    private FixtureAllocationDto? FixtureAllocation { get; set; }
+
+    [SupplyParameterFromQuery (Name="id")]
+    private Guid FixtureId { get; set; }
+
+    [SupplyParameterFromForm]
+    private string Action { get; set; } = "update";
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private FixtureDto? fixture;
+    private IReadOnlyList<PitchDto> pitches = [];
+    private bool isNew = true;
+    private bool isAuthenticated = false;
+    private EditContext editContext = default!;
+    private ValidationMessageStore messages = default!;
+
+    private TimeSpan[] durations = [ TimeSpan.FromMinutes(60),
+                                     TimeSpan.FromMinutes(75),
+                                     TimeSpan.FromMinutes(90),
+                                     TimeSpan.FromMinutes(105),
+                                     TimeSpan.FromMinutes(120) ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+
+        pitches = await PitchService.GetPitchesAsync();   // display order
+        fixture = await FixtureService.GetFixtureAsync(FixtureId);
+        if (fixture is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+
+        // "New" until the fixture has a pitch and a kick-off time.
+        isNew = !fixture.IsAllocated;
+
+        // On a post, FixtureAllocation is already filled from the form.
+        // Otherwise edit the existing allocation, or start a new one with the usual defaults.
+        FixtureAllocation ??= fixture.Allocation ?? new FixtureAllocationDto
+        {
+            PitchId = (pitches.FirstOrDefault(p => p.DisplayOrder == 5) ?? pitches.FirstOrDefault())?.Id ?? Guid.Empty,
+            Start = new TimeOnly(9, 30),
+            Duration = TimeSpan.FromMinutes(90),
+            IsConfirmed = false,
+        };
+        editContext = new EditContext(FixtureAllocation);
+        messages = new ValidationMessageStore(editContext);
+    }
+
+    private async Task SaveChanges()
+    {
+        if (Action == "delete")
+        {
+            await FixtureService.RemoveAllocationAsync(FixtureId);
+        }
+        else
+        {
+            // "add" and "update" are the same call: it creates the allocation or replaces it.
+            var result = await FixtureService.SetAllocationAsync(FixtureId, FixtureAllocation!);
+            if (result.Status == ServiceStatus.NotFound)
+            {
+                NavigationManager.NavigateTo("notfound");
+                return;
+            }
+            if (result.Status == ServiceStatus.Invalid)
+            {
+                foreach (var (field, fieldErrors) in result.Errors)
+                {
+                    messages.Add(editContext.Field(field), fieldErrors);
+                }
+                editContext.NotifyValidationStateChanged();
+                return;
+            }
+        }
+        NavigationManager.NavigateToLocal(ReturnUrl, "/fixtures");
+    }
+}

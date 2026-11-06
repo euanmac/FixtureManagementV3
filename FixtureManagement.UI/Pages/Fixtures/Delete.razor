@@ -1,0 +1,77 @@
+@page "/fixtures/delete"
+@attribute [Authorize]
+@inject IFixtureService FixtureService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Delete</PageTitle>
+
+<h1>Delete</h1>
+
+<p>Are you sure you want to delete this?</p>
+<div>
+
+    @if (fixture is null)
+    {
+        <h2>Fixture</h2>
+        <hr />
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <hr/>
+        <h3>@fixture.Team.DisplayName</h3>
+        <hr />
+        <dl class="row">
+            <dt class="col-sm-2">Date</dt>
+            <dd class="col-sm-10">@fixture.Date</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Is Home</dt>
+            <dd class="col-sm-10">@fixture.IsHome</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Opponent</dt>
+            <dd class="col-sm-10">@fixture.Opponent</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Type</dt>
+            <dd class="col-sm-10">@fixture.FixtureType</dd>
+        </dl>
+        @if (fixture.Allocation is not null)
+        {
+            <dl class="row">
+                <dt class="col-sm-2">Allocation</dt>
+                <dd class="col-sm-10">@fixture.Allocation.PitchName at @fixture.Allocation.Start.ToString("HH:mm") (deleted too)</dd>
+            </dl>
+        }
+        <EditForm method="post" Model="fixture" OnValidSubmit="DeleteFixture" FormName="delete" Enhance>
+            <button type="submit" class="btn btn-danger">Delete</button>
+            <a class="btn btn-secondary" href="/fixtures">Back</a>
+        </EditForm>
+    }
+</div>
+
+@code {
+    private FixtureDto? fixture;
+
+    [SupplyParameterFromQuery]
+    private Guid Id { get; set; }
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        fixture = await FixtureService.GetFixtureAsync(Id);
+
+        if (fixture is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    private async Task DeleteFixture()
+    {
+        await FixtureService.DeleteFixtureAsync(Id);
+        NavigationManager.NavigateToLocal(ReturnUrl, "/fixtures");
+    }
+}

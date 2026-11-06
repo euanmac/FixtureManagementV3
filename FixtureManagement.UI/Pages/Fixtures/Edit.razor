@@ -1,0 +1,84 @@
+@page "/fixtures/edit"
+@attribute [Authorize]
+@inject IFixtureService FixtureService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+@if (Fixture is null || saved is null)
+{
+    <h2>Fixture</h2>
+    <hr />
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <hr />
+    <h3>@saved.Team.DisplayName</h3>
+    <hr />
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" EditContext="editContext" OnValidSubmit="UpdateFixture" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                @* The team isn't editable here; post it back unchanged. *@
+                <input type="hidden" name="Fixture.TeamId" value="@Fixture.TeamId" />
+                <FixtureFormFields Fixture="Fixture" />
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a class="btn btn-secondary" href="#" onclick="history.back()">Back</a>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery]
+    private Guid Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private FixtureDto? Fixture { get; set; }
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    // What's in the database, for the heading (the posted form doesn't carry the team's name).
+    private FixtureDto? saved;
+    private EditContext editContext = default!;
+    private ValidationMessageStore messages = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        saved = await FixtureService.GetFixtureAsync(Id);
+        if (saved is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+
+        // On a post, Fixture is already filled from the form; otherwise show what's saved.
+        Fixture ??= saved;
+        editContext = new EditContext(Fixture);
+        messages = new ValidationMessageStore(editContext);
+    }
+
+    private async Task UpdateFixture()
+    {
+        // The id comes from the URL, not the form.
+        var result = await FixtureService.UpdateFixtureAsync(Id, Fixture!);
+        switch (result.Status)
+        {
+            case ServiceStatus.NotFound:
+                NavigationManager.NavigateTo("notfound");
+                return;
+            case ServiceStatus.Invalid:
+                foreach (var (field, fieldErrors) in result.Errors)
+                {
+                    messages.Add(editContext.Field(field), fieldErrors);
+                }
+                editContext.NotifyValidationStateChanged();
+                return;
+        }
+        NavigationManager.NavigateToLocal(ReturnUrl, "/fixtures");
+    }
+}

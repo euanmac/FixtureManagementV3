@@ -1,0 +1,85 @@
+@page "/fixtures/create"
+@attribute [Authorize]
+@inject IFixtureService FixtureService
+@inject ITeamService TeamService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<h1>New Fixture</h1>
+<hr />
+<div class="row">
+    <div class="col-md-3">
+        @if (Fixture is not null)
+        {
+            <EditForm method="post" EditContext="editContext" OnValidSubmit="AddFixture" FormName="create" Enhance>
+                <DataAnnotationsValidator />
+                <div class="mb-3 form-floating">
+                    <InputSelect id="teamid" @bind-Value="Fixture.TeamId" class="form-control form-select">
+                        @foreach (var team in teams)
+                        {
+                            <option value="@team.Id">@team.DisplayName</option>
+                        }
+                    </InputSelect>
+                    <label for="teamid" class="form-label">Team</label>
+                    <ValidationMessage For="() => Fixture.TeamId" class="text-danger" />
+                </div>
+                <FixtureFormFields Fixture="Fixture" />
+                <button type="submit" class="btn btn-primary btn">Save</button>
+                <a href="#" onclick="history.back()" class="btn btn btn-secondary">Back</a>
+            </EditForm>
+        }
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private FixtureDto? Fixture { get; set; }
+
+    // Set when arriving from a team's "Add Fixture" button.
+    [SupplyParameterFromQuery]
+    private Guid? TeamId { get; set; }
+
+    private IReadOnlyList<TeamDto> teams = [];
+    private EditContext editContext = default!;
+    private ValidationMessageStore messages = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        teams = (await TeamService.GetTeamsAsync())
+            .OrderBy(t => t.AgeGroup).ThenBy(t => t.Gender).ThenBy(t => t.Name)
+            .ToList();
+
+        if (Fixture is null && teams.Count != 0)
+        {
+            Fixture = new FixtureDto
+            {
+                TeamId = TeamId ?? teams[0].Id,
+                Date = DateOnly.FromDateTime(DateTime.Now),
+                FixtureType = FixtureType.League,
+                IsHome = true,
+            };
+        }
+        if (Fixture is not null)
+        {
+            editContext = new EditContext(Fixture);
+            messages = new ValidationMessageStore(editContext);
+        }
+    }
+
+    private async Task AddFixture()
+    {
+        var result = await FixtureService.CreateFixtureAsync(Fixture!);
+        if (result.Status == ServiceStatus.Invalid)
+        {
+            // e.g. the team was deleted meanwhile: show it against the field.
+            foreach (var (field, fieldErrors) in result.Errors)
+            {
+                messages.Add(editContext.Field(field), fieldErrors);
+            }
+            editContext.NotifyValidationStateChanged();
+            return;
+        }
+        NavigationManager.NavigateTo("/fixtures");
+    }
+}

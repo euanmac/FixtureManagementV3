@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\FixtureManagement.Server\FixtureManagement.Server.csproj" />
     <ProjectReference Include="..\FixtureManagement.Shared\FixtureManagement.Shared.csproj" />
+    <ProjectReference Include="..\FixtureManagement.UI\FixtureManagement.UI.csproj" />
   </ItemGroup>
 
 </Project>

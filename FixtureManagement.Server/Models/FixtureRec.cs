@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using FixtureManagement.Shared.Dtos;
 namespace FixtureManagement.Server.Models
 {
     public class TeamReconiliationRow
     {
-        public required Team Team { get; set; }
+        public required TeamDto Team { get; set; }
         public Guid Id { get; set; }
         public FixtureRecMatchType RecStatus { get; set; }
         [DataType(DataType.Date)]

@@ -1,13 +1,14 @@
 ﻿namespace FixtureManagement.Server.Services;
 
 using FixtureManagement.Server.Models;
+using FixtureManagement.Shared.Dtos;
 using HtmlAgilityPack;
 using System.Globalization;
 using System.Collections.Concurrent;
 using System.Net.Cache;
 
 public interface IFixtureReconciliationService {
-    public  IAsyncEnumerable<List<TeamReconiliationRow>> Reconcile(List<Team> teams, List<Fixture> fixtures, DateOnly gameWeekStart, DateOnly gameWeekEnd);
+    public  IAsyncEnumerable<List<TeamReconiliationRow>> Reconcile(IReadOnlyList<TeamDto> teams, IReadOnlyList<FixtureDto> fixtures, DateOnly gameWeekStart, DateOnly gameWeekEnd);
     public void ClearCache();
     TimeSpan CacheAge { get; }
 }
@@ -40,7 +41,7 @@ public class FullTimeReconciliationService : IFixtureReconciliationService
         cacheRefreshDateTime = null;
     }
 
-    public async IAsyncEnumerable<List<TeamReconiliationRow>>   Reconcile(List<Team> teams, List<Fixture> fixtures, DateOnly gameWeekStart, DateOnly gameWeekEnd)
+    public async IAsyncEnumerable<List<TeamReconiliationRow>>   Reconcile(IReadOnlyList<TeamDto> teams, IReadOnlyList<FixtureDto> fixtures, DateOnly gameWeekStart, DateOnly gameWeekEnd)
     {
         await Task.Delay(100);
         var teams2 = teams.Where(t => t.AgeGroup == AgeGroup.U13 && t.Gender == Gender.Female).ToList();
@@ -56,7 +57,7 @@ public class FullTimeReconciliationService : IFixtureReconciliationService
         }
     }
 
-    public async Task<List<TeamReconiliationRow>> ReconcileAsync(Team team, DateOnly start, DateOnly end, IList<Fixture> fixtures)
+    public async Task<List<TeamReconiliationRow>> ReconcileAsync(TeamDto team, DateOnly start, DateOnly end, IReadOnlyList<FixtureDto> fixtures)
     {
 
         Console.WriteLine($"{team.DisplayName} started");
@@ -86,7 +87,7 @@ public class FullTimeReconciliationService : IFixtureReconciliationService
         }
         
         //Get list of DB fixtures for date range
-        List<Fixture> filteredFixtures = fixtures
+        List<FixtureDto> filteredFixtures = fixtures
             .Where(f => (f.Date >= start && f.Date <= end && f.TeamId == team.Id))
             .ToList();
 
@@ -113,10 +114,10 @@ public class FullTimeReconciliationService : IFixtureReconciliationService
                     FixtureType = f.FixtureType,
                     CanAllocate = f.CanAllocate,
                     IsAllocated = f.IsAllocated,
-                    AllocationId = f.IsAllocated ? f.FixtureAllocation!.Id : Guid.Empty,
-                    Pitch = f.IsAllocated ? f.FixtureAllocation!.Pitch!.Name : "",
-                    Start = f.IsAllocated ? f.FixtureAllocation!.Start : TimeOnly.MinValue,
-                    IsConfirmed = f.IsAllocated ? f.FixtureAllocation!.IsConfirmed : false
+                    AllocationId = f.IsAllocated ? f.Allocation!.Id : Guid.Empty,
+                    Pitch = f.IsAllocated ? f.Allocation!.PitchName : "",
+                    Start = f.IsAllocated ? f.Allocation!.Start : TimeOnly.MinValue,
+                    IsConfirmed = f.IsAllocated ? f.Allocation!.IsConfirmed : false
 
                 };
 
@@ -167,9 +168,8 @@ public class FullTimeReconciliationService : IFixtureReconciliationService
 
     }
 
-    public async Task<IList<DownloadFixture>> FromFullTimeAsync(Team team)
+    public async Task<IList<DownloadFixture>> FromFullTimeAsync(TeamDto team)
     {
-        List<(Fixture, bool)> fixtureList = new List<(Fixture, bool)>();
         List<DownloadFixture> dFixtures = new List<DownloadFixture>();
 
         //Get fixtures from FulLTime
@@ -246,10 +246,8 @@ public class FullTimeReconciliationService : IFixtureReconciliationService
                     string opponent = isHome ? away : home;
                     FixtureType ftype = GetFixtureType(type);
 
-                    var fixture = new Fixture { Date = fdate, IsHome = isHome, Opponent = opponent, TeamId = team.Id, Team = team, FixtureType = ftype, Id = Guid.NewGuid() };
                     var downloadFixture = new DownloadFixture { Id = Guid.NewGuid(), Date = fdate, IsHome = isHome, Opponent = opponent, FixtureType = ftype, Add = true };
 
-                    fixtureList.Add((fixture, true));
                     dFixtures.Add(downloadFixture);
                 }
             }
@@ -274,10 +272,8 @@ public class FullTimeReconciliationService : IFixtureReconciliationService
                         string opponent = isHome ? away : home;
                         FixtureType ftype = FixtureType.Postponed;
 
-                        var fixture = new Fixture { Date = fdate, IsHome = isHome, Opponent = opponent, TeamId = team.Id, Team = team, FixtureType = ftype, Id = Guid.NewGuid() };
                         var downloadFixture = new DownloadFixture { Id = Guid.NewGuid(), Date = fdate, IsHome = isHome, Opponent = opponent, FixtureType = ftype, Add = true };
 
-                        fixtureList.Add((fixture, true));
                         dFixtures.Add(downloadFixture);
 
                     }
@@ -296,9 +292,8 @@ public class FullTimeReconciliationService : IFixtureReconciliationService
     }
 
 
-    public IList<DownloadFixture> FromFullTime(Team team)
+    public IList<DownloadFixture> FromFullTime(TeamDto team)
     {
-        List<(Fixture, bool)> fixtureList = new List<(Fixture, bool)>();
         List<DownloadFixture> dFixtures = new List<DownloadFixture>();
 
         //Get fixtures from FulLTime
@@ -357,10 +352,8 @@ public class FullTimeReconciliationService : IFixtureReconciliationService
                     string opponent = isHome ? away : home;
                     FixtureType ftype = GetFixtureType(type);
 
-                    var fixture = new Fixture { Date = fdate, IsHome = isHome, Opponent = opponent, TeamId = team.Id, Team = team, FixtureType = ftype, Id = Guid.NewGuid() };
                     var downloadFixture = new DownloadFixture { Id = Guid.NewGuid(), Date = fdate, IsHome = isHome, Opponent = opponent, FixtureType = ftype, Add = true };
 
-                    fixtureList.Add((fixture, true));
                     dFixtures.Add(downloadFixture);
                 }
             }
@@ -385,10 +378,8 @@ public class FullTimeReconciliationService : IFixtureReconciliationService
                         string opponent = isHome ? away : home;
                         FixtureType ftype = FixtureType.Postponed;
 
-                        var fixture = new Fixture { Date = fdate, IsHome = isHome, Opponent = opponent, TeamId = team.Id, Team = team, FixtureType = ftype, Id = Guid.NewGuid() };
                         var downloadFixture = new DownloadFixture { Id = Guid.NewGuid(), Date = fdate, IsHome = isHome, Opponent = opponent, FixtureType = ftype, Add = true };
 
-                        fixtureList.Add((fixture, true));
                         dFixtures.Add(downloadFixture);
 
                     }

@@ -33,4 +33,10 @@ public interface IFixtureService
 
     /// <summary>Returns false if the fixture doesn't exist or has no allocation.</summary>
     Task<bool> RemoveAllocationAsync(Guid fixtureId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Marks the allocations of the given fixtures as confirmed, in one save (Gameweek's "Confirm all").
+    /// Fixtures without an allocation, or already confirmed, are skipped. Returns how many were confirmed.
+    /// </summary>
+    Task<int> ConfirmAllocationsAsync(IReadOnlyCollection<Guid> fixtureIds, CancellationToken cancellationToken = default);
 }

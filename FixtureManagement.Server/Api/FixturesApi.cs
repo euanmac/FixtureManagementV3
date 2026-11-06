@@ -68,5 +68,9 @@ public static class FixturesApi
 
         group.MapDelete("/{id:guid}/allocation", async (Guid id, IFixtureService fixtures, CancellationToken ct) =>
             await fixtures.RemoveAllocationAsync(id, ct) ? Results.NoContent() : Results.NotFound());
+
+        // Confirm the allocations of several fixtures at once. Body: a JSON array of fixture ids.
+        group.MapPost("/allocations/confirm", async (List<Guid> fixtureIds, IFixtureService fixtures, CancellationToken ct) =>
+            Results.Ok(new { confirmed = await fixtures.ConfirmAllocationsAsync(fixtureIds, ct) }));
     }
 }

@@ -145,6 +145,23 @@ public class FixturesApiTests(TestWebApplicationFactory factory) : IClassFixture
     }
 
     [Fact]
+    public async Task Confirm_allocations_in_bulk()
+    {
+        var (client, teamId, pitchId) = await SetUpAsync();
+        var fixture = await (await client.PostAsJsonAsync("/api/fixtures", NewFixture(teamId, Nov7))).Content.ReadFromJsonAsync<FixtureDto>();
+        await client.PutAsJsonAsync($"/api/fixtures/{fixture!.Id}/allocation",
+            new FixtureAllocationDto { PitchId = pitchId, Start = new TimeOnly(9, 30), Duration = TimeSpan.FromMinutes(90) });
+
+        var response = await client.PostAsJsonAsync("/api/fixtures/allocations/confirm", new[] { fixture.Id });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(1, (await response.Content.ReadFromJsonAsync<ConfirmCount>())!.Confirmed);
+        Assert.True((await client.GetFromJsonAsync<FixtureDto>($"/api/fixtures/{fixture.Id}"))!.Allocation!.IsConfirmed);
+    }
+
+    private record ConfirmCount(int Confirmed);
+
+    [Fact]
     public async Task Bulk_delete_needs_a_filter_and_reports_the_count()
     {
         var (client, teamId, _) = await SetUpAsync();
