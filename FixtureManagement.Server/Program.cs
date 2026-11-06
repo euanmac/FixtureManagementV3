@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Components.Authorization;
+﻿using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using FixtureManagement.Server.Components;
@@ -6,6 +6,7 @@ using FixtureManagement.Server.Components.Account;
 using FixtureManagement.Server.Data;
 using FixtureManagement.Server.Services;
 using FixtureManagement.Server;
+using FixtureManagement.Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -84,7 +85,13 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 builder.Services.AddSingleton<FullTimeReconciliationService>();
 builder.Services.AddScoped<PageHistoryService>();
-builder.Services.AddScoped<FixtureManagement.Shared.Services.ITeamService, EfTeamService>();
+// Service interfaces used by the pages (Phase 3) and the /api endpoints; the desktop app will use HttpClient versions.
+builder.Services.AddScoped<ITeamService, EfTeamService>();
+builder.Services.AddScoped<IPitchService, EfPitchService>();
+builder.Services.AddScoped<IBookingService, EfBookingService>();
+builder.Services.AddScoped<IPersonService, EfPersonService>();
+builder.Services.AddScoped<ITeamContactService, EfTeamContactService>();
+builder.Services.AddScoped<IFixtureService, EfFixtureService>();
 
 var app = builder.Build();
 
@@ -118,9 +125,13 @@ app.MapAdditionalIdentityEndpoints();
 // Token login for API clients: POST /api/auth/login, POST /api/auth/refresh, etc.
 app.MapGroup("/api/auth").WithTags("Auth").MapIdentityApi<ApplicationUser>();
 
-app.MapEventEndpoints();
-app.MapFixtureEndpoints();
+app.MapEventEndpoints();   // FullCalendar feed (calendar-specific JSON)
 app.MapTeamEndpoints();
+app.MapPitchEndpoints();
+app.MapBookingEndpoints();
+app.MapPeopleEndpoints();
+app.MapTeamContactEndpoints();
+app.MapFixtureEndpoints();
 app.Run();
 
 // Lets the test project start the app with WebApplicationFactory<Program>.

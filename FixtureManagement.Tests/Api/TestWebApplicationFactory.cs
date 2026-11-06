@@ -60,6 +60,15 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
         return client;
     }
 
+    /// <summary>Adds rows straight into the test database (e.g. pitches, which the API can't create).</summary>
+    public async Task SeedAsync(params object[] entities)
+    {
+        using var scope = Services.CreateScope();
+        await using var db = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDBContext>>().CreateDbContextAsync();
+        db.AddRange(entities);
+        await db.SaveChangesAsync();
+    }
+
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);

@@ -69,3 +69,15 @@ public enum ContactType
     Admin = 0b_0000_0010,  // 2
     Other = 0b_0000_0011,  // 3
 }
+
+public enum FixtureType
+{
+    Friendly = 0,
+    League = 1,
+    Cup = 2,
+    [Display(Name = "County Cup")]
+    CountyCup = 6,
+    Cancelled = 3,
+    Postponed = 4,
+    Other = 5
+}

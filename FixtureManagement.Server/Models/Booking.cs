@@ -16,13 +16,7 @@ namespace FixtureManagement.Server.Models
         public Guid PitchId { get; set; }
         [Display(Name = "Recurring")]
         public bool IsRecurring { get; set; }
-        public bool IsPast
-        {
-            get
-            {
-                return End < DateTime.Now.Date;
-            }
-        }
+        public bool IsPast => FixtureRules.IsBookingPast(End);
 
         //Navigation
         public Pitch? Pitch { get; set; }

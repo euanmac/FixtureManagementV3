@@ -35,22 +35,9 @@ namespace FixtureManagement.Server.Models
         // public Person? Referee { get; set; }
 
         //Calculated Properties
-        public bool IsComplete
-        {
-            get
-            {
-                return (PitchId != Guid.Empty && Duration != TimeSpan.Zero);
-            }
-        }
+        public bool IsComplete => FixtureRules.IsAllocationComplete(PitchId, Duration);
 
         [DisplayFormat(DataFormatString = "{0:HH\\:mm}")]
-        public TimeOnly End
-        {
-            get
-            {
-                return Start.Add(Duration);
-            }
-
-        }
+        public TimeOnly End => FixtureRules.AllocationEnd(Start, Duration);
     }
 }

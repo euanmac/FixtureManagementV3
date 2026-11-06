@@ -29,6 +29,25 @@ public record TeamDto
     public bool IsOnFullTime => TeamRules.IsOnFullTime(FullTimeLeagueId, FullTimeTeamId);
 }
 
+/// <summary>
+/// The team details other areas need (fixtures, contacts, people) without the team's own contacts.
+/// </summary>
+public record TeamSummaryDto
+{
+    public Guid Id { get; init; }
+    public string Name { get; init; } = "";
+    public AgeGroup AgeGroup { get; init; }
+    public Gender Gender { get; init; }
+    public League League { get; init; }
+    public Division Division { get; init; }
+    public bool RefRequired { get; init; }
+
+    public string DisplayName => TeamRules.DisplayName(Name, AgeGroup, Gender);
+    public string DisplayShortName => TeamRules.DisplayShortName(Name, AgeGroup, Gender);
+    public string Colour => TeamRules.Colour(League);
+    public DayOfWeek MatchDay => TeamRules.MatchDay(League);
+}
+
 /// <summary>A team contact as shown on the team list and details pages.</summary>
 public record TeamContactSummaryDto
 {
