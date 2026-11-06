@@ -1,0 +1,60 @@
+@preservewhitespace true
+@inject NavigationManager NavigationManager
+
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.EntityFrameworkCore
+@using FixtureManagement.Server.Models
+@using FixtureManagement.Server.ViewModels
+@using FixtureManagement.Server.Data
+@using System.Linq
+
+<div>
+    <QuickGrid Items="Fixtures" Theme="corporate" id="fixtures" class="table table-striped table-sm">
+        <PropertyColumn Property="fixture => fixture.Date" />
+        @if (!@TeamHidden)
+        {
+            <TemplateColumn Context="fixture" title="Team">
+                <a href="@($"teams/details?id={fixture.TeamId}")">@fixture.Team</a>
+            </TemplateColumn>
+        }
+        <PropertyColumn Title="H/A" Property='fixture => (fixture.IsHome ? "H" : "A")'/>
+        <TemplateColumn Context="fixture" title="Opponent">
+            <a data-enhance-nav="false" href="@($"fixtures/{(CanEdit ? "edit" : "details")}?id={fixture.Id}")">@fixture.Opponent</a>
+        </TemplateColumn>
+        <PropertyColumn Property="fixture => fixture.Type" Class="d-none d-sm-table-cell"/>
+        <TemplateColumn Context="fixture" Title="Start">
+            @if (fixture.IsConfirmed || CanEdit)
+            {
+                @fixture.Start
+            }
+        </TemplateColumn>
+        <TemplateColumn Context="fixture" Title="Pitch">
+            @if (fixture.IsConfirmed || CanEdit)
+            {
+                @fixture.Pitch
+            }
+        </TemplateColumn>
+        <TemplateColumn Context="fixture">
+            @if(CanEdit)
+            {
+                <a data-enhance-nav="false" href="@(ActionURL("edit", fixture.Id))"><Icon Type="Icon.IconType.Edit"/></a>
+                <a href="@(ActionURL("delete", fixture.Id))"><Icon Type="Icon.IconType.Delete"/></a>        
+                @if (fixture.IsHome) {
+                    <a href="@(ActionURL("allocate", fixture.Id))"><Icon Type="Icon.IconType.Schedule"/></a>
+                }
+            }
+        </TemplateColumn>
+    </QuickGrid>
+</div>
+
+@code {
+
+    [Parameter, EditorRequired]
+    public required IQueryable<FixtureViewModel> Fixtures {get; set;}
+    [Parameter]
+    public bool CanEdit {get; set;}
+    [Parameter]
+    public bool TeamHidden {get; set;}= true;
+    private string ActionURL(string action, Guid id) => $"fixtures/{action}?id={id.ToString()}&returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}";
+
+}   

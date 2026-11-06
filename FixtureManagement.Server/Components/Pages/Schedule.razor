@@ -1,0 +1,17 @@
+﻿@page "/schedule"
+@using FixtureManagement.Server.Components.Helper
+
+<PageTitle>Fixture Grid</PageTitle>
+
+<h1>Schedule</h1>
+<hr />
+<FullCalendar ShowDayView="true" InitialDate="@InitialDate"/>
+
+@code {
+    [SupplyParameterFromQuery()]
+    public DateOnly? Date { get; set; }
+
+    public DateOnly InitialDate => Date.HasValue
+        ? Date.Value
+        : DateOnly.FromDateTime(DateTime.Now);
+}
