@@ -1,4 +1,4 @@
-﻿namespace FixtureManagementV3.Client.Services;
+﻿namespace FixtureManagement.Client.Services;
 
 using HtmlAgilityPack;
 using System.Globalization;

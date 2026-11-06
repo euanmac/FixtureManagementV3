@@ -108,7 +108,7 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
-    .AddAdditionalAssemblies(typeof(FixtureManagementV3.Client._Imports).Assembly)
+    .AddAdditionalAssemblies(typeof(FixtureManagement.Client._Imports).Assembly)
     .AddInteractiveServerRenderMode()
     .AddInteractiveWebAssemblyRenderMode();
 

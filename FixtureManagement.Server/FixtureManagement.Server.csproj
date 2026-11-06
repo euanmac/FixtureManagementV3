@@ -25,7 +25,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.7" />
-    <ProjectReference Include="..\FixtureManagementV3.Client\FixtureManagementV3.Client.csproj" />
+    <ProjectReference Include="..\FixtureManagement.Client\FixtureManagement.Client.csproj" />
     <ProjectReference Include="..\FixtureManagement.Shared\FixtureManagement.Shared.csproj" />
     <ProjectReference Include="..\FixtureManagement.UI\FixtureManagement.UI.csproj" />
   </ItemGroup>

@@ -5,7 +5,7 @@ VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FixtureManagement.Server", "FixtureManagement.Server\FixtureManagement.Server.csproj", "{549A4968-1608-4A52-9E32-27AA3FB07D9F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FixtureManagementV3.Client", "FixtureManagementV3.Client\FixtureManagementV3.Client.csproj", "{7D356E6C-B07C-41A2-9AD1-86F80EEAC9BB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FixtureManagement.Client", "FixtureManagement.Client\FixtureManagement.Client.csproj", "{7D356E6C-B07C-41A2-9AD1-86F80EEAC9BB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FixtureManagement.Shared", "FixtureManagement.Shared\FixtureManagement.Shared.csproj", "{1D5AB747-48AE-4628-B007-D60E36F0E6BE}"
 EndProject
