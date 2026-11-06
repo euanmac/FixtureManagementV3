@@ -1,6 +1,5 @@
 ﻿@page "/gameweek"
 @preservewhitespace true
-@using Microsoft.AspNetCore.Components.QuickGrid
 @using System.ComponentModel.DataAnnotations
 
 @inject IFixtureService FixtureService
@@ -8,7 +7,6 @@
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IFullTimeService FullTimeService
-@inject PageHistoryService PageHistoryService;
 
 @attribute [StreamRendering]
 <PageTitle>Gameweek</PageTitle>
