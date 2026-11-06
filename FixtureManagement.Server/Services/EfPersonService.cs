@@ -29,7 +29,7 @@ public class EfPersonService(IDbContextFactory<AppDBContext> dbFactory) : IPerso
         return person.ToDto(contacts);
     }
 
-    public async Task<PersonDto> CreatePersonAsync(PersonEditDto person, CancellationToken cancellationToken = default)
+    public async Task<PersonDto> CreatePersonAsync(PersonDto person, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var entity = new Person { Id = Guid.NewGuid() };
@@ -39,7 +39,7 @@ public class EfPersonService(IDbContextFactory<AppDBContext> dbFactory) : IPerso
         return entity.ToDto([]);
     }
 
-    public async Task<bool> UpdatePersonAsync(Guid id, PersonEditDto person, CancellationToken cancellationToken = default)
+    public async Task<bool> UpdatePersonAsync(Guid id, PersonDto person, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var entity = await db.Person.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
@@ -70,7 +70,7 @@ public class EfPersonService(IDbContextFactory<AppDBContext> dbFactory) : IPerso
         return ServiceResult.Success();
     }
 
-    private static void Apply(PersonEditDto source, Person target)
+    private static void Apply(PersonDto source, Person target)
     {
         target.FirstName = source.FirstName;
         target.LastName = source.LastName;

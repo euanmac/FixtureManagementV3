@@ -107,7 +107,7 @@ public class TeamsApiTests(TestWebApplicationFactory factory) : IClassFixture<Te
         Assert.Equal("Keep Me", unchanged?.Name);
     }
 
-    private static TeamEditDto NewTeam(string name) => new()
+    private static TeamDto NewTeam(string name) => new()
     {
         Name = name,
         AgeGroup = AgeGroup.U10,

@@ -16,14 +16,14 @@ public static class TeamsAPI
         group.MapGet("/{id:guid}", async (Guid id, ITeamService teams, CancellationToken ct) =>
             await teams.GetTeamAsync(id, ct) is { } team ? Results.Ok(team) : Results.NotFound());
 
-        group.MapPost("/", async (TeamEditDto team, ITeamService teams, CancellationToken ct) =>
+        group.MapPost("/", async (TeamDto team, ITeamService teams, CancellationToken ct) =>
         {
             if (ApiResults.Validate(team) is { } problem) return problem;
             var created = await teams.CreateTeamAsync(team, ct);
             return Results.Created($"/api/teams/{created.Id}", created);
         });
 
-        group.MapPut("/{id:guid}", async (Guid id, TeamEditDto team, ITeamService teams, CancellationToken ct) =>
+        group.MapPut("/{id:guid}", async (Guid id, TeamDto team, ITeamService teams, CancellationToken ct) =>
         {
             if (ApiResults.Validate(team) is { } problem) return problem;
             return await teams.UpdateTeamAsync(id, team, ct) ? Results.NoContent() : Results.NotFound();

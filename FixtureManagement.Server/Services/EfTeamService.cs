@@ -33,7 +33,7 @@ public class EfTeamService(IDbContextFactory<AppDBContext> dbFactory) : ITeamSer
         return team is null ? null : ToDto(team);
     }
 
-    public async Task<TeamDto> CreateTeamAsync(TeamEditDto team, CancellationToken cancellationToken = default)
+    public async Task<TeamDto> CreateTeamAsync(TeamDto team, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var entity = new Team { Id = Guid.NewGuid() };
@@ -43,7 +43,7 @@ public class EfTeamService(IDbContextFactory<AppDBContext> dbFactory) : ITeamSer
         return ToDto(entity);
     }
 
-    public async Task<bool> UpdateTeamAsync(Guid id, TeamEditDto team, CancellationToken cancellationToken = default)
+    public async Task<bool> UpdateTeamAsync(Guid id, TeamDto team, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var entity = await db.Team.FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
@@ -64,7 +64,7 @@ public class EfTeamService(IDbContextFactory<AppDBContext> dbFactory) : ITeamSer
     }
 
     // Only the editable fields are copied, so a caller can't overwrite Id or navigation data.
-    private static void Apply(TeamEditDto source, Team target)
+    private static void Apply(TeamDto source, Team target)
     {
         target.Name = source.Name;
         target.AgeGroup = source.AgeGroup;

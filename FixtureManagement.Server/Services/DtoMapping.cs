@@ -60,6 +60,7 @@ internal static class DtoMapping
     public static TeamContactDto ToDto(this TeamContact contact) => new()
     {
         Id = contact.Id,
+        TeamId = contact.TeamId,
         PersonId = contact.PersonId,
         ContactType = contact.ContactType,
         FirstName = contact.Person?.FirstName ?? "",
@@ -71,7 +72,8 @@ internal static class DtoMapping
     public static FixtureDto ToDto(this Fixture fixture) => new()
     {
         Id = fixture.Id,
-        Team = fixture.Team?.ToSummaryDto() ?? new TeamSummaryDto { Id = fixture.TeamId },
+        TeamId = fixture.TeamId,
+        Team =fixture.Team?.ToSummaryDto() ?? new TeamSummaryDto { Id = fixture.TeamId },
         Date = fixture.Date,
         IsHome = fixture.IsHome,
         Opponent = fixture.Opponent ?? "",

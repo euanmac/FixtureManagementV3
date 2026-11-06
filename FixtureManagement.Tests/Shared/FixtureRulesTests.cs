@@ -104,7 +104,6 @@ public class FixtureDtoTests
             Allocation = new FixtureAllocationDto { PitchId = Guid.NewGuid(), Start = new TimeOnly(10, 0), Duration = TimeSpan.FromMinutes(60) },
         };
 
-        Assert.Equal(dto.Team.Id, dto.TeamId);
         Assert.Equal("U9 Girls - Lions", dto.Team.DisplayName);
         Assert.Equal("CC", dto.FixtureTypeShortName);
         Assert.True(dto.CanAllocate);
@@ -120,7 +119,7 @@ public class FixtureDtoTests
     }
 }
 
-public class EditDtoValidationTests
+public class DtoValidationTests
 {
     private static List<ValidationResult> Validate(object model)
     {
@@ -141,12 +140,12 @@ public class EditDtoValidationTests
     [Fact]
     public void Booking_needs_a_title_and_a_pitch()
     {
-        var booking = new BookingEditDto { Title = "", Start = new DateTime(2026, 11, 7, 9, 0, 0), End = new DateTime(2026, 11, 7, 10, 0, 0) };
+        var booking = new BookingDto { Title = "", Start = new DateTime(2026, 11, 7, 9, 0, 0), End = new DateTime(2026, 11, 7, 10, 0, 0) };
 
         var members = Validate(booking).SelectMany(r => r.MemberNames).ToList();
 
-        Assert.Contains(nameof(BookingEditDto.Title), members);
-        Assert.Contains(nameof(BookingEditDto.PitchId), members);
+        Assert.Contains(nameof(BookingDto.Title), members);
+        Assert.Contains(nameof(BookingDto.PitchId), members);
     }
 
     // Note: .NET only runs IValidatableObject.Validate once all the attribute checks pass,
@@ -154,33 +153,33 @@ public class EditDtoValidationTests
     [Fact]
     public void Booking_end_must_be_after_start()
     {
-        var booking = new BookingEditDto { Title = "Training", PitchId = Guid.NewGuid(), Start = new DateTime(2026, 11, 7, 10, 0, 0), End = new DateTime(2026, 11, 7, 10, 0, 0) };
+        var booking = new BookingDto { Title = "Training", PitchId = Guid.NewGuid(), Start = new DateTime(2026, 11, 7, 10, 0, 0), End = new DateTime(2026, 11, 7, 10, 0, 0) };
 
         var result = Assert.Single(Validate(booking));
-        Assert.Equal([nameof(BookingEditDto.End)], result.MemberNames);
+        Assert.Equal([nameof(BookingDto.End)], result.MemberNames);
     }
 
     [Fact]
     public void A_complete_booking_is_valid()
     {
-        var booking = new BookingEditDto { Title = "Training", PitchId = Guid.NewGuid(), Start = new DateTime(2026, 11, 7, 9, 0, 0), End = new DateTime(2026, 11, 7, 10, 0, 0) };
+        var booking = new BookingDto { Title = "Training", PitchId = Guid.NewGuid(), Start = new DateTime(2026, 11, 7, 9, 0, 0), End = new DateTime(2026, 11, 7, 10, 0, 0) };
         Assert.Empty(Validate(booking));
     }
 
     [Fact]
     public void Fixture_needs_a_team_and_an_opponent()
     {
-        var members = Validate(new FixtureEditDto()).SelectMany(r => r.MemberNames).ToList();
-        Assert.Contains(nameof(FixtureEditDto.TeamId), members);
-        Assert.Contains(nameof(FixtureEditDto.Opponent), members);
+        var members = Validate(new FixtureDto()).SelectMany(r => r.MemberNames).ToList();
+        Assert.Contains(nameof(FixtureDto.TeamId), members);
+        Assert.Contains(nameof(FixtureDto.Opponent), members);
     }
 
     [Fact]
     public void Allocation_needs_a_pitch()
     {
-        var results = Validate(new FixtureAllocationEditDto { Start = new TimeOnly(9, 30), Duration = TimeSpan.FromHours(1) });
+        var results = Validate(new FixtureAllocationDto { Start = new TimeOnly(9, 30), Duration = TimeSpan.FromHours(1) });
         var result = Assert.Single(results);
-        Assert.Equal([nameof(FixtureAllocationEditDto.PitchId)], result.MemberNames);
+        Assert.Equal([nameof(FixtureAllocationDto.PitchId)], result.MemberNames);
         Assert.Equal("Pitch is required", result.ErrorMessage);
     }
 
@@ -189,24 +188,24 @@ public class EditDtoValidationTests
     [InlineData(-30)]
     public void Allocation_duration_must_be_positive(int minutes)
     {
-        var results = Validate(new FixtureAllocationEditDto { PitchId = Guid.NewGuid(), Start = new TimeOnly(9, 30), Duration = TimeSpan.FromMinutes(minutes) });
+        var results = Validate(new FixtureAllocationDto { PitchId = Guid.NewGuid(), Start = new TimeOnly(9, 30), Duration = TimeSpan.FromMinutes(minutes) });
         var result = Assert.Single(results);
-        Assert.Equal([nameof(FixtureAllocationEditDto.Duration)], result.MemberNames);
+        Assert.Equal([nameof(FixtureAllocationDto.Duration)], result.MemberNames);
     }
 
     [Fact]
     public void Person_needs_first_and_last_name_but_not_contact_details()
     {
-        var members = Validate(new PersonEditDto()).SelectMany(r => r.MemberNames).ToList();
-        Assert.Equal([nameof(PersonEditDto.FirstName), nameof(PersonEditDto.LastName)], members.Order());
+        var members = Validate(new PersonDto()).SelectMany(r => r.MemberNames).ToList();
+        Assert.Equal([nameof(PersonDto.FirstName), nameof(PersonDto.LastName)], members.Order());
     }
 
     [Fact]
     public void TeamContact_needs_a_team_and_a_person()
     {
-        var members = Validate(new TeamContactCreateDto()).SelectMany(r => r.MemberNames).ToList();
-        Assert.Contains(nameof(TeamContactCreateDto.TeamId), members);
-        Assert.Contains(nameof(TeamContactCreateDto.PersonId), members);
+        var members = Validate(new TeamContactDto()).SelectMany(r => r.MemberNames).ToList();
+        Assert.Contains(nameof(TeamContactDto.TeamId), members);
+        Assert.Contains(nameof(TeamContactDto.PersonId), members);
     }
 }
 

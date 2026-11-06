@@ -16,7 +16,7 @@ public static class BookingsApi
         group.MapGet("/{id:guid}", async (Guid id, IBookingService bookings, CancellationToken ct) =>
             await bookings.GetBookingAsync(id, ct) is { } booking ? Results.Ok(booking) : Results.NotFound());
 
-        group.MapPost("/", async (BookingEditDto booking, IBookingService bookings, CancellationToken ct) =>
+        group.MapPost("/", async (BookingDto booking, IBookingService bookings, CancellationToken ct) =>
         {
             if (ApiResults.Validate(booking) is { } problem) return problem;
             var result = await bookings.CreateBookingAsync(booking, ct);
@@ -25,7 +25,7 @@ public static class BookingsApi
                 : ApiResults.Failure(result);
         });
 
-        group.MapPut("/{id:guid}", async (Guid id, BookingEditDto booking, IBookingService bookings, CancellationToken ct) =>
+        group.MapPut("/{id:guid}", async (Guid id, BookingDto booking, IBookingService bookings, CancellationToken ct) =>
         {
             if (ApiResults.Validate(booking) is { } problem) return problem;
             var result = await bookings.UpdateBookingAsync(id, booking, ct);

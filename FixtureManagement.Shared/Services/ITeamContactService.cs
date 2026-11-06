@@ -11,7 +11,7 @@ public interface ITeamContactService
     Task<TeamContactDto?> GetTeamContactAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>Invalid if the team or person doesn't exist; Conflict if the same link already exists.</summary>
-    Task<ServiceResult<TeamContactDto>> CreateTeamContactAsync(TeamContactCreateDto contact, CancellationToken cancellationToken = default);
+    Task<ServiceResult<TeamContactDto>> CreateTeamContactAsync(TeamContactDto contact, CancellationToken cancellationToken = default);
 
     /// <summary>Returns false if the contact doesn't exist. The person themselves is kept.</summary>
     Task<bool> DeleteTeamContactAsync(Guid id, CancellationToken cancellationToken = default);

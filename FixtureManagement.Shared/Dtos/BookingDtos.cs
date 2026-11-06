@@ -4,25 +4,13 @@ using FixtureManagement.Shared.Validation;
 
 namespace FixtureManagement.Shared.Dtos;
 
-/// <summary>A pitch booking (training, events) as returned by IBookingService / GET /api/bookings.</summary>
-public record BookingDto
+/// <summary>
+/// A pitch booking (training, events): returned by IBookingService / GET /api/bookings and sent back to save one.
+/// Mutable so EditForm can bind to it. On writes Id comes from the URL and PitchName is ignored.
+/// </summary>
+public class BookingDto : IValidatableObject
 {
-    public Guid Id { get; init; }
-    public string Title { get; init; } = "";
-    public DateTime Start { get; init; }
-    public DateTime End { get; init; }
-    public Guid PitchId { get; init; }
-    /// <summary>Empty if the pitch has been removed.</summary>
-    public string PitchName { get; init; } = "";
-    /// <summary>Repeats weekly on Start's weekday, between Start and End.</summary>
-    public bool IsRecurring { get; init; }
-
-    public bool IsPast => FixtureRules.IsBookingPast(End);
-}
-
-/// <summary>Fields a user can set when creating or editing a booking. Mutable so EditForm can bind to it.</summary>
-public class BookingEditDto : IValidatableObject
-{
+    public Guid Id { get; set; }
     [Required]
     public string Title { get; set; } = "";
     [Required]
@@ -32,8 +20,14 @@ public class BookingEditDto : IValidatableObject
     [Display(Name = "Pitch")]
     [NotEmptyGuid]
     public Guid PitchId { get; set; }
+    /// <summary>Repeats weekly on Start's weekday, between Start and End.</summary>
     [Display(Name = "Recurring")]
     public bool IsRecurring { get; set; }
+
+    /// <summary>Output only. Empty if the pitch has been removed.</summary>
+    public string PitchName { get; set; } = "";
+
+    public bool IsPast => FixtureRules.IsBookingPast(End);
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

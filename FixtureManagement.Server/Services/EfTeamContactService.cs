@@ -31,7 +31,7 @@ public class EfTeamContactService(IDbContextFactory<AppDBContext> dbFactory) : I
         return contact?.ToDto();
     }
 
-    public async Task<ServiceResult<TeamContactDto>> CreateTeamContactAsync(TeamContactCreateDto contact, CancellationToken cancellationToken = default)
+    public async Task<ServiceResult<TeamContactDto>> CreateTeamContactAsync(TeamContactDto contact, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         if (!await db.Team.AnyAsync(t => t.Id == contact.TeamId, cancellationToken))

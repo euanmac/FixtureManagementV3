@@ -10,10 +10,10 @@ public interface IPersonService
 
     Task<PersonDto?> GetPersonAsync(Guid id, CancellationToken cancellationToken = default);
 
-    Task<PersonDto> CreatePersonAsync(PersonEditDto person, CancellationToken cancellationToken = default);
+    Task<PersonDto> CreatePersonAsync(PersonDto person, CancellationToken cancellationToken = default);
 
     /// <summary>Returns false if the person doesn't exist.</summary>
-    Task<bool> UpdatePersonAsync(Guid id, PersonEditDto person, CancellationToken cancellationToken = default);
+    Task<bool> UpdatePersonAsync(Guid id, PersonDto person, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Also removes the person's team contacts. NotFound if they don't exist;

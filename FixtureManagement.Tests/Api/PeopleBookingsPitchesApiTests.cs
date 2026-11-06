@@ -12,15 +12,15 @@ public class PeopleBookingsPitchesApiTests(TestWebApplicationFactory factory) : 
     {
         var client = await factory.CreateAuthenticatedClientAsync();
 
-        var invalid = await client.PostAsJsonAsync("/api/people", new PersonEditDto { FirstName = "Only" });
+        var invalid = await client.PostAsJsonAsync("/api/people", new PersonDto { FirstName = "Only" });
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
         Assert.Contains("LastName", (await invalid.Content.ReadFromJsonAsync<ValidationProblemDetails>())!.Errors.Keys);
 
-        var create = await client.PostAsJsonAsync("/api/people", new PersonEditDto { FirstName = "Sam", LastName = "Smith", Email = "sam@example.com" });
+        var create = await client.PostAsJsonAsync("/api/people", new PersonDto { FirstName = "Sam", LastName = "Smith", Email = "sam@example.com" });
         Assert.Equal(HttpStatusCode.Created, create.StatusCode);
         var person = await create.Content.ReadFromJsonAsync<PersonDto>();
 
-        var update = new PersonEditDto { FirstName = "Sam", LastName = "Jones", IsRef = true };
+        var update = new PersonDto { FirstName = "Sam", LastName = "Jones", IsRef = true };
         Assert.Equal(HttpStatusCode.NoContent, (await client.PutAsJsonAsync($"/api/people/{person!.Id}", update)).StatusCode);
         var fetched = await client.GetFromJsonAsync<PersonDto>($"/api/people/{person.Id}");
         Assert.Equal("Sam Jones", fetched!.FullName);
@@ -37,9 +37,9 @@ public class PeopleBookingsPitchesApiTests(TestWebApplicationFactory factory) : 
         var team = new Team { Id = Guid.NewGuid(), Name = "Lions", AgeGroup = AgeGroup.U9, Gender = Gender.Female };
         await factory.SeedAsync(team);
         var client = await factory.CreateAuthenticatedClientAsync();
-        var person = await (await client.PostAsJsonAsync("/api/people", new PersonEditDto { FirstName = "Mia", LastName = "Manager" }))
+        var person = await (await client.PostAsJsonAsync("/api/people", new PersonDto { FirstName = "Mia", LastName = "Manager" }))
             .Content.ReadFromJsonAsync<PersonDto>();
-        var link = new TeamContactCreateDto { TeamId = team.Id, PersonId = person!.Id, ContactType = ContactType.Manager };
+        var link = new TeamContactDto { TeamId = team.Id, PersonId = person!.Id, ContactType = ContactType.Manager };
 
         var create = await client.PostAsJsonAsync("/api/teamcontacts", link);
         Assert.Equal(HttpStatusCode.Created, create.StatusCode);
@@ -48,7 +48,7 @@ public class PeopleBookingsPitchesApiTests(TestWebApplicationFactory factory) : 
 
         Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsJsonAsync("/api/teamcontacts", link)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest,
-            (await client.PostAsJsonAsync("/api/teamcontacts", new TeamContactCreateDto { TeamId = Guid.NewGuid(), PersonId = person.Id })).StatusCode);
+            (await client.PostAsJsonAsync("/api/teamcontacts", new TeamContactDto { TeamId = Guid.NewGuid(), PersonId = person.Id })).StatusCode);
 
         var forTeam = await client.GetFromJsonAsync<List<TeamContactDto>>($"/api/teamcontacts?teamId={team.Id}");
         Assert.Equal([contact.Id], forTeam!.Select(c => c.Id));
@@ -68,22 +68,22 @@ public class PeopleBookingsPitchesApiTests(TestWebApplicationFactory factory) : 
         var start = new DateTime(2026, 11, 7, 9, 0, 0);
 
         var backwards = await client.PostAsJsonAsync("/api/bookings",
-            new BookingEditDto { Title = "Training", PitchId = pitch.Id, Start = start, End = start.AddHours(-1) });
+            new BookingDto { Title = "Training", PitchId = pitch.Id, Start = start, End = start.AddHours(-1) });
         Assert.Equal(HttpStatusCode.BadRequest, backwards.StatusCode);
         Assert.Contains("End", (await backwards.Content.ReadFromJsonAsync<ValidationProblemDetails>())!.Errors.Keys);
 
         var unknownPitch = await client.PostAsJsonAsync("/api/bookings",
-            new BookingEditDto { Title = "Training", PitchId = Guid.NewGuid(), Start = start, End = start.AddHours(1) });
+            new BookingDto { Title = "Training", PitchId = Guid.NewGuid(), Start = start, End = start.AddHours(1) });
         Assert.Equal(HttpStatusCode.BadRequest, unknownPitch.StatusCode);
 
         var create = await client.PostAsJsonAsync("/api/bookings",
-            new BookingEditDto { Title = "Training", PitchId = pitch.Id, Start = start, End = start.AddHours(1), IsRecurring = true });
+            new BookingDto { Title = "Training", PitchId = pitch.Id, Start = start, End = start.AddHours(1), IsRecurring = true });
         Assert.Equal(HttpStatusCode.Created, create.StatusCode);
         var booking = await create.Content.ReadFromJsonAsync<BookingDto>();
         Assert.Equal("Main Pitch", booking!.PitchName);
         Assert.Equal(start, booking.Start);
 
-        var update = new BookingEditDto { Title = "Moved", PitchId = pitch.Id, Start = start.AddDays(1), End = start.AddDays(1).AddHours(1) };
+        var update = new BookingDto { Title = "Moved", PitchId = pitch.Id, Start = start.AddDays(1), End = start.AddDays(1).AddHours(1) };
         Assert.Equal(HttpStatusCode.NoContent, (await client.PutAsJsonAsync($"/api/bookings/{booking.Id}", update)).StatusCode);
         Assert.Equal("Moved", (await client.GetFromJsonAsync<BookingDto>($"/api/bookings/{booking.Id}"))!.Title);
 

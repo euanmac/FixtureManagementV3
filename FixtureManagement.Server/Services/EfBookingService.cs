@@ -24,7 +24,7 @@ public class EfBookingService(IDbContextFactory<AppDBContext> dbFactory) : IBook
         return booking?.ToDto();
     }
 
-    public async Task<ServiceResult<BookingDto>> CreateBookingAsync(BookingEditDto booking, CancellationToken cancellationToken = default)
+    public async Task<ServiceResult<BookingDto>> CreateBookingAsync(BookingDto booking, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         if (await CheckPitch(db, booking.PitchId, cancellationToken) is { } invalid)
@@ -38,7 +38,7 @@ public class EfBookingService(IDbContextFactory<AppDBContext> dbFactory) : IBook
         return ServiceResult<BookingDto>.Success(entity.ToDto());
     }
 
-    public async Task<ServiceResult> UpdateBookingAsync(Guid id, BookingEditDto booking, CancellationToken cancellationToken = default)
+    public async Task<ServiceResult> UpdateBookingAsync(Guid id, BookingDto booking, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var entity = await db.Booking.FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
@@ -64,9 +64,9 @@ public class EfBookingService(IDbContextFactory<AppDBContext> dbFactory) : IBook
     private static async Task<ServiceResult?> CheckPitch(AppDBContext db, Guid pitchId, CancellationToken ct) =>
         await db.Pitch.AnyAsync(p => p.Id == pitchId, ct)
             ? null
-            : ServiceResult.Invalid(nameof(BookingEditDto.PitchId), "Pitch not found.");
+            : ServiceResult.Invalid(nameof(BookingDto.PitchId), "Pitch not found.");
 
-    private static void Apply(BookingEditDto source, Booking target)
+    private static void Apply(BookingDto source, Booking target)
     {
         target.Title = source.Title;
         target.Start = source.Start;

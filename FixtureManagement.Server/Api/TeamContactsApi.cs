@@ -17,7 +17,7 @@ public static class TeamContactsApi
         group.MapGet("/{id:guid}", async (Guid id, ITeamContactService contacts, CancellationToken ct) =>
             await contacts.GetTeamContactAsync(id, ct) is { } contact ? Results.Ok(contact) : Results.NotFound());
 
-        group.MapPost("/", async (TeamContactCreateDto contact, ITeamContactService contacts, CancellationToken ct) =>
+        group.MapPost("/", async (TeamContactDto contact, ITeamContactService contacts, CancellationToken ct) =>
         {
             if (ApiResults.Validate(contact) is { } problem) return problem;
             var result = await contacts.CreateTeamContactAsync(contact, ct);

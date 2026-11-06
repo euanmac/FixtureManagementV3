@@ -16,14 +16,14 @@ public static class PeopleApi
         group.MapGet("/{id:guid}", async (Guid id, IPersonService people, CancellationToken ct) =>
             await people.GetPersonAsync(id, ct) is { } person ? Results.Ok(person) : Results.NotFound());
 
-        group.MapPost("/", async (PersonEditDto person, IPersonService people, CancellationToken ct) =>
+        group.MapPost("/", async (PersonDto person, IPersonService people, CancellationToken ct) =>
         {
             if (ApiResults.Validate(person) is { } problem) return problem;
             var created = await people.CreatePersonAsync(person, ct);
             return Results.Created($"/api/people/{created.Id}", created);
         });
 
-        group.MapPut("/{id:guid}", async (Guid id, PersonEditDto person, IPersonService people, CancellationToken ct) =>
+        group.MapPut("/{id:guid}", async (Guid id, PersonDto person, IPersonService people, CancellationToken ct) =>
         {
             if (ApiResults.Validate(person) is { } problem) return problem;
             return await people.UpdatePersonAsync(id, person, ct) ? Results.NoContent() : Results.NotFound();

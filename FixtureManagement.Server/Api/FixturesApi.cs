@@ -21,7 +21,7 @@ public static class FixturesApi
         group.MapGet("/{id:guid}", async (Guid id, IFixtureService fixtures, CancellationToken ct) =>
             await fixtures.GetFixtureAsync(id, ct) is { } fixture ? Results.Ok(fixture) : Results.NotFound());
 
-        group.MapPost("/", async (FixtureEditDto fixture, IFixtureService fixtures, CancellationToken ct) =>
+        group.MapPost("/", async (FixtureDto fixture, IFixtureService fixtures, CancellationToken ct) =>
         {
             if (ApiResults.Validate(fixture) is { } problem) return problem;
             var result = await fixtures.CreateFixtureAsync(fixture, ct);
@@ -31,14 +31,14 @@ public static class FixturesApi
         });
 
         // Several fixtures in one save, e.g. from a FullTime upload. All or nothing.
-        group.MapPost("/batch", async (List<FixtureEditDto> batch, IFixtureService fixtures, CancellationToken ct) =>
+        group.MapPost("/batch", async (List<FixtureDto> batch, IFixtureService fixtures, CancellationToken ct) =>
         {
             if (ApiResults.ValidateAll(batch) is { } problem) return problem;
             var result = await fixtures.CreateFixturesAsync(batch, ct);
             return result.Succeeded ? Results.Created("/api/fixtures", result.Value) : ApiResults.Failure(result);
         });
 
-        group.MapPut("/{id:guid}", async (Guid id, FixtureEditDto fixture, IFixtureService fixtures, CancellationToken ct) =>
+        group.MapPut("/{id:guid}", async (Guid id, FixtureDto fixture, IFixtureService fixtures, CancellationToken ct) =>
         {
             if (ApiResults.Validate(fixture) is { } problem) return problem;
             var result = await fixtures.UpdateFixtureAsync(id, fixture, ct);
@@ -59,7 +59,7 @@ public static class FixturesApi
             return Results.Ok(new { deleted = await fixtures.DeleteFixturesAsync(teamId, after, ct) });
         });
 
-        group.MapPut("/{id:guid}/allocation", async (Guid id, FixtureAllocationEditDto allocation, IFixtureService fixtures, CancellationToken ct) =>
+        group.MapPut("/{id:guid}/allocation", async (Guid id, FixtureAllocationDto allocation, IFixtureService fixtures, CancellationToken ct) =>
         {
             if (ApiResults.Validate(allocation) is { } problem) return problem;
             var result = await fixtures.SetAllocationAsync(id, allocation, ct);

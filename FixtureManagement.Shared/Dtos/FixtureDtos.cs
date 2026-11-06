@@ -4,43 +4,14 @@ using FixtureManagement.Shared.Validation;
 
 namespace FixtureManagement.Shared.Dtos;
 
-/// <summary>A fixture with its team and pitch allocation, as returned by IFixtureService / GET /api/fixtures.</summary>
-public record FixtureDto
+/// <summary>
+/// A fixture: returned by IFixtureService / GET /api/fixtures and sent back to create or update one.
+/// Mutable so EditForm can bind to it. On writes Id comes from the URL, and Team and Allocation are
+/// ignored (set the pitch via PUT /api/fixtures/{id}/allocation).
+/// </summary>
+public class FixtureDto
 {
-    public Guid Id { get; init; }
-    public TeamSummaryDto Team { get; init; } = new();
-    public DateOnly Date { get; init; }
-    public bool IsHome { get; init; }
-    public string Opponent { get; init; } = "";
-    public FixtureType FixtureType { get; init; }
-    /// <summary>Null until a pitch and time have been set.</summary>
-    public FixtureAllocationDto? Allocation { get; init; }
-
-    public Guid TeamId => Team.Id;
-    public string FixtureTypeShortName => FixtureType.FixtureTypeShortName();
-    public bool CanAllocate => FixtureRules.CanAllocate(IsHome, FixtureType);
-    public bool IsAllocated => Allocation is not null
-        && FixtureRules.IsAllocated(true, Allocation.PitchId, Allocation.Start);
-}
-
-/// <summary>When and where a home fixture is played.</summary>
-public record FixtureAllocationDto
-{
-    public Guid Id { get; init; }
-    public Guid PitchId { get; init; }
-    /// <summary>Empty if no pitch is set.</summary>
-    public string PitchName { get; init; } = "";
-    public TimeOnly Start { get; init; }
-    public TimeSpan Duration { get; init; }
-    public bool IsConfirmed { get; init; }
-
-    public TimeOnly End => FixtureRules.AllocationEnd(Start, Duration);
-    public bool IsComplete => FixtureRules.IsAllocationComplete(PitchId, Duration);
-}
-
-/// <summary>Fields a user can set when creating or editing a fixture. Mutable so EditForm can bind to it.</summary>
-public class FixtureEditDto
-{
+    public Guid Id { get; set; }
     [Display(Name = "Team")]
     [NotEmptyGuid]
     public Guid TeamId { get; set; }
@@ -52,11 +23,25 @@ public class FixtureEditDto
     public string Opponent { get; set; } = "";
     [Display(Name = "Type")]
     public FixtureType FixtureType { get; set; }
+
+    /// <summary>Output only.</summary>
+    public TeamSummaryDto Team { get; set; } = new();
+    /// <summary>Output only. Null until a pitch and time have been set.</summary>
+    public FixtureAllocationDto? Allocation { get; set; }
+
+    public string FixtureTypeShortName => FixtureType.FixtureTypeShortName();
+    public bool CanAllocate => FixtureRules.CanAllocate(IsHome, FixtureType);
+    public bool IsAllocated => Allocation is not null
+        && FixtureRules.IsAllocated(true, Allocation.PitchId, Allocation.Start);
 }
 
-/// <summary>Sets a fixture's pitch and kick-off. Mutable so EditForm can bind to it.</summary>
-public class FixtureAllocationEditDto : IValidatableObject
+/// <summary>
+/// When and where a home fixture is played: returned inside FixtureDto and by
+/// PUT /api/fixtures/{id}/allocation, and sent to that endpoint to set it. On writes Id and PitchName are ignored.
+/// </summary>
+public class FixtureAllocationDto : IValidatableObject
 {
+    public Guid Id { get; set; }
     [Display(Name = "Pitch")]
     [NotEmptyGuid(ErrorMessage = "Pitch is required")]
     public Guid PitchId { get; set; }
@@ -67,6 +52,13 @@ public class FixtureAllocationEditDto : IValidatableObject
     public TimeSpan Duration { get; set; }
     [Display(Name = "Confirmed")]
     public bool IsConfirmed { get; set; }
+
+    /// <summary>Output only. Empty if no pitch is set.</summary>
+    public string PitchName { get; set; } = "";
+
+    [DisplayFormat(DataFormatString = "{0:HH\\:mm}")]
+    public TimeOnly End => FixtureRules.AllocationEnd(Start, Duration);
+    public bool IsComplete => FixtureRules.IsAllocationComplete(PitchId, Duration);
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

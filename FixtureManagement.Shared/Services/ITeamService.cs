@@ -14,10 +14,10 @@ public interface ITeamService
     /// <summary>One team with its contacts, or null if it doesn't exist.</summary>
     Task<TeamDto?> GetTeamAsync(Guid id, CancellationToken cancellationToken = default);
 
-    Task<TeamDto> CreateTeamAsync(TeamEditDto team, CancellationToken cancellationToken = default);
+    Task<TeamDto> CreateTeamAsync(TeamDto team, CancellationToken cancellationToken = default);
 
     /// <summary>Returns false if the team doesn't exist.</summary>
-    Task<bool> UpdateTeamAsync(Guid id, TeamEditDto team, CancellationToken cancellationToken = default);
+    Task<bool> UpdateTeamAsync(Guid id, TeamDto team, CancellationToken cancellationToken = default);
 
     /// <summary>Returns false if the team doesn't exist.</summary>
     Task<bool> DeleteTeamAsync(Guid id, CancellationToken cancellationToken = default);

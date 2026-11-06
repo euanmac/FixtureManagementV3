@@ -137,7 +137,7 @@ public sealed class EfTeamServiceTests : IDisposable
         Assert.Equal(2, (await _service.GetTeamsAsync()).Single().Contacts.Count);
     }
 
-    private static TeamEditDto NewEdit(string name, AgeGroup ageGroup, Gender gender, Division division) => new()
+    private static TeamDto NewEdit(string name, AgeGroup ageGroup, Gender gender, Division division) => new()
     {
         Name = name,
         AgeGroup = ageGroup,

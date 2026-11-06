@@ -11,7 +11,7 @@ public sealed class EfBookingServiceTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    private static BookingEditDto NewBooking(Guid pitchId, DateTime start, string title = "Training") => new()
+    private static BookingDto NewBooking(Guid pitchId, DateTime start, string title = "Training") => new()
     {
         Title = title,
         Start = start,
@@ -50,7 +50,7 @@ public sealed class EfBookingServiceTests : IDisposable
         var badUpdate = await _service.UpdateBookingAsync(created.Value!.Id, NewBooking(Guid.NewGuid(), Sat));
 
         Assert.Equal(ServiceStatus.Invalid, badCreate.Status);
-        Assert.Contains(nameof(BookingEditDto.PitchId), badCreate.Errors.Keys);
+        Assert.Contains(nameof(BookingDto.PitchId), badCreate.Errors.Keys);
         Assert.Equal(ServiceStatus.Invalid, badUpdate.Status);
     }
 

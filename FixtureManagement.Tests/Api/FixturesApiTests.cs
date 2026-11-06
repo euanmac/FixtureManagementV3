@@ -15,7 +15,7 @@ public class FixturesApiTests(TestWebApplicationFactory factory) : IClassFixture
         return (await factory.CreateAuthenticatedClientAsync(), team.Id, pitch.Id);
     }
 
-    private static FixtureEditDto NewFixture(Guid teamId, DateOnly date, string opponent = "Rivals") => new()
+    private static FixtureDto NewFixture(Guid teamId, DateOnly date, string opponent = "Rivals") => new()
     {
         TeamId = teamId, Date = date, IsHome = true, Opponent = opponent, FixtureType = FixtureType.League,
     };
@@ -41,6 +41,24 @@ public class FixturesApiTests(TestWebApplicationFactory factory) : IClassFixture
 
         Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/fixtures/{created.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/fixtures/{created.Id}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_fetched_fixture_can_be_edited_and_sent_straight_back()
+    {
+        // The point of one DTO per area: GET it, change a field, PUT the same object.
+        var (client, teamId, _) = await SetUpAsync();
+        var id = (await (await client.PostAsJsonAsync("/api/fixtures", NewFixture(teamId, Nov7))).Content.ReadFromJsonAsync<FixtureDto>())!.Id;
+
+        var fixture = await client.GetFromJsonAsync<FixtureDto>($"/api/fixtures/{id}");
+        Assert.Equal(teamId, fixture!.TeamId);
+        fixture.Opponent = "Edited";
+        fixture.FixtureType = FixtureType.Cup;
+
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PutAsJsonAsync($"/api/fixtures/{id}", fixture)).StatusCode);
+        var saved = await client.GetFromJsonAsync<FixtureDto>($"/api/fixtures/{id}");
+        Assert.Equal("Edited", saved!.Opponent);
+        Assert.Equal(FixtureType.Cup, saved.FixtureType);
     }
 
     [Fact]
@@ -91,7 +109,7 @@ public class FixturesApiTests(TestWebApplicationFactory factory) : IClassFixture
     {
         var (client, teamId, pitchId) = await SetUpAsync();
         var fixture = await (await client.PostAsJsonAsync("/api/fixtures", NewFixture(teamId, Nov7))).Content.ReadFromJsonAsync<FixtureDto>();
-        var allocation = new FixtureAllocationEditDto { PitchId = pitchId, Start = new TimeOnly(9, 30), Duration = TimeSpan.FromMinutes(90), IsConfirmed = true };
+        var allocation = new FixtureAllocationDto { PitchId = pitchId, Start = new TimeOnly(9, 30), Duration = TimeSpan.FromMinutes(90), IsConfirmed = true };
 
         var set = await client.PutAsJsonAsync($"/api/fixtures/{fixture!.Id}/allocation", allocation);
         Assert.Equal(HttpStatusCode.OK, set.StatusCode);
@@ -115,11 +133,11 @@ public class FixturesApiTests(TestWebApplicationFactory factory) : IClassFixture
         var fixture = await (await client.PostAsJsonAsync("/api/fixtures", NewFixture(teamId, Nov7))).Content.ReadFromJsonAsync<FixtureDto>();
 
         var noDuration = await client.PutAsJsonAsync($"/api/fixtures/{fixture!.Id}/allocation",
-            new FixtureAllocationEditDto { PitchId = pitchId, Start = new TimeOnly(9, 30) });
+            new FixtureAllocationDto { PitchId = pitchId, Start = new TimeOnly(9, 30) });
         var noPitch = await client.PutAsJsonAsync($"/api/fixtures/{fixture.Id}/allocation",
-            new FixtureAllocationEditDto { PitchId = Guid.NewGuid(), Start = new TimeOnly(9, 30), Duration = TimeSpan.FromHours(1) });
+            new FixtureAllocationDto { PitchId = Guid.NewGuid(), Start = new TimeOnly(9, 30), Duration = TimeSpan.FromHours(1) });
         var noFixture = await client.PutAsJsonAsync($"/api/fixtures/{Guid.NewGuid()}/allocation",
-            new FixtureAllocationEditDto { PitchId = pitchId, Start = new TimeOnly(9, 30), Duration = TimeSpan.FromHours(1) });
+            new FixtureAllocationDto { PitchId = pitchId, Start = new TimeOnly(9, 30), Duration = TimeSpan.FromHours(1) });
 
         Assert.Equal(HttpStatusCode.BadRequest, noDuration.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, noPitch.StatusCode);

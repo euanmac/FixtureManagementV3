@@ -15,7 +15,7 @@ public sealed class EfPersonServiceTests : IDisposable
     [Fact]
     public async Task Create_then_Get_round_trips_every_field()
     {
-        var created = await _service.CreatePersonAsync(new PersonEditDto
+        var created = await _service.CreatePersonAsync(new PersonDto
         {
             FirstName = "Sam", LastName = "Smith", Tel = "07700 900000", Email = "sam@example.com", IsRef = true,
         });
@@ -56,12 +56,30 @@ public sealed class EfPersonServiceTests : IDisposable
     {
         var person = await _db.AddPersonAsync();
 
-        Assert.True(await _service.UpdatePersonAsync(person.Id, new PersonEditDto { FirstName = "New", LastName = "Name", Email = "new@example.com" }));
+        Assert.True(await _service.UpdatePersonAsync(person.Id, new PersonDto { FirstName = "New", LastName = "Name", Email = "new@example.com" }));
 
         var loaded = await _service.GetPersonAsync(person.Id);
         Assert.Equal("New Name", loaded!.FullName);
         Assert.Equal("new@example.com", loaded.Email);
-        Assert.False(await _service.UpdatePersonAsync(Guid.NewGuid(), new PersonEditDto { FirstName = "X", LastName = "Y" }));
+        Assert.False(await _service.UpdatePersonAsync(Guid.NewGuid(), new PersonDto { FirstName = "X", LastName = "Y" }));
+    }
+
+    [Fact]
+    public async Task Update_ignores_the_posted_teams_list()
+    {
+        var team = await _db.AddTeamAsync();
+        var person = await _db.AddPersonAsync();
+        var edit = new PersonDto
+        {
+            FirstName = "Sam", LastName = "Smith",
+            Teams = [new PersonTeamDto { TeamContactId = Guid.NewGuid(), Team = new TeamSummaryDto { Id = team.Id } }],
+        };
+
+        Assert.True(await _service.UpdatePersonAsync(person.Id, edit));
+
+        Assert.Empty((await _service.GetPersonAsync(person.Id))!.Teams);
+        await using var db = _db.CreateDbContext();
+        Assert.Equal(0, await db.TeamContact.CountAsync());
     }
 
     [Fact]
@@ -96,14 +114,18 @@ public sealed class EfTeamContactServiceTests : IDisposable
         var team = await _db.AddTeamAsync("Lions", AgeGroup.U9, Gender.Female);
         var person = await _db.AddPersonAsync("Mia", "Manager");
 
-        var result = await _service.CreateTeamContactAsync(new TeamContactCreateDto { TeamId = team.Id, PersonId = person.Id, ContactType = ContactType.Coach });
+        var result = await _service.CreateTeamContactAsync(new TeamContactDto { TeamId = team.Id, PersonId = person.Id, ContactType = ContactType.Coach });
 
         Assert.True(result.Succeeded);
         Assert.Equal("Mia Manager", result.Value!.FullName);
         Assert.Equal("U9 Girls - Lions", result.Value.Team.DisplayName);
         Assert.Equal(ContactType.Coach, result.Value.ContactType);
         var loaded = await _service.GetTeamContactAsync(result.Value.Id);
-        Assert.Equal(result.Value, loaded);
+        Assert.NotNull(loaded);
+        Assert.Equal(team.Id, loaded.TeamId);
+        Assert.Equal(person.Id, loaded.PersonId);
+        Assert.Equal("Mia Manager", loaded.FullName);
+        Assert.Equal(result.Value.Team, loaded.Team); // TeamSummaryDto is a record, so this compares values
     }
 
     [Fact]
@@ -112,13 +134,13 @@ public sealed class EfTeamContactServiceTests : IDisposable
         var team = await _db.AddTeamAsync();
         var person = await _db.AddPersonAsync();
 
-        var noTeam = await _service.CreateTeamContactAsync(new TeamContactCreateDto { TeamId = Guid.NewGuid(), PersonId = person.Id });
-        var noPerson = await _service.CreateTeamContactAsync(new TeamContactCreateDto { TeamId = team.Id, PersonId = Guid.NewGuid() });
+        var noTeam = await _service.CreateTeamContactAsync(new TeamContactDto { TeamId = Guid.NewGuid(), PersonId = person.Id });
+        var noPerson = await _service.CreateTeamContactAsync(new TeamContactDto { TeamId = team.Id, PersonId = Guid.NewGuid() });
 
         Assert.Equal(ServiceStatus.Invalid, noTeam.Status);
-        Assert.Contains(nameof(TeamContactCreateDto.TeamId), noTeam.Errors.Keys);
+        Assert.Contains(nameof(TeamContactDto.TeamId), noTeam.Errors.Keys);
         Assert.Equal(ServiceStatus.Invalid, noPerson.Status);
-        Assert.Contains(nameof(TeamContactCreateDto.PersonId), noPerson.Errors.Keys);
+        Assert.Contains(nameof(TeamContactDto.PersonId), noPerson.Errors.Keys);
     }
 
     [Fact]
@@ -126,11 +148,11 @@ public sealed class EfTeamContactServiceTests : IDisposable
     {
         var team = await _db.AddTeamAsync();
         var person = await _db.AddPersonAsync();
-        var manager = new TeamContactCreateDto { TeamId = team.Id, PersonId = person.Id, ContactType = ContactType.Manager };
+        var manager = new TeamContactDto { TeamId = team.Id, PersonId = person.Id, ContactType = ContactType.Manager };
 
         Assert.True((await _service.CreateTeamContactAsync(manager)).Succeeded);
         Assert.Equal(ServiceStatus.Conflict, (await _service.CreateTeamContactAsync(manager)).Status);
-        Assert.True((await _service.CreateTeamContactAsync(new TeamContactCreateDto { TeamId = team.Id, PersonId = person.Id, ContactType = ContactType.Coach })).Succeeded);
+        Assert.True((await _service.CreateTeamContactAsync(new TeamContactDto { TeamId = team.Id, PersonId = person.Id, ContactType = ContactType.Coach })).Succeeded);
     }
 
     [Fact]

@@ -32,7 +32,7 @@ public class EfFixtureService(IDbContextFactory<AppDBContext> dbFactory) : IFixt
         return fixture?.ToDto();
     }
 
-    public async Task<ServiceResult<FixtureDto>> CreateFixtureAsync(FixtureEditDto fixture, CancellationToken cancellationToken = default)
+    public async Task<ServiceResult<FixtureDto>> CreateFixtureAsync(FixtureDto fixture, CancellationToken cancellationToken = default)
     {
         var result = await CreateFixturesAsync([fixture], cancellationToken);
         return result.Succeeded
@@ -40,7 +40,7 @@ public class EfFixtureService(IDbContextFactory<AppDBContext> dbFactory) : IFixt
             : ServiceResult<FixtureDto>.From(result);
     }
 
-    public async Task<ServiceResult<IReadOnlyList<FixtureDto>>> CreateFixturesAsync(IReadOnlyList<FixtureEditDto> fixtures, CancellationToken cancellationToken = default)
+    public async Task<ServiceResult<IReadOnlyList<FixtureDto>>> CreateFixturesAsync(IReadOnlyList<FixtureDto> fixtures, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var teamIds = fixtures.Select(f => f.TeamId).Distinct().ToList();
@@ -48,7 +48,7 @@ public class EfFixtureService(IDbContextFactory<AppDBContext> dbFactory) : IFixt
         var missing = teamIds.Where(id => !teams.ContainsKey(id)).ToList();
         if (missing.Count > 0)
             return ServiceResult<IReadOnlyList<FixtureDto>>.From(
-                ServiceResult.Invalid(nameof(FixtureEditDto.TeamId), $"Team not found: {string.Join(", ", missing)}."));
+                ServiceResult.Invalid(nameof(FixtureDto.TeamId), $"Team not found: {string.Join(", ", missing)}."));
 
         var entities = fixtures.Select(f =>
         {
@@ -63,7 +63,7 @@ public class EfFixtureService(IDbContextFactory<AppDBContext> dbFactory) : IFixt
         return ServiceResult<IReadOnlyList<FixtureDto>>.Success(entities.Select(f => f.ToDto()).ToList());
     }
 
-    public async Task<ServiceResult> UpdateFixtureAsync(Guid id, FixtureEditDto fixture, CancellationToken cancellationToken = default)
+    public async Task<ServiceResult> UpdateFixtureAsync(Guid id, FixtureDto fixture, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var entity = await db.Fixture.FirstOrDefaultAsync(f => f.Id == id, cancellationToken);
@@ -104,7 +104,7 @@ public class EfFixtureService(IDbContextFactory<AppDBContext> dbFactory) : IFixt
         return fixtures.Count;
     }
 
-    public async Task<ServiceResult<FixtureAllocationDto>> SetAllocationAsync(Guid fixtureId, FixtureAllocationEditDto allocation, CancellationToken cancellationToken = default)
+    public async Task<ServiceResult<FixtureAllocationDto>> SetAllocationAsync(Guid fixtureId, FixtureAllocationDto allocation, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var fixture = await db.Fixture.Include(f => f.FixtureAllocation).FirstOrDefaultAsync(f => f.Id == fixtureId, cancellationToken);
@@ -145,7 +145,7 @@ public class EfFixtureService(IDbContextFactory<AppDBContext> dbFactory) : IFixt
                 .ThenInclude(a => a!.Pitch);
 
     // Only the editable fields are copied, so a caller can't overwrite Id or the allocation.
-    private static void Apply(FixtureEditDto source, Fixture target)
+    private static void Apply(FixtureDto source, Fixture target)
     {
         target.TeamId = source.TeamId;
         target.Date = source.Date;

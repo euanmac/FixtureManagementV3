@@ -13,7 +13,7 @@ public sealed class EfFixtureServiceTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    private static FixtureEditDto NewFixture(Guid teamId, DateOnly date, string opponent = "Rivals", bool isHome = true) => new()
+    private static FixtureDto NewFixture(Guid teamId, DateOnly date, string opponent = "Rivals", bool isHome = true) => new()
     {
         TeamId = teamId,
         Date = date,
@@ -22,7 +22,7 @@ public sealed class EfFixtureServiceTests : IDisposable
         FixtureType = FixtureType.League,
     };
 
-    private static FixtureAllocationEditDto NewAllocation(Guid pitchId, int hour = 9) => new()
+    private static FixtureAllocationDto NewAllocation(Guid pitchId, int hour = 9) => new()
     {
         PitchId = pitchId,
         Start = new TimeOnly(hour, 30),
@@ -50,12 +50,43 @@ public sealed class EfFixtureServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Get_returns_the_TeamId()
+    {
+        var team = await _db.AddTeamAsync();
+        var id = (await _service.CreateFixtureAsync(NewFixture(team.Id, Nov7))).Value!.Id;
+
+        Assert.Equal(team.Id, (await _service.GetFixtureAsync(id))!.TeamId);
+    }
+
+    [Fact]
+    public async Task Writes_ignore_the_output_only_fields()
+    {
+        var team = await _db.AddTeamAsync();
+        var pitch = await _db.AddPitchAsync();
+        var sneaky = NewFixture(team.Id, Nov7);
+        var fakeId = Guid.NewGuid();
+        sneaky.Id = fakeId;
+        sneaky.Team = new TeamSummaryDto { Id = Guid.NewGuid(), Name = "Not this team" };
+        sneaky.Allocation = new FixtureAllocationDto { PitchId = pitch.Id, Start = new TimeOnly(9, 30), Duration = TimeSpan.FromHours(1) };
+
+        var created = (await _service.CreateFixtureAsync(sneaky)).Value!;
+        Assert.True((await _service.UpdateFixtureAsync(created.Id, sneaky)).Succeeded);
+
+        var loaded = await _service.GetFixtureAsync(created.Id);
+        Assert.NotEqual(fakeId, created.Id);           // Id is always generated
+        Assert.Equal("Lions", loaded!.Team.Name);       // Team comes from TeamId, not the posted summary
+        Assert.Null(loaded.Allocation);                 // allocations only change via SetAllocationAsync
+        await using var db = _db.CreateDbContext();
+        Assert.Equal(0, await db.FixtureAllocation.CountAsync());
+    }
+
+    [Fact]
     public async Task Create_with_an_unknown_team_is_invalid()
     {
         var result = await _service.CreateFixtureAsync(NewFixture(Guid.NewGuid(), Nov7));
 
         Assert.Equal(ServiceStatus.Invalid, result.Status);
-        Assert.Contains(nameof(FixtureEditDto.TeamId), result.Errors.Keys);
+        Assert.Contains(nameof(FixtureDto.TeamId), result.Errors.Keys);
     }
 
     [Fact]
@@ -163,7 +194,7 @@ public sealed class EfFixtureServiceTests : IDisposable
         Assert.Equal(ServiceStatus.NotFound, (await _service.SetAllocationAsync(Guid.NewGuid(), NewAllocation(pitch.Id))).Status);
         var invalid = await _service.SetAllocationAsync(id, NewAllocation(Guid.NewGuid()));
         Assert.Equal(ServiceStatus.Invalid, invalid.Status);
-        Assert.Contains(nameof(FixtureAllocationEditDto.PitchId), invalid.Errors.Keys);
+        Assert.Contains(nameof(FixtureAllocationDto.PitchId), invalid.Errors.Keys);
     }
 
     [Fact]
