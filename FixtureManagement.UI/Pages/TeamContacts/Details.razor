@@ -1,0 +1,50 @@
+@page "/teamcontacts/details"
+@attribute [Authorize]
+@inject ITeamContactService TeamContactService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>Team Contact</h2>
+    <hr />
+    @if (contact is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">Team</dt>
+            <dd class="col-sm-10"><a href="@($"/teams/details?id={contact.TeamId}")">@contact.Team.DisplayName</a></dd>
+            <dt class="col-sm-2">Contact Type</dt>
+            <dd class="col-sm-10">@contact.ContactType</dd>
+            <dt class="col-sm-2">Person</dt>
+            <dd class="col-sm-10"><a href="@($"/contacts/details?id={contact.PersonId}")">@contact.FullName</a></dd>
+            <dt class="col-sm-2">Email</dt>
+            <dd class="col-sm-10">@contact.Email</dd>
+        </dl>
+        <div>
+            <a href="@($"/teamcontacts/delete?id={contact.Id}")">Delete</a> |
+            <a href="/teamcontacts">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private TeamContactDto? contact;
+
+    [SupplyParameterFromQuery]
+    private Guid Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        contact = await TeamContactService.GetTeamContactAsync(Id);
+
+        if (contact is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}

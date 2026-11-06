@@ -1,0 +1,41 @@
+@page "/teamcontacts"
+@inject ITeamContactService TeamContactService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Team Contacts</PageTitle>
+
+<h1>Team Contacts</h1>
+
+@if (isAuthenticated)
+{
+    <p>
+        <a href="teamcontacts/create">Create New</a>
+    </p>
+}
+
+<QuickGrid Class="table" Items="contacts">
+    <PropertyColumn Property="contact => contact.Team.DisplayName" Title="Team" />
+    <PropertyColumn Property="contact => contact.ContactType" Title="Contact Type" />
+    <PropertyColumn Property="contact => contact.FullName" Title="Person" />
+    @if (isAuthenticated)
+    {
+        <TemplateColumn Context="contact">
+            <a href="@($"teamcontacts/details?id={contact.Id}")"><Icon Type="Icon.IconType.Details"/></a>
+            <a href="@($"teamcontacts/delete?id={contact.Id}")"><Icon Type="Icon.IconType.Delete"/></a>
+        </TemplateColumn>
+    }
+</QuickGrid>
+
+@code {
+    private IQueryable<TeamContactDto> contacts = Enumerable.Empty<TeamContactDto>().AsQueryable();
+    private bool isAuthenticated;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+
+        // Ordered by team (youngest first), then contact type.
+        contacts = (await TeamContactService.GetTeamContactsAsync()).AsQueryable();
+    }
+}

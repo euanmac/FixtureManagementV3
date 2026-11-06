@@ -1,0 +1,127 @@
+@page "/teamcontacts/create"
+@attribute [Authorize]
+@inject ITeamContactService TeamContactService
+@inject ITeamService TeamService
+@inject IPersonService PersonService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<h1>Add</h1>
+
+<h2>Team Contact</h2>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" EditContext="editContext" OnValidSubmit="AddTeamContact" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert"/>
+            @if (errorMessage is not null)
+            {
+                <div class="alert alert-danger" role="alert">@errorMessage</div>
+            }
+
+            @if (fixedTeam is not null)
+            {
+                <div class="mb-3 form-floating">
+                    <input id="teamname" class="form-control" value="@fixedTeam.DisplayName" disabled />
+                    <label for="teamname">Team</label>
+                    <input type="hidden" name="Contact.TeamId" value="@fixedTeam.Id" />
+                </div>
+            }
+            else
+            {
+                <div class="mb-3 form-floating">
+                    <InputSelect id="teamid" @bind-Value="Contact.TeamId" class="form-control form-select">
+                        <option value="@Guid.Empty">Select a team…</option>
+                        @foreach (var team in teams)
+                        {
+                            <option value="@team.Id">@team.DisplayName</option>
+                        }
+                    </InputSelect>
+                    <label for="teamid">Team</label>
+                    <ValidationMessage For="() => Contact.TeamId" class="text-danger" />
+                </div>
+            }
+            <div class="mb-3 form-floating">
+                <InputSelect id="contacttype" @bind-Value="Contact.ContactType" class="form-control form-select" aria-required="true">
+                    @foreach (var ct in Enum.GetValues<ContactType>())
+                    {
+                        <option value="@ct">@ct</option>
+                    }
+                </InputSelect>
+                <label for="contacttype">Contact Type</label>
+                <ValidationMessage For="() => Contact.ContactType" class="text-danger" />
+            </div>
+            <div class="mb-3 form-floating">
+                <InputSelect id="personid" @bind-Value="Contact.PersonId" class="form-control form-select">
+                    <option value="@Guid.Empty">Select a person…</option>
+                    @foreach (var person in people)
+                    {
+                        <option value="@person.Id">@person.FullName</option>
+                    }
+                </InputSelect>
+                <label for="personid">Person</label>
+                <ValidationMessage For="() => Contact.PersonId" class="text-danger" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/teamcontacts">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private TeamContactDto Contact { get; set; } = new();
+
+    // Set when arriving from a team's "Add Contact" button: the team is shown but can't be changed.
+    [SupplyParameterFromQuery]
+    private Guid? TeamId { get; set; }
+
+    private EditContext editContext = default!;
+    private ValidationMessageStore messages = default!;
+    private string? errorMessage;
+    private IReadOnlyList<TeamDto> teams = [];
+    private IReadOnlyList<PersonDto> people = [];
+    private TeamDto? fixedTeam;
+
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Contact);
+        messages = new ValidationMessageStore(editContext);
+
+        teams = await TeamService.GetTeamsAsync();
+        people = await PersonService.GetPeopleAsync();
+        if (TeamId is not null)
+        {
+            fixedTeam = teams.FirstOrDefault(t => t.Id == TeamId.Value);
+        }
+    }
+
+    private async Task AddTeamContact()
+    {
+        var result = await TeamContactService.CreateTeamContactAsync(Contact);
+        switch (result.Status)
+        {
+            case ServiceStatus.Success:
+                NavigationManager.NavigateTo($"teams/details?id={Contact.TeamId}");
+                return;
+            case ServiceStatus.Invalid:
+                // e.g. the team or person no longer exists: show it against the field.
+                foreach (var (field, fieldErrors) in result.Errors)
+                {
+                    messages.Add(editContext.Field(field), fieldErrors);
+                }
+                editContext.NotifyValidationStateChanged();
+                return;
+            default:
+                // Conflict: this person already has that role for the team.
+                errorMessage = result.Message;
+                return;
+        }
+    }
+}
