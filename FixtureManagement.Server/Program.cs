@@ -122,3 +122,6 @@ app.MapEventEndpoints();
 app.MapFixtureEndpoints();
 app.MapTeamEndpoints();
 app.Run();
+
+// Lets the test project start the app with WebApplicationFactory<Program>.
+public partial class Program { }
