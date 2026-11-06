@@ -1,5 +1,5 @@
 ﻿@using FixtureManagementV3.Components.Account.Shared
-<Router AppAssembly="typeof(Program).Assembly">
+<Router AppAssembly="typeof(Program).Assembly" AdditionalAssemblies="new[] { typeof(FixtureManagementV3.Client._Imports).Assembly }">
     <Found Context="routeData">
         <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
             <NotAuthorized>

@@ -17,11 +17,6 @@
     <Compile Remove="FixtureManagementV3.Client/**/*.razor" />
     <Content Remove="FixtureManagementV3.Client/**" />
     <None Remove="FixtureManagementV3.Client/**" />
-
-    <Compile Remove="FixtureManagementV3.Wasm/**/*.cs" />
-    <Compile Remove="FixtureManagementV3.Wasm/**/*.razor" />
-    <Content Remove="FixtureManagementV3.Wasm/**" />
-    <None Remove="FixtureManagementV3.Wasm/**" />
   </ItemGroup>
 
   <ItemGroup>
