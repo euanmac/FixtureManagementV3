@@ -1,4 +1,5 @@
 using FixtureManagement.Server.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace FixtureManagement.Tests.Server;
 
@@ -63,6 +64,33 @@ public sealed class EfBookingServiceTests : IDisposable
         await _service.CreateBookingAsync(NewBooking(pitch.Id, Sat, "Early Saturday"));
 
         Assert.Equal(["Early Saturday", "Late Saturday", "Sunday"], (await _service.GetBookingsAsync()).Select(b => b.Title));
+    }
+
+    [Fact]
+    public async Task A_booking_whose_pitch_has_gone_is_still_listed_and_can_be_deleted()
+    {
+        // local.db has no foreign key from Booking to Pitch, so a pitch can be removed under a booking.
+        // The test schema does have one, so switch enforcement off just to create that situation.
+        var pitch = await _db.AddPitchAsync("Kept");
+        await _service.CreateBookingAsync(NewBooking(pitch.Id, Sat, "Normal"));
+        var orphanId = Guid.NewGuid();
+        await using (var db = _db.CreateDbContext())
+        {
+            await db.Database.OpenConnectionAsync();
+            await db.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF");
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"INSERT INTO Booking (Id, Title, Start, End, PitchId, IsRecurring) VALUES ({orphanId}, 'Orphan', {Sat.AddDays(1)}, {Sat.AddDays(1).AddHours(1)}, {Guid.NewGuid()}, 0)");
+            await db.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON");
+        }
+
+        var all = await _service.GetBookingsAsync();
+        var orphan = await _service.GetBookingAsync(orphanId);
+
+        Assert.Equal(["Normal", "Orphan"], all.Select(b => b.Title));
+        Assert.Equal("Kept", all[0].PitchName);
+        Assert.NotNull(orphan);
+        Assert.Equal("", orphan.PitchName);
+        Assert.True(await _service.DeleteBookingAsync(orphanId));
     }
 
     [Fact]

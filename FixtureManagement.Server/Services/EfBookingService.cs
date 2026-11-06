@@ -8,21 +8,31 @@ namespace FixtureManagement.Server.Services;
 /// <summary>IBookingService backed by the database.</summary>
 public class EfBookingService(IDbContextFactory<AppDBContext> dbFactory) : IBookingService
 {
+    // Pitch names are looked up separately rather than with .Include(b => b.Pitch): EF treats the pitch as required
+    // and turns an Include into an inner join, which would silently drop bookings whose pitch has been removed
+    // (local.db has no foreign key from Booking to Pitch, so that can happen).
+
     public async Task<IReadOnlyList<BookingDto>> GetBookingsAsync(CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-        var bookings = await db.Booking.AsNoTracking().Include(b => b.Pitch)
+        var bookings = await db.Booking.AsNoTracking()
             .OrderBy(b => b.Start)
             .ToListAsync(cancellationToken);
-        return bookings.Select(b => b.ToDto()).ToList();
+        var pitchNames = await PitchNames(db, cancellationToken);
+        return bookings.Select(b => b.ToDto(pitchNames.GetValueOrDefault(b.PitchId))).ToList();
     }
 
     public async Task<BookingDto?> GetBookingAsync(Guid id, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-        var booking = await db.Booking.AsNoTracking().Include(b => b.Pitch).FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
-        return booking?.ToDto();
+        var booking = await db.Booking.AsNoTracking().FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
+        if (booking is null) return null;
+        var pitch = await db.Pitch.AsNoTracking().FirstOrDefaultAsync(p => p.Id == booking.PitchId, cancellationToken);
+        return booking.ToDto(pitch?.Name);
     }
+
+    private static Task<Dictionary<Guid, string>> PitchNames(AppDBContext db, CancellationToken ct) =>
+        db.Pitch.AsNoTracking().ToDictionaryAsync(p => p.Id, p => p.Name ?? "", ct);
 
     public async Task<ServiceResult<BookingDto>> CreateBookingAsync(BookingDto booking, CancellationToken cancellationToken = default)
     {

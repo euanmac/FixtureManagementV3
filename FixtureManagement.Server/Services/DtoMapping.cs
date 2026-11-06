@@ -24,14 +24,17 @@ internal static class DtoMapping
         DisplayOrder = pitch.DisplayOrder,
     };
 
-    public static BookingDto ToDto(this Booking booking) => new()
+    public static BookingDto ToDto(this Booking booking) => booking.ToDto(booking.Pitch?.Name);
+
+    /// <summary>For when the pitch name was looked up separately (it may be missing).</summary>
+    public static BookingDto ToDto(this Booking booking, string? pitchName) => new()
     {
         Id = booking.Id,
         Title = booking.Title ?? "",
         Start = booking.Start,
         End = booking.End,
         PitchId = booking.PitchId,
-        PitchName = booking.Pitch?.Name ?? "",
+        PitchName = pitchName ?? "",
         IsRecurring = booking.IsRecurring,
     };
 

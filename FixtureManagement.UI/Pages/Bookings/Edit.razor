@@ -1,0 +1,79 @@
+@page "/bookings/edit"
+@attribute [Authorize]
+@inject IBookingService BookingService
+@inject IPitchService PitchService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+<h2>Booking</h2>
+<hr />
+@if (Booking is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" EditContext="editContext" OnValidSubmit="UpdateBooking" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <BookingFormFields Booking="Booking" Pitches="pitches" />
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/bookings">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private Guid Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private BookingDto? Booking { get; set; }
+
+    private IReadOnlyList<PitchDto> pitches = [];
+    private EditContext editContext = default!;
+    private ValidationMessageStore messages = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        pitches = await PitchService.GetPitchesAsync();
+
+        // On a post, Booking is already filled from the form; otherwise load it.
+        Booking ??= await BookingService.GetBookingAsync(Id);
+        if (Booking is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+        editContext = new EditContext(Booking);
+        messages = new ValidationMessageStore(editContext);
+    }
+
+    private async Task UpdateBooking()
+    {
+        // The id comes from the URL, not the form.
+        var result = await BookingService.UpdateBookingAsync(Id, Booking!);
+        switch (result.Status)
+        {
+            case ServiceStatus.NotFound:
+                NavigationManager.NavigateTo("notfound");
+                return;
+            case ServiceStatus.Invalid:
+                foreach (var (field, fieldErrors) in result.Errors)
+                {
+                    messages.Add(editContext.Field(field), fieldErrors);
+                }
+                editContext.NotifyValidationStateChanged();
+                return;
+        }
+        NavigationManager.NavigateTo("/bookings");
+    }
+}

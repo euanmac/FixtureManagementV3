@@ -1,0 +1,60 @@
+@page "/bookings"
+@inject IBookingService BookingService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Bookings</PageTitle>
+
+<h1>Bookings</h1>
+<hr/>
+<div class="row align-items-center mb-3">
+    <div class="col-auto">
+        @if (isAuthenticated)  {
+            <a class="btn btn-primary" href="bookings/create">Add Booking</a>
+        }
+    </div>
+    <div class="col-auto">
+        <input type="checkbox" id="show-past" onclick="ToggleRows(!this.checked)" class="form-check-input"/>
+        <label>Show Past</label>
+    </div>
+</div>
+
+<QuickGrid Class="table" Items="bookings">
+    <PropertyColumn Property="booking => booking.Title" />
+    <PropertyColumn Property="booking => booking.Start" />
+    <PropertyColumn Property="booking => booking.End" />
+    <PropertyColumn Property="booking => booking.PitchName" title="Pitch"/>
+    <TemplateColumn Context="booking"  title="Recurring" Align="Align.Center">
+        @* "past" marks the row so the Show Past checkbox can hide/show it. *@
+        <input type="checkbox" checked="@booking.IsRecurring" disabled class="form-check-input @(booking.IsPast ? "past" : "")" />
+    </TemplateColumn>
+    @if (isAuthenticated) {
+        <TemplateColumn Context="booking">
+            <a href="@($"bookings/edit?id={booking.Id}")"><Icon Type="Icon.IconType.Edit"/></a>
+            <a href="@($"bookings/delete?id={booking.Id}")"><Icon Type="Icon.IconType.Delete"/></a>
+        </TemplateColumn>
+    }
+</QuickGrid>
+
+<script>
+    function ToggleRows(hidden){
+        document.querySelectorAll('.past').forEach(row => {
+            row.parentElement.parentElement.hidden = hidden;
+        });
+    }
+
+    ToggleRows(true);
+</script>
+
+@code {
+    private IQueryable<BookingDto> bookings = Enumerable.Empty<BookingDto>().AsQueryable();
+    private bool isAuthenticated;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+
+        // Earliest start first.
+        bookings = (await BookingService.GetBookingsAsync()).AsQueryable();
+    }
+}

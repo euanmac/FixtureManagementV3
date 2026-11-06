@@ -1,0 +1,53 @@
+@page "/bookings/details"
+@inject IBookingService BookingService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>Booking</h2>
+    <hr />
+    @if (booking is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">Title</dt>
+            <dd class="col-sm-10">@booking.Title</dd>
+            <dt class="col-sm-2">Start</dt>
+            <dd class="col-sm-10">@booking.Start</dd>
+            <dt class="col-sm-2">End</dt>
+            <dd class="col-sm-10">@booking.End</dd>
+            <dt class="col-sm-2">Pitch</dt>
+            <dd class="col-sm-10">@booking.PitchName</dd>
+            <dt class="col-sm-2">Is Recurring</dt>
+            <dd class="col-sm-10">@booking.IsRecurring</dd>
+            <dt class="col-sm-2">Is Past</dt>
+            <dd class="col-sm-10">@booking.IsPast</dd>
+        </dl>
+        <div>
+            <a href="@($"/bookings/edit?id={booking.Id}")">Edit</a> |
+            <a href="/bookings">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private BookingDto? booking;
+
+    [SupplyParameterFromQuery]
+    private Guid Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        booking = await BookingService.GetBookingAsync(Id);
+
+        if (booking is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}

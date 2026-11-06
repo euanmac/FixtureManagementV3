@@ -1,0 +1,62 @@
+@page "/bookings/create"
+@attribute [Authorize]
+@inject IBookingService BookingService
+@inject IPitchService PitchService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+
+<h2>Booking</h2>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" EditContext="editContext" OnValidSubmit="AddBooking" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <BookingFormFields Booking="Booking" Pitches="pitches" />
+            <a class="btn btn-secondary" href="#" onclick="history.back()">Back</a>
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private BookingDto Booking { get; set; } = new()
+    {
+        Start = DateTime.Now.Date.AddHours(9).AddMinutes(30),
+        End = DateTime.Now.Date.AddHours(10).AddMinutes(30),
+    };
+
+    private IReadOnlyList<PitchDto> pitches = [];
+    private EditContext editContext = default!;
+    private ValidationMessageStore messages = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        pitches = await PitchService.GetPitchesAsync();   // display order
+        if (Booking.PitchId == Guid.Empty && pitches.Count > 0)
+        {
+            Booking.PitchId = pitches[0].Id;
+        }
+        editContext = new EditContext(Booking);
+        messages = new ValidationMessageStore(editContext);
+    }
+
+    private async Task AddBooking()
+    {
+        var result = await BookingService.CreateBookingAsync(Booking);
+        if (result.Status == ServiceStatus.Invalid)
+        {
+            // e.g. the pitch no longer exists: show it against the field.
+            foreach (var (field, fieldErrors) in result.Errors)
+            {
+                messages.Add(editContext.Field(field), fieldErrors);
+            }
+            editContext.NotifyValidationStateChanged();
+            return;
+        }
+        NavigationManager.NavigateTo("/bookings");
+    }
+}

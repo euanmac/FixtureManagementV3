@@ -1,0 +1,39 @@
+@* The booking fields shared by Create and Edit. Must sit inside an EditForm whose model is Booking.
+   "End must be after Start" comes from BookingDto's own validation. *@
+<div class="mb-3 form-floating">
+    <InputText id="title" @bind-Value="Booking.Title" class="form-control" placeholder=" " />
+    <label for="title" class="form-label">Title</label>
+    <ValidationMessage For="() => Booking.Title" class="text-danger" />
+</div>
+<div class="mb-3 form-floating">
+    <InputDate id="start" Type="InputDateType.DateTimeLocal" @bind-Value="Booking.Start" class="form-control" />
+    <label for="start" class="form-label">Start</label>
+    <ValidationMessage For="() => Booking.Start" class="text-danger" />
+</div>
+<div class="mb-3 form-floating">
+    <InputDate id="end" Type="InputDateType.DateTimeLocal" @bind-Value="Booking.End" class="form-control" />
+    <label for="end" class="form-label">End</label>
+    <ValidationMessage For="() => Booking.End" class="text-danger" />
+</div>
+<div class="mb-3 form-check form-switch">
+    <InputCheckbox id="isrecurring" @bind-Value="Booking.IsRecurring" class="form-check-input" />
+    <label for="isrecurring" class="form-label">Is Recurring</label>
+</div>
+<div class="mb-3 form-floating">
+    <InputSelect id="pitchid" @bind-Value="Booking.PitchId" class="form-control form-select" aria-required="true">
+        @foreach (var pitch in Pitches)
+        {
+            <option value="@pitch.Id">@pitch.Name</option>
+        }
+    </InputSelect>
+    <label for="pitchid" class="form-label">Pitch</label>
+    <ValidationMessage For="() => Booking.PitchId" class="text-danger" />
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public required BookingDto Booking { get; set; }
+
+    [Parameter, EditorRequired]
+    public required IReadOnlyList<PitchDto> Pitches { get; set; }
+}
