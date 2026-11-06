@@ -5,10 +5,13 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-FixtureManagementV3-a56d5c1a-c165-4abc-8029-e7cc64e5f838</UserSecretsId>
+    <!-- Ship the SQLite databases with the build/publish (the test sites get the repo's copy on every deploy).
+         Production builds pass -p:IncludeDatabase=false so its live database is never replaced. -->
+    <IncludeDatabase Condition="'$(IncludeDatabase)' == ''">true</IncludeDatabase>
   </PropertyGroup>
 
-  <ItemGroup>
-    <None Update="Data\app.db" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />  
+  <ItemGroup Condition="'$(IncludeDatabase)' == 'true'">
+    <None Update="Data\app.db" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
     <None Update="Data\local.db" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 
