@@ -1,0 +1,52 @@
+@page "/contacts/details"
+@attribute [Authorize]
+@inject IPersonService PersonService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>Person</h2>
+    <hr />
+    @if (person is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">First Name</dt>
+            <dd class="col-sm-10">@person.FirstName</dd>
+            <dt class="col-sm-2">Last Name</dt>
+            <dd class="col-sm-10">@person.LastName</dd>
+            <dt class="col-sm-2">Telephone</dt>
+            <dd class="col-sm-10">@person.Tel</dd>
+            <dt class="col-sm-2">Email</dt>
+            <dd class="col-sm-10">@person.Email</dd>
+            <dt class="col-sm-2">Is Referee</dt>
+            <dd class="col-sm-10">@person.IsRef</dd>
+        </dl>
+        <div>
+            <a class="btn btn-primary" href="@($"/contacts/edit?id={person.Id}")">Edit</a>
+            <a class="btn btn-secondary" href="#" onclick="history.back()">Back</a>
+        </div>
+    }
+</div>
+
+@code {
+    private PersonDto? person;
+
+    [SupplyParameterFromQuery]
+    private Guid Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        person = await PersonService.GetPersonAsync(Id);
+
+        if (person is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}

@@ -119,8 +119,8 @@
     private async Task RemoveContact()
     {
         // The forms render for everyone, so check here rather than trusting the button being hidden.
-        if (!isAuthenticated || RemoveContactId is not { } contactId) return;
-        await TeamContactService.DeleteTeamContactAsync(contactId);
+        if (!isAuthenticated || RemoveContactId is null) return;
+        await TeamContactService.DeleteTeamContactAsync(RemoveContactId.Value);
         NavigationManager.NavigateTo(NavigationManager.Uri, true);
     }
 

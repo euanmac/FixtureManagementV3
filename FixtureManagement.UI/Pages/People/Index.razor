@@ -1,0 +1,60 @@
+@page "/contacts"
+@inject IPersonService PersonService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Contacts</PageTitle>
+
+<h1>Contacts</h1>
+<hr>
+<div class="mt-2 mb-2">
+    @if (isAuthenticated)  {
+        <a class="btn btn-primary" href="contacts/create">Add Contact</a>
+        <a class="btn btn-primary" href="mailto:@emailContacts">Email All</a>
+    }
+</div>
+
+<QuickGrid Class="table table-striped" Items="people">
+    <PropertyColumn Property="person => person.FirstName" Title="First Name" />
+    <PropertyColumn Property="person => person.LastName" Title="Last Name"/>
+    @if (isAuthenticated) {
+        <PropertyColumn Property="person => person.Tel" Title="Telephone" />
+        <PropertyColumn Property="person => person.Email" Title="Email" />
+    }
+    <TemplateColumn Context="person" title="Teams">
+        @foreach (var team in person.Teams)
+        {
+            @team.Team.DisplayName <br />
+        }
+    </TemplateColumn>
+    @if (isAuthenticated)
+    {
+        <TemplateColumn Context="person">
+            <a href="@($"contacts/edit?id={person.Id}")"><Icon Type="Icon.IconType.Edit"/></a>
+            <a href="@($"contacts/delete?id={person.Id}")"><Icon Type="Icon.IconType.Delete"/></a>
+        </TemplateColumn>
+    }
+</QuickGrid>
+
+@code {
+    private IQueryable<PersonDto> people = Enumerable.Empty<PersonDto>().AsQueryable();
+    private bool isAuthenticated;
+    private string emailContacts = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+
+        // Ordered by last name then first name; each person's teams youngest first.
+        var list = await PersonService.GetPeopleAsync();
+        people = list.AsQueryable();
+
+        // "Email All": everyone who is a team contact or a referee and has an email address.
+        if (isAuthenticated)
+        {
+            emailContacts = string.Join(",", list
+                .Where(p => p.Email.Length > 0 && (p.Teams.Count > 0 || p.IsRef))
+                .Select(p => p.Email));
+        }
+    }
+}

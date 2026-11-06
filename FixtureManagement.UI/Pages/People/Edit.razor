@@ -1,0 +1,80 @@
+@page "/contacts/edit"
+@attribute [Authorize]
+@inject IPersonService PersonService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+<h2>Person</h2>
+<hr />
+@if (Person is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Person" OnValidSubmit="UpdatePerson" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary role="alert"/>
+                <PersonFormFields Person="Person" />
+                <hr/>
+                <dl class="row">
+                    @foreach (var team in teams)
+                    {
+                        <dt class="col-sm-2">
+                            @team.ContactType
+                        </dt>
+                        <dd class="col-sm-10">
+                            @team.Team.DisplayName
+                        </dd>
+                    }
+                </dl>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/contacts">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private Guid Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private PersonDto? Person { get; set; }
+
+    // Teams aren't posted back with the form, so keep them separately for redisplay after a failed save.
+    private IReadOnlyList<PersonTeamDto> teams = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var saved = await PersonService.GetPersonAsync(Id);
+        if (saved is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+
+        // On a post, Person is already filled from the form; otherwise show what's saved.
+        Person ??= saved;
+        teams = saved.Teams;
+    }
+
+    private async Task UpdatePerson()
+    {
+        // The id comes from the URL, not the form.
+        if (!await PersonService.UpdatePersonAsync(Id, Person!))
+        {
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+        NavigationManager.NavigateTo("/contacts");
+    }
+}

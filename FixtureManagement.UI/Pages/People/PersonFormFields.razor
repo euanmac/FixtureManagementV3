@@ -1,0 +1,30 @@
+@* The person fields shared by the Create and Edit pages. Must sit inside an EditForm whose model is Person. *@
+<div class="mb-3 form-floating">
+    <InputText id="firstname" @bind-Value="Person.FirstName" class="form-control" placeholder=" "/>
+    <label for="firstname" class="form-label">First Name</label>
+    <ValidationMessage For="() => Person.FirstName" class="text-danger" />
+</div>
+<div class="mb-3 form-floating">
+    <InputText id="lastname" @bind-Value="Person.LastName" class="form-control" placeholder=" "/>
+    <label for="lastname" class="form-label">Last Name</label>
+    <ValidationMessage For="() => Person.LastName" class="text-danger" />
+</div>
+<div class="mb-3 form-floating">
+    <InputText id="tel" @bind-Value="Person.Tel" class="form-control" placeholder=" " />
+    <label for="tel" class="form-label">Telephone</label>
+    <ValidationMessage For="() => Person.Tel" class="text-danger" />
+</div>
+<div class="mb-3 form-floating">
+    <InputText id="email" @bind-Value="Person.Email" class="form-control" placeholder=" " />
+    <label for="email" class="form-label">Email</label>
+    <ValidationMessage For="() => Person.Email" class="text-danger" />
+</div>
+<div class="mb-3 form-check">
+    <InputCheckbox id="isref" @bind-Value="Person.IsRef" class="form-check-input" />
+    <label for="isref" class="form-check-label">Is Referee</label>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public required PersonDto Person { get; set; }
+}

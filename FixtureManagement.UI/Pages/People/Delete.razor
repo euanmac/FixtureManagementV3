@@ -1,0 +1,88 @@
+@page "/contacts/delete"
+@attribute [Authorize]
+@inject IPersonService PersonService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Delete</PageTitle>
+
+<h1>Delete</h1>
+
+<p>Are you sure you want to delete this?</p>
+<div>
+    <h2>Person</h2>
+    <hr />
+    @if (person is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        @if (errorMessage is not null)
+        {
+            <div class="alert alert-danger" role="alert">@errorMessage</div>
+        }
+        <dl class="row">
+            <dt class="col-sm-2">First Name</dt>
+            <dd class="col-sm-10">@person.FirstName</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Last Name</dt>
+            <dd class="col-sm-10">@person.LastName</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Telephone</dt>
+            <dd class="col-sm-10">@person.Tel</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Email</dt>
+            <dd class="col-sm-10">@person.Email</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Is Referee</dt>
+            <dd class="col-sm-10">@person.IsRef</dd>
+        </dl>
+        @if (person.Teams.Count > 0)
+        {
+            <dl class="row">
+                <dt class="col-sm-2">Contact for</dt>
+                <dd class="col-sm-10">
+                    @string.Join(", ", person.Teams.Select(t => $"{t.Team.DisplayName} ({t.ContactType})"))
+                    <br /><em>They'll be removed from these teams.</em>
+                </dd>
+            </dl>
+        }
+        <EditForm method="post" Model="person" OnValidSubmit="DeletePerson" FormName="delete" Enhance>
+            <button type="submit" class="btn btn-danger">Delete</button> |
+            <a href="/contacts">Back to List</a>
+        </EditForm>
+    }
+</div>
+
+@code {
+    private PersonDto? person;
+    private string? errorMessage;
+
+    [SupplyParameterFromQuery]
+    private Guid Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        person = await PersonService.GetPersonAsync(Id);
+
+        if (person is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    private async Task DeletePerson()
+    {
+        var result = await PersonService.DeletePersonAsync(Id);
+        if (result.Status == ServiceStatus.Conflict)
+        {
+            // e.g. still recorded as a referee on an allocation; stay on the page and say why.
+            errorMessage = result.Message;
+            return;
+        }
+        NavigationManager.NavigateTo("/contacts");
+    }
+}

@@ -1,0 +1,33 @@
+@page "/contacts/create"
+@attribute [Authorize]
+@inject IPersonService PersonService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+
+<h2>Person</h2>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Person" OnValidSubmit="AddPerson" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <PersonFormFields Person="Person" />
+            <button class="btn btn-primary" type="submit">Save</button>
+            <a class="btn btn-secondary" href="#" onclick="history.back()">Back</a>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private PersonDto Person { get; set; } = new();
+
+    private async Task AddPerson()
+    {
+        // The service only copies the editable fields, so posted extras (Id, Teams) are ignored.
+        await PersonService.CreatePersonAsync(Person);
+        NavigationManager.NavigateTo("/contacts");
+    }
+}
