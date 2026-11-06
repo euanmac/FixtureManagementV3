@@ -20,12 +20,46 @@ builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
+// Website pages sign in with the Identity cookie; API clients (e.g. the desktop app)
+// send "Authorization: Bearer <token>". The policy scheme picks the right one per request.
+const string CookieOrBearerScheme = "CookieOrBearer";
+
 builder.Services.AddAuthentication(options =>
     {
-        options.DefaultScheme = IdentityConstants.ApplicationScheme;
+        options.DefaultScheme = CookieOrBearerScheme;
         options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
     })
+    .AddBearerToken(IdentityConstants.BearerScheme)
+    .AddPolicyScheme(CookieOrBearerScheme, "Cookie or bearer token", options =>
+    {
+        options.ForwardDefaultSelector = context =>
+            context.Request.Headers.Authorization.ToString()
+                .StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                ? IdentityConstants.BearerScheme
+                : IdentityConstants.ApplicationScheme;
+    })
     .AddIdentityCookies();
+
+// API calls should get 401/403 rather than being redirected to the login page.
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Events.OnRedirectToLogin = context =>
+    {
+        if (context.Request.Path.StartsWithSegments("/api"))
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        else
+            context.Response.Redirect(context.RedirectUri);
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToAccessDenied = context =>
+    {
+        if (context.Request.Path.StartsWithSegments("/api"))
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        else
+            context.Response.Redirect(context.RedirectUri);
+        return Task.CompletedTask;
+    };
+});
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
@@ -43,7 +77,8 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<AuthenticationDbContext>()
     .AddSignInManager()
-    .AddDefaultTokenProviders();
+    .AddDefaultTokenProviders()
+    .AddApiEndpoints();
 
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
@@ -78,6 +113,9 @@ app.MapRazorComponents<App>()
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
+
+// Token login for API clients: POST /api/auth/login, POST /api/auth/refresh, etc.
+app.MapGroup("/api/auth").WithTags("Auth").MapIdentityApi<ApplicationUser>();
 
 app.MapEventEndpoints();
 app.MapFixtureEndpoints();

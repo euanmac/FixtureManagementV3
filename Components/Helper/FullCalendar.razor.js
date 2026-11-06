@@ -147,6 +147,12 @@ export function onLoad() {
             });
         
             if (!response.ok) {
+                // Put the event back where it was - the change wasn't saved
+                info.revert();
+                if (response.status === 401 || response.status === 403) {
+                    alert('You need to be logged in to move fixtures.');
+                    return;
+                }
                 const message = `An error has occurred: ${response.statusText}`;
                 throw new Error(message);
             }

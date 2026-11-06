@@ -31,7 +31,7 @@ public static class FixturesAPI
             db.Fixture.Add(newFixture);
             await db.SaveChangesAsync();
             return Results.Created($"/api/Fixture/{newFixture.Id}", newFixture);
-        });
+        }).RequireAuthorization();
 
         // Add a list of fixtures
         group.MapPut("/list", async ([FromBody] List<Fixture> newFixtures, AppDBContext db) =>
@@ -39,6 +39,6 @@ public static class FixturesAPI
             db.Fixture.AddRange(newFixtures);
             await db.SaveChangesAsync();
             return Results.Created("/api/Fixture/list", newFixtures);
-        });
+        }).RequireAuthorization();
     }
 }

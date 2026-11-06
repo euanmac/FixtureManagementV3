@@ -71,7 +71,7 @@ public static class EventsAPI
                 db.Attach(allocation).State = EntityState.Modified;
                 await db.SaveChangesAsync();
             return ;
-        }) ;
+        }).RequireAuthorization();
         // .WithOpenApi();
         
    
