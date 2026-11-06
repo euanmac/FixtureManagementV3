@@ -84,6 +84,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 builder.Services.AddSingleton<FullTimeReconciliationService>();
 builder.Services.AddScoped<PageHistoryService>();
+builder.Services.AddScoped<FixtureManagement.Shared.Services.ITeamService, EfTeamService>();
 
 var app = builder.Build();
 
@@ -119,4 +120,5 @@ app.MapGroup("/api/auth").WithTags("Auth").MapIdentityApi<ApplicationUser>();
 
 app.MapEventEndpoints();
 app.MapFixtureEndpoints();
+app.MapTeamEndpoints();
 app.Run();

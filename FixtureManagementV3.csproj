@@ -17,6 +17,16 @@
     <Compile Remove="FixtureManagementV3.Client/**/*.razor" />
     <Content Remove="FixtureManagementV3.Client/**" />
     <None Remove="FixtureManagementV3.Client/**" />
+
+    <Compile Remove="FixtureManagement.Shared/**/*.cs" />
+    <Compile Remove="FixtureManagement.Shared/**/*.razor" />
+    <Content Remove="FixtureManagement.Shared/**" />
+    <None Remove="FixtureManagement.Shared/**" />
+
+    <Compile Remove="FixtureManagement.UI/**/*.cs" />
+    <Compile Remove="FixtureManagement.UI/**/*.razor" />
+    <Content Remove="FixtureManagement.UI/**" />
+    <None Remove="FixtureManagement.UI/**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -33,6 +43,8 @@
     </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.7" />
     <ProjectReference Include="FixtureManagementV3.Client\FixtureManagementV3.Client.csproj" />
+    <ProjectReference Include="FixtureManagement.Shared\FixtureManagement.Shared.csproj" />
+    <ProjectReference Include="FixtureManagement.UI\FixtureManagement.UI.csproj" />
   </ItemGroup>
 
 </Project>

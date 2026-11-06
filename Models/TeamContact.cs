@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using CsvHelper.Configuration.Attributes;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using FixtureManagement.Shared.Models;
 namespace FixtureManagementV3.Models
 {
     public class TeamContact
@@ -18,13 +19,5 @@ namespace FixtureManagementV3.Models
         [Ignore]
         public Team? Team { get; set; }
 
-    }
-
-    public enum ContactType
-    {
-        Manager = 0b_0000_0000,  // 0
-        Coach = 0b_0000_0001,  // 1
-        Admin = 0b_0000_0010,  // 2
-        Other = 0b_0000_0011,  // 3
     }
 }
