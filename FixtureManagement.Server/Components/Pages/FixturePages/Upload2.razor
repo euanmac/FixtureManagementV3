@@ -3,7 +3,7 @@
 @inject ITeamService TeamService
 @inject IFixtureService FixtureService
 @inject NavigationManager NavigationManager
-@inject FullTimeReconciliationService FullTimeReconciliationService
+@inject IFullTimeService FullTimeService
 @using CsvHelper
 @using System.Globalization
 @using System.ComponentModel.DataAnnotations
@@ -103,7 +103,7 @@
                 }
                 <AntiforgeryToken />
             </form>
-            <code>@(FullTimeReconciliationService.html)</code>
+            <code>@(FullTimeService.LastHtml)</code>
             <script>
                 document.addEventListener("DOMContentLoaded", function () {
                     document.getElementById("select-all").addEventListener("click", function () {
@@ -200,7 +200,7 @@
         }
         try
         {
-            var fulltimeFixtures = await FullTimeReconciliationService.FromFullTimeAsync(team);
+            var fulltimeFixtures = await FullTimeService.GetFixturesAsync(team);
             Fixtures = fulltimeFixtures.Select(ff => new FixtureDto
             {
                 Id = Guid.NewGuid(),

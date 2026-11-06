@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.Collections.Generic;
 using FixtureManagement.Shared.Models;
@@ -22,8 +22,6 @@ namespace FixtureManagement.Server.Models
         public String? FullTimeLeagueId { get; set; } = "";
         [Display(Name = "Club Ref Required")]
         public bool RefRequired { get; set; }
-
-        public IList<DownloadFixture> DownloadFixture { get; set; } = [];
 
         public void RollAgeGroup()
         {

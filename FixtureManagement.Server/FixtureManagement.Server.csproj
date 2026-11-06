@@ -30,4 +30,8 @@
     <ProjectReference Include="..\FixtureManagement.UI\FixtureManagement.UI.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\FixtureManagement.FullTime\FixtureManagement.FullTime.csproj" />
+  </ItemGroup>
+
 </Project>

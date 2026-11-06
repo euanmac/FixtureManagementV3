@@ -3,7 +3,7 @@
 @inject ITeamService TeamService
 @inject IFixtureService FixtureService
 @inject NavigationManager NavigationManager
-@inject FullTimeReconciliationService FullTimeReconciliationService
+@inject IFullTimeService FullTimeService
 @using CsvHelper
 @using System.Globalization
 @using System.ComponentModel.DataAnnotations
@@ -145,7 +145,7 @@
             return;
         }
         try {
-            @* var fulltimeFixtures =  FullTimeReconciliationService.FromFullTime(team);
+            @* var fulltimeFixtures =  FullTimeService.GetFixturesAsync(team);
             Fixtures = fulltimeFixtures.Select(ff => new FixtureDto {
                         Id = Guid.NewGuid(),
                         TeamId = UploadTeamId,

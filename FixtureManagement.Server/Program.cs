@@ -7,6 +7,7 @@ using FixtureManagement.Server.Data;
 using FixtureManagement.Server.Services;
 using FixtureManagement.Server;
 using FixtureManagement.Shared.Services;
+using FixtureManagement.FullTime;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -83,7 +84,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
-builder.Services.AddSingleton<FullTimeReconciliationService>();
+builder.Services.AddFullTime();   // FullTime scraping (shared with the desktop app)
 builder.Services.AddScoped<PageHistoryService>();
 // Service interfaces used by the pages (Phase 3) and the /api endpoints; the desktop app will use HttpClient versions.
 builder.Services.AddScoped<ITeamService, EfTeamService>();

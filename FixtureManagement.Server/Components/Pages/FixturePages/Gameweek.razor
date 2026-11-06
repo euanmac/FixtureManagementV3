@@ -7,7 +7,7 @@
 @inject ITeamService TeamService
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject FullTimeReconciliationService FullTimeReconciliationService;
+@inject IFullTimeService FullTimeService
 @inject PageHistoryService PageHistoryService;
 
 @attribute [StreamRendering]
@@ -117,7 +117,7 @@
                         <td class="text-center align-middle" style="@($"background-color: var({rowColour})")">
                             <i class="@item.GetRecIcon() align-middle" data-toggle="tooltip" data-original-title="@item.RecStatus"></i>
                         </td>
-                        @if (item.RecStatus != Models.FixtureRecMatchType.noFixture && item.RecStatus != Models.FixtureRecMatchType.pending)
+                        @if (item.RecStatus != FixtureRecMatchType.noFixture && item.RecStatus != FixtureRecMatchType.pending && item.RecStatus != FixtureRecMatchType.unknownTeam)
                         {
                             <td style="@($"background-color: var({rowColour})")">
                                 @item.Venue
@@ -161,7 +161,7 @@
                         {
                             <td style="@($"background-color: var({rowColour})")">
 
-                                @if (item.RecStatus == Models.FixtureRecMatchType.fullTimeUnmatched)
+                                @if (item.RecStatus == FixtureRecMatchType.fullTimeUnmatched)
                                 {
                                     <EditForm method="post" Model="item" OnSubmit="DownloadFixture" FormName="@(item.Id.ToString())" Enhance>
                                         <input type="hidden" name="downloadFixture.Id" value="@item.Id" />
@@ -178,7 +178,7 @@
                                         </button>
                                     </EditForm>
                                 }
-                                @if (item.RecStatus != Models.FixtureRecMatchType.fullTimeUnmatched && item.RecStatus != Models.FixtureRecMatchType.noFixture && item.RecStatus != Models.FixtureRecMatchType.pending)
+                                @if (item.RecStatus != FixtureRecMatchType.fullTimeUnmatched && item.RecStatus != FixtureRecMatchType.noFixture && item.RecStatus != FixtureRecMatchType.pending && item.RecStatus != FixtureRecMatchType.unknownTeam)
                                 {
 
 
@@ -268,7 +268,7 @@
 
         //For each team reconcile the fixtures for a given date
         //Will be asynchronous so update state on each result returned
-        await foreach (var row in FullTimeReconciliationService.Reconcile(teams, fixtures, gameWeekStart, gameWeekEnd)) {
+        await foreach (var row in FullTimeService.Reconcile(teams, fixtures, gameWeekStart, gameWeekEnd)) {
 
             if (row.Count > 0) {
                 fixtureRecResults[row[0].Team] = row;
@@ -283,7 +283,7 @@
     }
 
     public void ClearCache() {
-        FullTimeReconciliationService.ClearCache();
+        FullTimeService.ClearCache();
         NavigationManager.NavigateTo(ThisWeekUrl);
     }
 
@@ -311,7 +311,7 @@
                 break;
 
             case Action.Update:
-                FullTimeReconciliationService.ClearCache();
+                FullTimeService.ClearCache();
                 break;
 
             case Action.Confirm:

@@ -1,4 +1,4 @@
-namespace FixtureManagement.Shared.Models;
+﻿namespace FixtureManagement.Shared.Models;
 
 /// <summary>
 /// Fixture, allocation and booking rules, shared by the server's entities and the DTOs
@@ -41,16 +41,4 @@ public static class FixtureTypeExtensions
         _ => "O"
     };
 
-    /// <summary>Maps a FullTime fixture-type code to a FixtureType.</summary>
-    public static FixtureType FromFullTimeFixtureType(this League league, string fullTimeType) => fullTimeType switch
-    {
-        "F" => FixtureType.Friendly,
-        "Cup" => FixtureType.Cup,
-        "C" => FixtureType.CountyCup,
-        "L" => FixtureType.League,
-        "ONE" => FixtureType.League,
-        "TWO" => FixtureType.League,
-        "HL2N" => FixtureType.League,
-        _ => FixtureType.Other
-    };
 }

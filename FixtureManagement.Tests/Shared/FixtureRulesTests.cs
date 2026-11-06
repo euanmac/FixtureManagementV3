@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using FixtureManagement.Shared.Validation;
 
 namespace FixtureManagement.Tests.Shared;
@@ -62,19 +62,6 @@ public class FixtureRulesTests
     public void FixtureTypeShortName_codes(FixtureType type, string expected)
     {
         Assert.Equal(expected, type.FixtureTypeShortName());
-    }
-
-    [Theory]
-    [InlineData("F", FixtureType.Friendly)]
-    [InlineData("Cup", FixtureType.Cup)]
-    [InlineData("C", FixtureType.CountyCup)]
-    [InlineData("L", FixtureType.League)]
-    [InlineData("ONE", FixtureType.League)]
-    [InlineData("HL2N", FixtureType.League)]
-    [InlineData("???", FixtureType.Other)]
-    public void FromFullTimeFixtureType_maps_FullTime_codes(string code, FixtureType expected)
-    {
-        Assert.Equal(expected, League.SouthBucksMini.FromFullTimeFixtureType(code));
     }
 
     [Fact]
