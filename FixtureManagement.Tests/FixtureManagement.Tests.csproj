@@ -26,6 +26,7 @@
     <ProjectReference Include="..\FixtureManagement.Shared\FixtureManagement.Shared.csproj" />
     <ProjectReference Include="..\FixtureManagement.UI\FixtureManagement.UI.csproj" />
     <ProjectReference Include="..\FixtureManagement.FullTime\FixtureManagement.FullTime.csproj" />
+    <ProjectReference Include="..\FixtureManagement.ApiClient\FixtureManagement.ApiClient.csproj" />
   </ItemGroup>
 
 </Project>
