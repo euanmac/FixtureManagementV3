@@ -489,3 +489,10 @@ $RECYCLE.BIN/
 
 # Claude Code notes (local only)
 CLAUDE.md
+
+# Databases: only the anonymised local.db is committed (the test sites get it on every deploy).
+# Never commit a real copy of the production database.
+*.db
+*.db-wal
+*.db-shm
+!FixtureManagement.Server/Data/local.db
