@@ -1,4 +1,4 @@
-@page "/contacts/create"
+﻿@page "/contacts/create"
 @attribute [Authorize]
 @inject IPersonService PersonService
 @inject NavigationManager NavigationManager
@@ -13,7 +13,7 @@
     <div class="col-md-4">
         <EditForm method="post" Model="Person" OnValidSubmit="AddPerson" FormName="create" Enhance>
             <DataAnnotationsValidator />
-            <PersonFormFields Person="Person" />
+            <PersonFormFields Person="Person!" />
             <button class="btn btn-primary" type="submit">Save</button>
             <a class="btn btn-secondary" href="#" onclick="history.back()">Back</a>
         </EditForm>
@@ -21,13 +21,17 @@
 </div>
 
 @code {
+    // No initializer on a [SupplyParameterFromForm] property (BL0008): a form post can set it to null.
+    // Create the empty model in OnInitialized instead, only when the form didn't supply one.
     [SupplyParameterFromForm]
-    private PersonDto Person { get; set; } = new();
+    private PersonDto? Person { get; set; }
+
+    protected override void OnInitialized() => Person ??= new();
 
     private async Task AddPerson()
     {
         // The service only copies the editable fields, so posted extras (Id, Teams) are ignored.
-        await PersonService.CreatePersonAsync(Person);
+        await PersonService.CreatePersonAsync(Person!);
         NavigationManager.NavigateTo("/contacts");
     }
 }

@@ -32,7 +32,7 @@
             else
             {
                 <div class="mb-3 form-floating">
-                    <InputSelect id="teamid" @bind-Value="Contact.TeamId" class="form-control form-select">
+                    <InputSelect id="teamid" @bind-Value="Contact!.TeamId" class="form-control form-select">
                         <option value="@Guid.Empty">Select a team…</option>
                         @foreach (var team in teams)
                         {
@@ -40,21 +40,21 @@
                         }
                     </InputSelect>
                     <label for="teamid">Team</label>
-                    <ValidationMessage For="() => Contact.TeamId" class="text-danger" />
+                    <ValidationMessage For="() => Contact!.TeamId" class="text-danger" />
                 </div>
             }
             <div class="mb-3 form-floating">
-                <InputSelect id="contacttype" @bind-Value="Contact.ContactType" class="form-control form-select" aria-required="true">
+                <InputSelect id="contacttype" @bind-Value="Contact!.ContactType" class="form-control form-select" aria-required="true">
                     @foreach (var ct in Enum.GetValues<ContactType>())
                     {
                         <option value="@ct">@ct</option>
                     }
                 </InputSelect>
                 <label for="contacttype">Contact Type</label>
-                <ValidationMessage For="() => Contact.ContactType" class="text-danger" />
+                <ValidationMessage For="() => Contact!.ContactType" class="text-danger" />
             </div>
             <div class="mb-3 form-floating">
-                <InputSelect id="personid" @bind-Value="Contact.PersonId" class="form-control form-select">
+                <InputSelect id="personid" @bind-Value="Contact!.PersonId" class="form-control form-select">
                     <option value="@Guid.Empty">Select a person…</option>
                     @foreach (var person in people)
                     {
@@ -62,7 +62,7 @@
                     }
                 </InputSelect>
                 <label for="personid">Person</label>
-                <ValidationMessage For="() => Contact.PersonId" class="text-danger" />
+                <ValidationMessage For="() => Contact!.PersonId" class="text-danger" />
             </div>
 
             <button type="submit" class="btn btn-primary">Create</button>
@@ -75,8 +75,10 @@
 </div>
 
 @code {
+    // No initializer on a [SupplyParameterFromForm] property (BL0008): a form post can set it to null.
+    // Create the empty model in OnInitializedAsync instead, only when the form didn't supply one.
     [SupplyParameterFromForm]
-    private TeamContactDto Contact { get; set; } = new();
+    private TeamContactDto? Contact { get; set; }
 
     // Set when arriving from a team's "Add Contact" button: the team is shown but can't be changed.
     [SupplyParameterFromQuery]
@@ -91,6 +93,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Contact ??= new();
         editContext = new EditContext(Contact);
         messages = new ValidationMessageStore(editContext);
 
@@ -109,11 +112,11 @@
 
     private async Task AddTeamContact()
     {
-        var result = await TeamContactService.CreateTeamContactAsync(Contact);
+        var result = await TeamContactService.CreateTeamContactAsync(Contact!);
         switch (result.Status)
         {
             case ServiceStatus.Success:
-                NavigationManager.NavigateTo($"teams/details?id={Contact.TeamId}");
+                NavigationManager.NavigateTo($"teams/details?id={Contact!.TeamId}");
                 return;
             case ServiceStatus.Invalid:
                 // e.g. the team or person no longer exists: show it against the field.

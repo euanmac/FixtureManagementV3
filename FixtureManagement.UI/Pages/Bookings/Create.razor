@@ -1,4 +1,4 @@
-@page "/bookings/create"
+﻿@page "/bookings/create"
 @attribute [Authorize]
 @inject IBookingService BookingService
 @inject IPitchService PitchService
@@ -14,7 +14,7 @@
     <div class="col-md-4">
         <EditForm method="post" EditContext="editContext" OnValidSubmit="AddBooking" FormName="create" Enhance>
             <DataAnnotationsValidator />
-            <BookingFormFields Booking="Booking" Pitches="pitches" />
+            <BookingFormFields Booking="Booking!" Pitches="pitches" />
             <a class="btn btn-secondary" href="#" onclick="history.back()">Back</a>
             <button type="submit" class="btn btn-primary">Create</button>
         </EditForm>
@@ -22,12 +22,10 @@
 </div>
 
 @code {
+    // No initializer on a [SupplyParameterFromForm] property (BL0008): a form post can set it to null.
+    // Create the empty model in OnInitializedAsync instead, only when the form didn't supply one.
     [SupplyParameterFromForm]
-    private BookingDto Booking { get; set; } = new()
-    {
-        Start = DateTime.Now.Date.AddHours(9).AddMinutes(30),
-        End = DateTime.Now.Date.AddHours(10).AddMinutes(30),
-    };
+    private BookingDto? Booking { get; set; }
 
     private IReadOnlyList<PitchDto> pitches = [];
     private EditContext editContext = default!;
@@ -35,6 +33,11 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Booking ??= new BookingDto
+        {
+            Start = DateTime.Now.Date.AddHours(9).AddMinutes(30),
+            End = DateTime.Now.Date.AddHours(10).AddMinutes(30),
+        };
         pitches = await PitchService.GetPitchesAsync();   // display order
         if (Booking.PitchId == Guid.Empty && pitches.Count > 0)
         {
@@ -46,7 +49,7 @@
 
     private async Task AddBooking()
     {
-        var result = await BookingService.CreateBookingAsync(Booking);
+        var result = await BookingService.CreateBookingAsync(Booking!);
         if (result.Status == ServiceStatus.Invalid)
         {
             // e.g. the pitch no longer exists: show it against the field.

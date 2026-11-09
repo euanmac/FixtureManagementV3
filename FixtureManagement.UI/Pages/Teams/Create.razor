@@ -1,4 +1,4 @@
-@page "/teams/create"
+﻿@page "/teams/create"
 @attribute [Authorize]
 @inject ITeamService TeamService
 @inject NavigationManager NavigationManager
@@ -13,7 +13,7 @@
     <div class="col-md-4">
         <EditForm method="post" Model="Team" OnValidSubmit="AddTeam" FormName="create" Enhance>
             <DataAnnotationsValidator />
-            <TeamFormFields Team="Team" />
+            <TeamFormFields Team="Team!" />
             <button type="submit" class="btn btn-primary">Create</button>
             <a href="#" onclick="history.back()" class="btn btn btn-secondary">Back</a>
         </EditForm>
@@ -21,13 +21,17 @@
 </div>
 
 @code {
+    // No initializer on a [SupplyParameterFromForm] property (BL0008): a form post can set it to null.
+    // Create the empty model in OnInitialized instead, only when the form didn't supply one.
     [SupplyParameterFromForm]
-    private TeamDto Team { get; set; } = new();
+    private TeamDto? Team { get; set; }
+
+    protected override void OnInitialized() => Team ??= new();
 
     private async Task AddTeam()
     {
         // The service only copies the editable fields, so posted extras (Id, Contacts) are ignored.
-        await TeamService.CreateTeamAsync(Team);
+        await TeamService.CreateTeamAsync(Team!);
         NavigationManager.NavigateTo("/teams");
     }
 }
