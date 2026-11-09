@@ -1,0 +1,70 @@
+# Production deploy for tufixturemanager (Windows App Service).
+# - Runs only when started by hand: Actions tab -> this workflow -> "Run workflow". Commits never deploy production.
+# - The deploy job uses the "live" environment, which has required reviewers: it waits for approval before deploying.
+# - The live database is in D:\home\data (connection string set in Azure), so the package leaves out Data/*.db
+#   (-p:IncludeDatabase=false) and clean: true can safely remove old files from wwwroot.
+
+name: Deploy to production - tufixturemanager
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Build
+        run: dotnet build FixtureManagement.Server/FixtureManagement.Server.csproj --configuration Release
+
+      - name: Run tests
+        run: dotnet test FixtureManagement.Tests/FixtureManagement.Tests.csproj --configuration Release
+
+      - name: Publish (without the database)
+        run: dotnet publish FixtureManagement.Server/FixtureManagement.Server.csproj -c Release -p:IncludeDatabase=false -o "${{env.DOTNET_ROOT}}/myapp"
+
+      - name: Check no database is in the package
+        shell: pwsh
+        run: |
+          $dbs = Get-ChildItem -Path "${{env.DOTNET_ROOT}}/myapp" -Recurse -Filter *.db
+          if ($dbs) { Write-Error "Database files found in the production package: $($dbs.FullName -join ', ')"; exit 1 }
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: .net-app
+          path: ${{env.DOTNET_ROOT}}/myapp
+
+  deploy:
+    runs-on: windows-latest
+    needs: build
+    environment:
+      name: 'live'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: .net-app
+
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'tufixturemanager'
+          slot-name: 'Production'
+          publish-profile: ${{ secrets.TUFIXTUREMANAGER_PUBLISH_PROFILE }}
+          package: .
+          clean: true
