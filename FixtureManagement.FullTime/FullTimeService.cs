@@ -31,11 +31,9 @@ public sealed class FullTimeRefusedException(string message) : HttpRequestExcept
 /// everyone; in the desktop app each install has its own.
 /// Requests are throttled (<see cref="FullTimeOptions"/>): FullTime answers a burst of requests with 403s.
 /// </summary>
-public sealed class FullTimeService(IHttpClientFactory httpClientFactory, ILogger<FullTimeService>? logger = null, FullTimeOptions? options = null)
+public sealed class FullTimeService(IFullTimePageLoader pageLoader, ILogger<FullTimeService>? logger = null, FullTimeOptions? options = null)
     : IFullTimeService
 {
-    internal const string HttpClientName = "FullTime";
-
     private readonly FullTimeOptions options = options ?? new FullTimeOptions();
     private readonly SemaphoreSlim requestSlots = new(Math.Max(1, (options ?? new FullTimeOptions()).MaxConcurrentRequests));
     private readonly ConcurrentDictionary<(Guid TeamId, DateOnly Start, DateOnly End), List<FullTimeFixture>> cache = new();
@@ -68,32 +66,24 @@ public sealed class FullTimeService(IHttpClientFactory httpClientFactory, ILogge
         {
             ThrowIfPausedAfterRefusal();
 
-            // FullTime turns away requests that don't look like a browser, so send browser-like headers.
-            using var request = new HttpRequestMessage(HttpMethod.Get, FullTimeParser.TeamPageUrl(team));
-            request.Headers.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15");
-            request.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-            request.Headers.Add("Accept-Language", "en-GB,en;q=0.9");
-            request.Headers.Referrer = new Uri("https://www.google.com/");
+            // HtmlWeb downloads and parses the page in one go (see HtmlWebPageLoader).
+            var page = await pageLoader.LoadAsync(FullTimeParser.TeamPageUrl(team), cancellationToken);
+            LastHtml = page.Html;
 
-            var client = httpClientFactory.CreateClient(HttpClientName);
-            using var response = await client.SendAsync(request, cancellationToken);
-            var html = await response.Content.ReadAsStringAsync(cancellationToken);
-            LastHtml = html;
-
-            if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests)
+            if (page.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests)
             {
                 refusedUntil = DateTime.UtcNow + options.PauseAfterRefusal;
                 logger?.LogWarning("FullTime refused the request for {Team} ({Status}); not asking again for {Pause}",
-                    team.Name, (int)response.StatusCode, options.PauseAfterRefusal);
-                throw new FullTimeRefusedException($"FullTime refused the request ({(int)response.StatusCode}).");
+                    team.Name, (int)page.StatusCode, options.PauseAfterRefusal);
+                throw new FullTimeRefusedException($"FullTime refused the request ({(int)page.StatusCode}).");
             }
-            if (!response.IsSuccessStatusCode)
+            if (!page.IsSuccess)
             {
-                logger?.LogWarning("FullTime page for {Team} returned {Status}", team.Name, (int)response.StatusCode);
-                throw new HttpRequestException($"FullTime returned {(int)response.StatusCode}.", null, response.StatusCode);
+                logger?.LogWarning("FullTime page for {Team} returned {Status}", team.Name, (int)page.StatusCode);
+                throw new HttpRequestException($"FullTime returned {(int)page.StatusCode}.", null, page.StatusCode);
             }
 
-            var fixtures = FullTimeParser.ParseFixtures(html, team);
+            var fixtures = FullTimeParser.ParseFixtures(page.Document, team);
             logger?.LogDebug("FullTime page for {Team}: {Count} fixtures", team.Name, fixtures.Count);
             return fixtures;
         }
@@ -182,10 +172,7 @@ public static class FullTimeServiceCollectionExtensions
         configure?.Invoke(options);
         services.AddSingleton(options);
 
-        // .NET's own HTTP stack everywhere. On Mac/iOS the default would be Apple's NSURLSession, which sends requests
-        // differently from the website; this keeps the desktop app's FullTime requests the same as the website's.
-        services.AddHttpClient(FullTimeService.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(30))
-            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler());
+        services.AddSingleton<IFullTimePageLoader, HtmlWebPageLoader>();
         services.AddSingleton<IFullTimeService, FullTimeService>();
         return services;
     }

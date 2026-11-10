@@ -15,18 +15,32 @@ public class FullTimeServiceTests
         </tbody></table></div>
         """;
 
-    /// <summary>Answers every request with the given page (or fails), and records what was asked for.</summary>
-    private sealed class FakeFullTime(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler, IHttpClientFactory
+    /// <summary>
+    /// Stands in for HtmlWeb: answers every request with the given page (or fails), and records what was asked for.
+    /// Responses are written as HttpResponseMessages for readability and turned into FullTimePages.
+    /// </summary>
+    private sealed class FakeFullTime(Func<HttpRequestMessage, HttpResponseMessage> respond) : IFullTimePageLoader
     {
+        private readonly object gate = new();
         public List<HttpRequestMessage> Requests { get; } = [];
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        public async Task<FullTimePage> LoadAsync(string url, CancellationToken cancellationToken = default)
         {
-            Requests.Add(request);
-            return Task.FromResult(respond(request));
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            lock (gate)
+            {
+                Requests.Add(request);
+            }
+            using var response = respond(request);
+            return await ToPageAsync(response);
         }
+    }
 
-        public HttpClient CreateClient(string name) => new(this, disposeHandler: false);
+    private static async Task<FullTimePage> ToPageAsync(HttpResponseMessage response)
+    {
+        var document = new HtmlAgilityPack.HtmlDocument();
+        document.LoadHtml(await response.Content.ReadAsStringAsync());
+        return new FullTimePage(response.StatusCode, document);
     }
 
     private static HttpResponseMessage Ok(string html) => new(HttpStatusCode.OK) { Content = new StringContent(html) };
@@ -35,7 +49,7 @@ public class FullTimeServiceTests
         new() { Id = Guid.NewGuid(), Name = name, League = League.SouthBucksMini, FullTimeLeagueId = "1", FullTimeTeamId = teamId };
 
     [Fact]
-    public async Task GetFixtures_requests_the_team_page_with_browser_headers()
+    public async Task GetFixtures_requests_the_team_page_once()
     {
         var fake = new FakeFullTime(_ => Ok(OneFixturePage));
         var service = new FullTimeService(fake);
@@ -45,7 +59,6 @@ public class FullTimeServiceTests
         Assert.Equal(2, fixtures.Count);
         var request = Assert.Single(fake.Requests);
         Assert.Equal("https://fulltime.thefa.com/displayTeam.html?divisionseason=1&teamID=2", request.RequestUri!.ToString());
-        Assert.Contains("Mozilla", request.Headers.UserAgent.ToString());
         Assert.Equal(OneFixturePage, service.LastHtml);
     }
 
@@ -188,18 +201,17 @@ public class FullTimeServiceTests
     }
 
     /// <summary>A FullTime stand-in whose answers take a while, to see how many requests overlap.</summary>
-    private sealed class SlowFullTime(Func<Task<HttpResponseMessage>> respond) : HttpMessageHandler, IHttpClientFactory
+    private sealed class SlowFullTime(Func<Task<HttpResponseMessage>> respond) : IFullTimePageLoader
     {
         private int requestCount;
         public int RequestCount => requestCount;
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        public async Task<FullTimePage> LoadAsync(string url, CancellationToken cancellationToken = default)
         {
             Interlocked.Increment(ref requestCount);
-            return respond();
+            using var response = await respond();
+            return await ToPageAsync(response);
         }
-
-        public HttpClient CreateClient(string name) => new(this, disposeHandler: false);
     }
 
     private static async Task<List<List<TeamReconiliationRow>>> Drain(IAsyncEnumerable<List<TeamReconiliationRow>> source)

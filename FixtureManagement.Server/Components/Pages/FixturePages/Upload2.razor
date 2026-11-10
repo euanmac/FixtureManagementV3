@@ -4,8 +4,7 @@
 @inject IFixtureService FixtureService
 @inject NavigationManager NavigationManager
 @inject IFullTimeService FullTimeService
-@using CsvHelper
-@using System.Globalization
+@using FixtureManagement.UI.Components
 @using System.ComponentModel.DataAnnotations
 
 <PageTitle>Upload Fixtures</PageTitle>
@@ -153,42 +152,17 @@
 
     }
 
-    public void LoadFile()
+    public async Task LoadFile()
     {
         if (File is null)
         {
-            Console.WriteLine("No file uploaded.");
+            errorMessage = "Choose a CSV file first.";
             return;
         }
-        else
-        {
-            using (var csv = new CsvReader(new StreamReader(File.OpenReadStream()), CultureInfo.InvariantCulture))
-            {
-                try
-                {
-                    IEnumerable<FixtureFile> records = csv.GetRecords<FixtureFile>();
-                    Fixtures = records.Select(r => new FixtureDto
-                    {
-                        Id = Guid.NewGuid(),
-                        TeamId = UploadTeamId,
-                        Opponent = r.Opponent,
-                        IsHome = r.Venue.Substring(0, 1) == "H",
-                        Date = r.Date,
-                        FixtureType = FixtureType.League,
-                    }).ToList();
-
-                    Console.WriteLine($"File: {File.Name}, Records: {records}");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error registering class map: {ex.Message}");
-                    return;
-                }
-            }
-            return;
-        }
-
-
+        // Same parser as the desktop app's upload page (FixtureManagement.UI/Components/FixtureCsv.cs).
+        var result = await FixtureCsv.ReadAsync(File.OpenReadStream(), UploadTeamId);
+        Fixtures = result.Fixtures.ToList();
+        errorMessage = result.Error;
     }
     public async Task LoadFromFullTimeAsync()
     {
@@ -237,14 +211,6 @@
             }
         }
         NavigationManager.NavigateTo($"teams/details?id={UploadTeamId}");
-    }
-
-    public record FixtureFile
-    {
-        public required string Opponent { get; set; }
-        public required string Venue { get; set; }
-        public DateOnly Date { get; set; }
-
     }
 
     public record UploadFixture

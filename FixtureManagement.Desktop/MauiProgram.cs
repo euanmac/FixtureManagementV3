@@ -28,7 +28,9 @@ public static class MauiProgram
         builder.Services.AddBlazorWebViewDeveloperTools();
         builder.Logging.AddDebug();
         builder.Logging.AddConsole();   // visible when started from a terminal (Contents/MacOS/FixtureManagement.Desktop)
-        builder.Logging.SetMinimumLevel(LogLevel.Debug);
+        builder.Logging.SetMinimumLevel(LogLevel.Information);
+        builder.Logging.AddFilter("FixtureManagement", LogLevel.Debug);                       // our own detail
+        builder.Logging.AddFilter("Microsoft.AspNetCore.Components", LogLevel.Warning);       // not every render
 #endif
 
         return builder.Build();

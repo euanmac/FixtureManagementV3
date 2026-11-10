@@ -1,0 +1,236 @@
+@page "/fixtures/upload2"
+@attribute [Authorize]
+@using FixtureManagement.Shared.Dtos
+@using FixtureManagement.Shared.Services
+@inject ITeamService TeamService
+@inject IFixtureService FixtureService
+@inject IFullTimeService FullTimeService
+@inject NavigationManager NavigationManager
+
+@* The desktop app's version of the website's Upload2 (same address, so the team page's Upload button works):
+   pick a CSV (or load from FullTime), tick the fixtures to add, Create. Interactive only – no form posts. *@
+
+<PageTitle>Upload Fixtures</PageTitle>
+
+<h1>Upload Fixtures</h1>
+<hr />
+
+@if (team is null)
+{
+    <p><em>Loading…</em></p>
+}
+else
+{
+    <h3>@team.DisplayName</h3>
+    <hr />
+
+    @if (errorMessage is not null)
+    {
+        <div class="alert alert-danger" role="alert">@errorMessage</div>
+    }
+
+    <div class="d-flex flex-wrap align-items-end gap-3 mb-3">
+        <div>
+            <label for="file" class="form-label">CSV file (columns Opponent, Venue, Date)</label>
+            <InputFile id="file" OnChange="LoadFileAsync" accept=".csv,text/csv" class="form-control" disabled="@busy" />
+        </div>
+        @if (team.IsOnFullTime)
+        {
+            <div>
+                <button type="button" class="btn btn-primary" @onclick="LoadFromFullTimeAsync" disabled="@busy">Load from FullTime</button>
+                <a href="@team.FixtureURL" target="_blank" class="ms-2">@team.LeagueName</a>
+            </div>
+        }
+        <a href="@($"teams/details?id={team.Id}")" class="btn btn-secondary">Back</a>
+    </div>
+
+    @if (busy)
+    {
+        <p><em>Loading fixtures…</em></p>
+    }
+
+    @if (fixtures.Count > 0)
+    {
+        <p>@source: @fixtures.Count fixtures. Untick any you don't want, then Create.</p>
+        <table class="quickgrid table table-striped table-sm">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Venue</th>
+                    <th>Opponent</th>
+                    <th>Type</th>
+                    <th>
+                        <input id="select-all" type="checkbox" title="Select all" checked="@AllSelected"
+                               @onchange="e => SelectAll(e.Value is true)" />
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var fixture in fixtures)
+                {
+                    <tr>
+                        <td>@fixture.Date.ToString("ddd d MMM yyyy")</td>
+                        <td>@(fixture.IsHome ? "Home" : "Away")</td>
+                        <td>@fixture.Opponent</td>
+                        <td>@fixture.FixtureType</td>
+                        <td>
+                            <input type="checkbox" class="add-fixture" checked="@selected.Contains(fixture.Id)"
+                                   @onchange="e => Toggle(fixture.Id, e.Value is true)" />
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <button type="button" class="btn btn-primary" @onclick="CreateAsync" disabled="@(busy || selected.Count == 0)">
+            Create @selected.Count
+        </button>
+    }
+}
+
+@code {
+    /// <summary>Big enough for years of fixtures; stops someone picking a huge file by mistake.</summary>
+    private const long MaxFileSize = 1024 * 1024;
+
+    [SupplyParameterFromQuery]
+    public Guid TeamId { get; set; }
+
+    private TeamDto? team;
+    private List<FixtureDto> fixtures = [];
+    private readonly HashSet<Guid> selected = [];
+    private string? source;
+    private string? errorMessage;
+    private bool busy;
+
+    private bool AllSelected => fixtures.Count > 0 && selected.Count == fixtures.Count;
+
+    protected override async Task OnInitializedAsync()
+    {
+        team = await TeamService.GetTeamAsync(TeamId);
+        if (team is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    private async Task LoadFileAsync(InputFileChangeEventArgs e)
+    {
+        if (team is null)
+        {
+            return;
+        }
+        busy = true;
+        errorMessage = null;
+        try
+        {
+            if (e.File.Size > MaxFileSize)
+            {
+                Show([], null);
+                errorMessage = $"{e.File.Name} is too big for a fixtures CSV ({e.File.Size / 1024} KB).";
+                return;
+            }
+            await using var stream = e.File.OpenReadStream(MaxFileSize);
+            var result = await FixtureCsv.ReadAsync(stream, team.Id);
+            Show(result.Fixtures, e.File.Name);
+            errorMessage = result.Error;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task LoadFromFullTimeAsync()
+    {
+        if (team is null)
+        {
+            return;
+        }
+        busy = true;
+        errorMessage = null;
+        try
+        {
+            var fromFullTime = await FullTimeService.GetFixturesAsync(team);
+            Show(fromFullTime.Select(f => new FixtureDto
+            {
+                Id = Guid.NewGuid(),
+                TeamId = team.Id,
+                Opponent = f.Opponent,
+                IsHome = f.IsHome,
+                Date = f.Date,
+                FixtureType = f.FixtureType,
+            }).ToList(), "FullTime");
+            if (fixtures.Count == 0)
+            {
+                errorMessage = "FullTime has no fixtures for this team.";
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Show([], null);
+            errorMessage = $"Couldn't load from FullTime: {ex.Message} You can download the fixtures from FullTime as a CSV and upload that instead.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private void Show(IReadOnlyList<FixtureDto> loaded, string? from)
+    {
+        fixtures = loaded.ToList();
+        source = from;
+        selected.Clear();
+        selected.UnionWith(fixtures.Select(f => f.Id));   // everything ticked to start with, as on the website
+    }
+
+    private void Toggle(Guid id, bool on)
+    {
+        if (on)
+        {
+            selected.Add(id);
+        }
+        else
+        {
+            selected.Remove(id);
+        }
+    }
+
+    private void SelectAll(bool on)
+    {
+        selected.Clear();
+        if (on)
+        {
+            selected.UnionWith(fixtures.Select(f => f.Id));
+        }
+    }
+
+    private async Task CreateAsync()
+    {
+        if (team is null)
+        {
+            return;
+        }
+        var toCreate = fixtures.Where(f => selected.Contains(f.Id)).ToList();
+        if (toCreate.Count == 0)
+        {
+            return;
+        }
+        busy = true;
+        errorMessage = null;
+        try
+        {
+            var result = await FixtureService.CreateFixturesAsync(toCreate);
+            if (!result.Succeeded)
+            {
+                var reasons = result.Errors.SelectMany(e => e.Value).Prepend(result.Message).Where(m => !string.IsNullOrWhiteSpace(m));
+                errorMessage = "Nothing was created: " + string.Join(" ", reasons);
+                return;
+            }
+            NavigationManager.NavigateTo($"teams/details?id={team.Id}");
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

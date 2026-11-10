@@ -31,6 +31,12 @@ public static class FullTimeParser
     {
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
+        return ParseFixtures(doc, team);
+    }
+
+    /// <summary>As above, for a page HtmlWeb has already loaded and parsed.</summary>
+    public static List<FullTimeFixture> ParseFixtures(HtmlDocument doc, TeamDto team)
+    {
         var fixtures = new List<FullTimeFixture>();
 
         try
