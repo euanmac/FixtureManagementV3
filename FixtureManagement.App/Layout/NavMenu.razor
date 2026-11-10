@@ -1,0 +1,86 @@
+@* The desktop app's menu. Same look as the website's (NavMenu.razor.css is a copy), but:
+   no Schedule yet (its FullCalendar feed needs porting), no Settings (website/Admin only), and sign-in/out
+   go through ApiSession instead of the website's Account pages. *@
+@inject ApiAuthClient AuthClient
+@inject NavigationManager NavigationManager
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">Thame United</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="nav flex-column">
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Fixtures
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="gameweek">
+                <span class="bi bi-calendar2-week" aria-hidden="true"></span> Gameweek
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="bookings">
+                <span class="bi bi-journal-check" aria-hidden="true"></span> Bookings
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="teams">
+                <span class="bi bi-microsoft-teams" aria-hidden="true"></span> Teams
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="contacts">
+                <span class="bi bi-person-vcard" aria-hidden="true"></span> Contacts
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="server">
+                <span class="bi bi-gear" aria-hidden="true"></span> Server
+            </NavLink>
+        </div>
+
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <span class="nav-link">
+                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @context.User.Identity?.Name
+                    </span>
+                </div>
+                <div class="nav-item px-3">
+                    <button type="button" class="nav-link" @onclick="SignOut">
+                        <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Sign out
+                    </button>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="login">
+                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Sign in
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
+    </nav>
+</div>
+
+@code {
+    private void SignOut()
+    {
+        // Forgets the tokens here (and, via SessionPersistence, the saved ones). The server's refresh token simply
+        // expires – Identity's bearer tokens have no server-side revoke.
+        AuthClient.SignOut();
+        NavigationManager.NavigateTo("login");
+    }
+}

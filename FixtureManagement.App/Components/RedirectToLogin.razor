@@ -1,0 +1,29 @@
+@* Shown by AuthorizeRouteView for [Authorize] pages: sends signed-out users to the sign-in page
+   (coming back here afterwards). Signed-in users only get here if a page needs something they don't have. *@
+@inject NavigationManager NavigationManager
+
+@if (signedIn)
+{
+    <h1>Not allowed</h1>
+    <p>Your account doesn't have access to this page.</p>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    private bool signedIn;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthenticationState is not null)
+        {
+            var state = await AuthenticationState;
+            signedIn = state.User.Identity?.IsAuthenticated ?? false;
+        }
+        if (!signedIn)
+        {
+            NavigationManager.NavigateTo(LoginLinks.LoginUrl(NavigationManager));
+        }
+    }
+}

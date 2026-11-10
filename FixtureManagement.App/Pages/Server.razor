@@ -1,0 +1,74 @@
+@page "/server"
+@inject AppSettings AppSettings
+@inject ApiAuthClient AuthClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Server</PageTitle>
+
+<h1>Server</h1>
+
+<p>
+    The app reads and saves everything through this website.
+    @if (AppSettings.IsDefaultServer)
+    {
+        <span>It's using the live site.</span>
+    }
+    else
+    {
+        <span class="text-warning">It's <strong>not</strong> using the live site
+            (@AppSettings.DefaultServerAddress.Host).</span>
+    }
+</p>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label for="address" class="form-label">Server address</label>
+            <input id="address" class="form-control" @bind="addressText" @bind:event="oninput" />
+            @if (error is not null)
+            {
+                <div class="text-danger">@error</div>
+            }
+            <div class="form-text">Changing it signs you out; sign in with your account on the new server.</div>
+        </div>
+
+        <button type="button" class="btn btn-primary" @onclick="Save">Save</button>
+        @if (!AppSettings.IsDefaultServer)
+        {
+            <button type="button" class="btn btn-outline-secondary ms-2" @onclick="UseLiveSite">Use the live site</button>
+        }
+    </div>
+</div>
+
+@code {
+    private string? addressText;
+    private string? error;
+
+    protected override void OnInitialized() => addressText = AppSettings.ServerAddress.AbsoluteUri;
+
+    private void Save()
+    {
+        if (!ServerAddressParser.TryParse(addressText, out var address, out var parseError))
+        {
+            error = parseError;
+            return;
+        }
+        error = null;
+        if (address! == AppSettings.ServerAddress)
+        {
+            NavigationManager.NavigateTo("");
+            return;
+        }
+        Switch(address!);
+    }
+
+    private void UseLiveSite() => Switch(AppSettings.DefaultServerAddress);
+
+    private void Switch(Uri address)
+    {
+        // The tokens belong to the old server, so sign out before pointing the app elsewhere.
+        AuthClient.SignOut();
+        AppSettings.SetServerAddress(address);
+        NavigationManager.NavigateTo("login");
+    }
+}

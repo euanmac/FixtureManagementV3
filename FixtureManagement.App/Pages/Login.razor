@@ -1,0 +1,96 @@
+@page "/login"
+@inject ApiAuthClient AuthClient
+@inject ApiSession Session
+@inject AppSettings AppSettings
+@inject NavigationManager NavigationManager
+
+<PageTitle>Sign in</PageTitle>
+
+<h1>Sign in</h1>
+
+<p class="text-muted">
+    Use your account on <strong>@AppSettings.ServerAddress.Host</strong>
+    (<a href="server">change server</a>).
+</p>
+
+@if (Session.IsSignedIn && Session.Email is not null)
+{
+    <div class="alert alert-info">You're signed in as @Session.Email. Signing in again replaces that.</div>
+}
+
+<div class="row">
+    <div class="col-md-4">
+        <EditForm Model="Model" OnValidSubmit="SignInAsync" FormName="login">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <InputText id="email" @bind-Value="Model.Email" class="form-control" autocomplete="username" />
+                <ValidationMessage For="() => Model.Email" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <InputText id="password" type="password" @bind-Value="Model.Password" class="form-control" autocomplete="current-password" />
+                <ValidationMessage For="() => Model.Password" class="text-danger" />
+            </div>
+
+            @if (error is not null)
+            {
+                <div class="alert alert-danger" role="alert">@error</div>
+            }
+
+            <button type="submit" class="btn btn-primary" disabled="@busy">
+                @(busy ? "Signing in…" : "Sign in")
+            </button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    /// <summary>Where to go after signing in (only followed if it's inside the app).</summary>
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    private LoginModel Model { get; set; } = new();
+    private string? error;
+    private bool busy;
+
+    private async Task SignInAsync()
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            if (await AuthClient.LoginAsync(Model.Email!.Trim(), Model.Password!))
+            {
+                NavigationManager.NavigateToLocal(ReturnUrl, "/");
+                return;
+            }
+            // Identity answers 401 for a wrong password, an unconfirmed email and a locked-out account alike.
+            error = "Wrong email or password (or the account isn't confirmed yet).";
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode is not null)
+        {
+            error = $"The server couldn't sign you in right now ({(int)ex.StatusCode.Value}). Try again in a minute.";
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            error = $"Couldn't reach {AppSettings.ServerAddress}. Check your internet connection or the server address.";
+        }
+        finally
+        {
+            busy = false;
+            Model.Password = null;
+        }
+    }
+
+    public sealed class LoginModel
+    {
+        [Required(ErrorMessage = "Enter your email address.")]
+        [EmailAddress(ErrorMessage = "That isn't an email address.")]
+        public string? Email { get; set; }
+
+        [Required(ErrorMessage = "Enter your password.")]
+        public string? Password { get; set; }
+    }
+}

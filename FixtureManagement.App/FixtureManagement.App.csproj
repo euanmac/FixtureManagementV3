@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <!-- The desktop app's shell (routes, layout, sign-in, settings), kept out of the MAUI host so it can be
+       tested with bUnit on any machine. The host only supplies storage (IAppSettingsStore, ISessionStore). -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.14" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="FixtureManagement.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FixtureManagement.UI\FixtureManagement.UI.csproj" />
+    <ProjectReference Include="..\FixtureManagement.ApiClient\FixtureManagement.ApiClient.csproj" />
+    <ProjectReference Include="..\FixtureManagement.FullTime\FixtureManagement.FullTime.csproj" />
+  </ItemGroup>
+
+</Project>

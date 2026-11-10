@@ -425,6 +425,8 @@ test-results/
 # Mac bundle stuff
 *.dmg
 *.app
+# ...but not the FixtureManagement.App project folder (matches *.app on case-insensitive file systems)
+!/FixtureManagement.App/
 
 # content below from: https://github.com/github/gitignore/blob/master/Global/macOS.gitignore
 # General

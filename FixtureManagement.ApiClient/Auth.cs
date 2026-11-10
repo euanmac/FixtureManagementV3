@@ -85,7 +85,9 @@ public sealed class ApiAuthClient(HttpClient http, ApiSession session)
     }
 
     /// <summary>
-    /// Swaps the refresh token for new tokens. Returns false (and signs out) if there's no session or it has expired.
+    /// Swaps the refresh token for new tokens. Returns false (and signs out) if there's no session or the server
+    /// rejects the token (expired/revoked: 400/401). Any other failure (server down, 5xx, Azure's "Site Disabled" 403)
+    /// throws HttpRequestException and keeps the session, so a temporary outage doesn't sign the user out.
     /// Safe to call from several requests at once: only one refresh runs.
     /// </summary>
     public async Task<bool> RefreshAsync(CancellationToken cancellationToken = default)
@@ -99,11 +101,12 @@ public sealed class ApiAuthClient(HttpClient http, ApiSession session)
             if (session.RefreshToken is null || session.Email is null) return false;
 
             using var response = await http.PostAsJsonAsync("api/auth/refresh", new { refreshToken = session.RefreshToken }, ApiResponses.Json, cancellationToken);
-            if (!response.IsSuccessStatusCode)
+            if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.BadRequest)
             {
                 session.Clear();
                 return false;
             }
+            response.EnsureSuccessStatusCode();
             var tokens = await response.Content.ReadFromJsonAsync<TokenResponse>(ApiResponses.Json, cancellationToken);
             if (tokens is null)
             {

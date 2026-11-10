@@ -1,0 +1,36 @@
+@inherits LayoutComponentBase
+@inject AppSettings AppSettings
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            @if (!AppSettings.IsDefaultServer)
+            {
+                <a href="server" class="text-warning" title="Not the live site">Server: @AppSettings.ServerAddress.Host</a>
+            }
+        </div>
+        <article class="content px-4">
+            <ErrorBoundary @ref="errorBoundary">
+                <ChildContent>
+                    @Body
+                </ChildContent>
+                <ErrorContent Context="exception">
+                    <ApiErrorContent Exception="exception" OnRetry="Retry" />
+                </ErrorContent>
+            </ErrorBoundary>
+        </article>
+    </main>
+</div>
+
+@code {
+    private ErrorBoundary? errorBoundary;
+
+    // Runs on every navigation (the Body changes): clear any error so the new page gets a fresh start.
+    protected override void OnParametersSet() => errorBoundary?.Recover();
+
+    private void Retry() => errorBoundary?.Recover();
+}

@@ -1,0 +1,48 @@
+@* What a page shows instead of crashing when an API call fails (see MainLayout's ErrorBoundary). *@
+@inject NavigationManager NavigationManager
+@inject AppSettings AppSettings
+
+@if (Exception is ApiAuthenticationException auth && auth.StatusCode == System.Net.HttpStatusCode.Forbidden)
+{
+    <div class="alert alert-warning">
+        <p class="mb-0">@auth.Message</p>
+    </div>
+}
+else if (Exception is ApiAuthenticationException)
+{
+    <p>You need to sign in. Taking you there…</p>
+}
+else if (Exception is HttpRequestException or TaskCanceledException)
+{
+    <div class="alert alert-danger">
+        <p>Couldn't reach the server at @AppSettings.ServerAddress.</p>
+        <p class="mb-0">Check your internet connection and try again. If it keeps happening, the site may be down,
+            or the <a href="server">server address</a> may be wrong.</p>
+    </div>
+    <button class="btn btn-primary" @onclick="OnRetry">Try again</button>
+}
+else
+{
+    <div class="alert alert-danger">
+        <p>Something went wrong.</p>
+        <p class="mb-0 small">@Exception?.Message</p>
+    </div>
+    <button class="btn btn-primary" @onclick="OnRetry">Try again</button>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public Exception? Exception { get; set; }
+
+    [Parameter]
+    public EventCallback OnRetry { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        // 401: not signed in, or the session couldn't be refreshed (BearerTokenHandler has already tried).
+        if (Exception is ApiAuthenticationException auth && auth.StatusCode != System.Net.HttpStatusCode.Forbidden)
+        {
+            NavigationManager.NavigateTo(LoginLinks.LoginUrl(NavigationManager));
+        }
+    }
+}

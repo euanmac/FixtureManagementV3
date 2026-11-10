@@ -1,0 +1,36 @@
+@* The desktop app's root component (the MAUI host's BlazorWebView renders this).
+   Restores the saved sign-in first, so pages don't flash "signed out" and then change. *@
+@inject SessionPersistence SessionPersistence
+
+@if (!restored)
+{
+    <p class="p-4">Loading…</p>
+}
+else
+{
+    <Router AppAssembly="typeof(Routes).Assembly"
+            AdditionalAssemblies="new[] { typeof(FixtureManagement.UI._Imports).Assembly }"
+            NotFoundPage="typeof(Pages.NotFound)">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
+                <NotAuthorized>
+                    <RedirectToLogin />
+                </NotAuthorized>
+                <Authorizing>
+                    <p>Checking sign-in…</p>
+                </Authorizing>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+    </Router>
+}
+
+@code {
+    private bool restored;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await SessionPersistence.RestoreAsync();
+        restored = true;
+    }
+}
