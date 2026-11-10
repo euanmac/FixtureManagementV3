@@ -124,6 +124,84 @@ public class FullTimeServiceTests
         Assert.Equal(2, fake.Requests.Count(r => r.RequestUri!.Query.Contains("teamID=999")));
     }
 
+    [Theory]
+    [InlineData(HttpStatusCode.Forbidden)]
+    [InlineData(HttpStatusCode.TooManyRequests)]
+    public async Task When_FullTime_refuses_it_stops_asking_and_no_local_fixture_looks_unmatched(HttpStatusCode refusal)
+    {
+        // FullTime's block page: a big HTML page with no fixtures. Must not read as "this team has no fixtures".
+        var fake = new FakeFullTime(_ => new HttpResponseMessage(refusal) { Content = new StringContent("<html>blocked</html>") });
+        var service = new FullTimeService(fake, options: new FullTimeOptions { MaxConcurrentRequests = 1, DelayBetweenRequests = TimeSpan.Zero });
+        var teams = Enumerable.Range(1, 5).Select(i => OnFullTime($"Team {i}", teamId: i.ToString())).ToList();
+        var localFixture = new FixtureDto { Id = Guid.NewGuid(), TeamId = teams[0].Id, Date = Sunday, Opponent = "Rivals" };
+
+        var results = await Drain(service.Reconcile(teams, [localFixture], Monday, Sunday));
+
+        Assert.All(results, rows => Assert.Equal(FixtureRecMatchType.unknownTeam, Assert.Single(rows).RecStatus));
+        Assert.Single(fake.Requests);   // after the first refusal the other four weren't requested
+        await Assert.ThrowsAsync<FullTimeRefusedException>(() => service.GetFixturesAsync(teams[1]));
+        Assert.Single(fake.Requests);   // still pausing
+    }
+
+    [Fact]
+    public async Task A_server_error_is_a_failure_not_an_empty_fixture_list()
+    {
+        var fake = new FakeFullTime(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError) { Content = new StringContent("oops") });
+        var service = new FullTimeService(fake, options: new FullTimeOptions { DelayBetweenRequests = TimeSpan.Zero });
+
+        var error = await Assert.ThrowsAsync<HttpRequestException>(() => service.GetFixturesAsync(OnFullTime()));
+        Assert.Equal(HttpStatusCode.InternalServerError, error.StatusCode);
+
+        // Not a refusal, so the next request goes ahead.
+        await Assert.ThrowsAsync<HttpRequestException>(() => service.GetFixturesAsync(OnFullTime()));
+        Assert.Equal(2, fake.Requests.Count);
+    }
+
+    [Fact]
+    public async Task A_gameweek_load_never_has_more_than_the_allowed_requests_in_flight()
+    {
+        var inFlight = 0;
+        var maxInFlight = 0;
+        var handler = new SlowFullTime(async () =>
+        {
+            var now = Interlocked.Increment(ref inFlight);
+            InterlockedMax(ref maxInFlight, now);
+            await Task.Delay(30);
+            Interlocked.Decrement(ref inFlight);
+            return Ok(OneFixturePage);
+        });
+        var service = new FullTimeService(handler, options: new FullTimeOptions { MaxConcurrentRequests = 2, DelayBetweenRequests = TimeSpan.FromMilliseconds(10) });
+        var teams = Enumerable.Range(1, 8).Select(i => OnFullTime($"Team {i}", teamId: i.ToString())).ToList();
+
+        var results = await Drain(service.Reconcile(teams, [], Monday, Sunday));
+
+        Assert.Equal(8, results.Count);
+        Assert.All(results, rows => Assert.Equal(FixtureRecMatchType.fullTimeUnmatched, Assert.Single(rows).RecStatus));
+        Assert.Equal(8, handler.RequestCount);
+        Assert.True(maxInFlight <= 2, $"{maxInFlight} requests were in flight at once");
+    }
+
+    private static void InterlockedMax(ref int target, int value)
+    {
+        int current;
+        while (value > (current = Volatile.Read(ref target)) && Interlocked.CompareExchange(ref target, value, current) != current) { }
+    }
+
+    /// <summary>A FullTime stand-in whose answers take a while, to see how many requests overlap.</summary>
+    private sealed class SlowFullTime(Func<Task<HttpResponseMessage>> respond) : HttpMessageHandler, IHttpClientFactory
+    {
+        private int requestCount;
+        public int RequestCount => requestCount;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref requestCount);
+            return respond();
+        }
+
+        public HttpClient CreateClient(string name) => new(this, disposeHandler: false);
+    }
+
     private static async Task<List<List<TeamReconiliationRow>>> Drain(IAsyncEnumerable<List<TeamReconiliationRow>> source)
     {
         var all = new List<List<TeamReconiliationRow>>();

@@ -1,0 +1,63 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+    <!-- The desktop app: a thin MAUI Blazor Hybrid host around FixtureManagement.App (pages, sign-in, settings).
+         Mac builds need Xcode + the "maui" workload; the Windows build only builds on Windows. -->
+
+    <PropertyGroup>
+        <!-- Mac: pinned to the 26.0 Mac Catalyst SDK. The MAUI workload's default (27.0) needs Xcode 27.1, and each SDK
+             checks for an exact Xcode major.minor; Xcode 26.6 (the newest for macOS 26.7) builds 26.0 bindings fine, so
+             the exact-match check is switched off. Revisit when Xcode is updated: plain net10.0-maccatalyst + remove
+             ValidateXcodeVersion once Xcode matches the workload's SDK. -->
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">net10.0-maccatalyst26.0</TargetFrameworks>
+        <ValidateXcodeVersion Condition="$([MSBuild]::IsOSPlatform('osx'))">false</ValidateXcodeVersion>
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">net10.0-windows10.0.19041.0</TargetFrameworks>
+
+        <!-- Mac: Debug builds for this machine's CPU (x64 by default); Release covers Intel and Apple silicon. -->
+        <RuntimeIdentifiers Condition="'$(Configuration)' == 'Release' and $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">maccatalyst-x64;maccatalyst-arm64</RuntimeIdentifiers>
+
+        <OutputType>Exe</OutputType>
+        <RootNamespace>FixtureManagement.Desktop</RootNamespace>
+        <UseMaui>true</UseMaui>
+        <SingleProject>true</SingleProject>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <!-- Disable MAUI CSS handling so Blazor can handle it -->
+        <EnableDefaultCssItems>false</EnableDefaultCssItems>
+        <!-- Generate C# from XAML at compile time (faster start-up). -->
+        <MauiXamlInflator>SourceGen</MauiXamlInflator>
+
+        <ApplicationTitle>Fixture Manager</ApplicationTitle>
+        <!-- Identifies the app to the OS (Keychain items, preferences, signing). Changing it later loses saved settings and sign-in. -->
+        <ApplicationId>com.euanmac.fixturemanagement</ApplicationId>
+
+        <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+        <ApplicationVersion>1</ApplicationVersion>
+
+        <!-- Windows: a plain .exe (no MSIX package/Store). -->
+        <WindowsPackageType>None</WindowsPackageType>
+
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">17.0</SupportedOSPlatformVersion>
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+        <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- App icon and splash screen: the template's for now. -->
+        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+        <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+        <MauiFont Include="Resources\Fonts\*" />
+        <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.14" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.14" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\FixtureManagement.App\FixtureManagement.App.csproj" />
+    </ItemGroup>
+
+</Project>
