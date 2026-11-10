@@ -1,0 +1,51 @@
+# Builds the desktop app (FixtureManagement.Desktop, MAUI Blazor Hybrid) for Windows.
+# - Runs only when started by hand: Actions tab -> this workflow -> "Run workflow". It deploys nothing.
+# - Download the result from the run page (Artifacts -> FixtureManager-windows-x64), unzip, run FixtureManagement.Desktop.exe.
+# - Self-contained: .NET and the Windows App SDK are bundled, so nothing needs installing first.
+# - Unsigned for now: Windows SmartScreen shows "Windows protected your PC" -> More info -> Run anyway.
+
+name: Build desktop app - Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      # Only the Windows part of MAUI (the full "maui" workload also pulls in Android/iOS).
+      - name: Install the MAUI workload
+        run: dotnet workload install maui-windows
+
+      - name: Run tests
+        run: dotnet test FixtureManagement.Tests/FixtureManagement.Tests.csproj --configuration Release
+
+      - name: Publish the desktop app
+        run: >
+          dotnet publish FixtureManagement.Desktop/FixtureManagement.Desktop.csproj
+          -f net10.0-windows10.0.19041.0 -c Release -r win-x64
+          --self-contained true -p:WindowsAppSDKSelfContained=true -p:WindowsPackageType=None
+          -o publish/win-x64
+
+      - name: Check the app is there
+        shell: pwsh
+        run: |
+          if (-not (Test-Path publish/win-x64/FixtureManagement.Desktop.exe)) { Write-Error "FixtureManagement.Desktop.exe wasn't published"; exit 1 }
+          Get-ChildItem publish/win-x64 | Measure-Object -Property Length -Sum | ForEach-Object { "Published {0:N0} MB" -f ($_.Sum / 1MB) }
+
+      - name: Upload the app
+        uses: actions/upload-artifact@v4
+        with:
+          name: FixtureManager-windows-x64
+          path: publish/win-x64
+          retention-days: 30
