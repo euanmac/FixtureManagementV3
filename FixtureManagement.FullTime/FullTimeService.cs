@@ -42,6 +42,8 @@ public sealed class FullTimeService(IFullTimePageLoader pageLoader, ILogger<Full
 
     public string LastHtml { get; private set; } = "";
 
+    public string UserAgent => pageLoader.UserAgent;
+
     public TimeSpan CacheAge => cacheFilledAt is null ? TimeSpan.Zero : DateTime.Now - cacheFilledAt.Value;
 
     public void ClearCache()

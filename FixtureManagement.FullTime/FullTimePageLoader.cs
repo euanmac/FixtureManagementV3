@@ -1,5 +1,6 @@
 using System.Net;
 using HtmlAgilityPack;
+using Microsoft.Extensions.Logging;
 
 namespace FixtureManagement.FullTime;
 
@@ -14,25 +15,31 @@ public sealed record FullTimePage(HttpStatusCode StatusCode, HtmlDocument Docume
 public interface IFullTimePageLoader
 {
     Task<FullTimePage> LoadAsync(string url, CancellationToken cancellationToken = default);
+
+    /// <summary>The User-Agent header sent with each request (shown on the Gameweek page).</summary>
+    string UserAgent => "";
 }
 
 /// <summary>
 /// Downloads with HtmlAgilityPack's HtmlWeb. Its async loader sends <see cref="HtmlWeb.UserAgent"/> but not
 /// PreRequest headers, and doesn't throw on error statuses – <see cref="HtmlWeb.StatusCode"/> carries them.
 /// </summary>
-public sealed class HtmlWebPageLoader : IFullTimePageLoader
+public sealed class HtmlWebPageLoader(ILogger<HtmlWebPageLoader>? logger = null) : IFullTimePageLoader
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
-    // Same user agent as before the switch to HtmlWeb.
-    public const string UserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15";
+    // HtmlWeb's own default user agent (we don't set one).
+    public static string UserAgent { get; } = new HtmlWeb().UserAgent;
+
+    string IFullTimePageLoader.UserAgent => UserAgent;
 
     public async Task<FullTimePage> LoadAsync(string url, CancellationToken cancellationToken = default)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(Timeout);
 
-        var web = new HtmlWeb { UserAgent = UserAgent };   // one per request: StatusCode is per instance
+        var web = new HtmlWeb();   // one per request: StatusCode is per instance
+        logger?.LogInformation("FullTime request {Url} with User-Agent: {UserAgent}", url, web.UserAgent);
         var document = await web.LoadFromWebAsync(url, timeout.Token);
         return new FullTimePage(web.StatusCode, document);
     }

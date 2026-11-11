@@ -49,7 +49,7 @@ public sealed class HtmlWebPageLoaderTests : IDisposable
     }
 
     [Fact]
-    public async Task Loads_and_parses_the_page_with_the_user_agent()
+    public async Task Loads_and_parses_the_page_with_the_default_user_agent()
     {
         var page = await new HtmlWebPageLoader().LoadAsync(baseUrl + "team");
 

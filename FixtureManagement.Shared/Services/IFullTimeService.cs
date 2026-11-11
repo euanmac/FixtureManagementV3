@@ -31,4 +31,7 @@ public interface IFullTimeService
 
     /// <summary>The raw HTML of the last FullTime page downloaded, for troubleshooting.</summary>
     string LastHtml { get; }
+
+    /// <summary>The User-Agent header sent to FullTime.</summary>
+    string UserAgent { get; }
 }
