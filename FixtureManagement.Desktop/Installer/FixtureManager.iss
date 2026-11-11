@@ -1,4 +1,4 @@
-; Inno Setup script for the Windows installer (FixtureManagerSetup-<version>.exe).
+; Inno Setup script for the Windows installer (FixtureManagerSetup.exe).
 ; Built by .github/workflows/desktop_windows.yml, which passes:
 ;   /DAppVersion=<ApplicationDisplayVersion from the csproj>  /DSourceDir=<the dotnet publish folder>
 ; Installs per user (no admin prompt) into %LOCALAPPDATA%\Programs\Fixture Manager, adds a Start menu shortcut
@@ -28,7 +28,9 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.17763
 UninstallDisplayIcon={app}\{#AppExe}
-OutputBaseFilename=FixtureManagerSetup-{#AppVersion}
+; No version in the name: the GitHub Release asset keeps one name, so
+; .../releases/latest/download/FixtureManagerSetup.exe always points at the newest installer.
+OutputBaseFilename=FixtureManagerSetup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern

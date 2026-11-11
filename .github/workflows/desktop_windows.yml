@@ -1,8 +1,11 @@
 # Builds the desktop app (FixtureManagement.Desktop, MAUI Blazor Hybrid) for Windows.
-# - Runs only when started by hand: Actions tab -> this workflow -> "Run workflow". It deploys nothing.
+# - Runs only when started by hand: Actions tab -> this workflow -> "Run workflow". It deploys nothing to the websites.
 # - Download from the run page (Artifacts):
-#   FixtureManager-windows-installer = FixtureManagerSetup-<version>.exe – the one to hand out (per-user install, no admin);
+#   FixtureManager-windows-installer = FixtureManagerSetup.exe – the one to hand out (per-user install, no admin);
 #   FixtureManager-windows-x64 = the plain folder – unzip, run FixtureManagement.Desktop.exe.
+# - Tick "Publish as a GitHub Release" to also release it (tag desktop-v<ApplicationDisplayVersion>). The permanent link
+#   https://github.com/euanmac/FixtureManagementV3/releases/latest/download/FixtureManagerSetup.exe then serves it.
+#   Bump ApplicationDisplayVersion in the Desktop csproj for each release; re-releasing the same version replaces its installer.
 # - Self-contained: .NET and the Windows App SDK are bundled, so nothing needs installing first.
 # - Unsigned for now: Windows SmartScreen shows "Windows protected your PC" -> More info -> Run anyway.
 
@@ -10,12 +13,17 @@ name: Build desktop app - Windows
 
 on:
   workflow_dispatch:
+    inputs:
+      release:
+        description: Publish as a GitHub Release (updates the permanent download link)
+        type: boolean
+        default: false
 
 jobs:
   build:
     runs-on: windows-latest
     permissions:
-      contents: read
+      contents: write   # only used by the release step
 
     steps:
       - uses: actions/checkout@v4
@@ -72,3 +80,23 @@ jobs:
           name: FixtureManager-windows-installer
           path: publish/installer/*.exe
           retention-days: 30
+
+      - name: Publish a GitHub Release
+        if: ${{ inputs.release }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Select-Xml -Path FixtureManagement.Desktop/FixtureManagement.Desktop.csproj -XPath "//ApplicationDisplayVersion").Node.InnerText
+          $tag = "desktop-v$version"
+          $installer = "publish/installer/FixtureManagerSetup.exe"
+          gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+            "Release $tag exists - replacing its installer"
+            gh release upload $tag $installer --clobber --repo $env:GITHUB_REPOSITORY
+          } else {
+            gh release create $tag $installer --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --latest `
+              --title "Fixture Manager $version (Windows)" `
+              --notes "Download FixtureManagerSetup.exe and run it. It installs for the current user (no admin needed). Unsigned: if Windows SmartScreen warns, click More info -> Run anyway."
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
