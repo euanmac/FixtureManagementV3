@@ -93,3 +93,27 @@ h1:focus {
     font-weight: bold;
     text-transform: uppercase;
 }
+
+/* Blazor's error bar (the div in index.html). Must be global CSS: the div is outside every component, so a
+   scoped rule (e.g. in MainLayout.razor.css) never matches it and the bar would always show. Blazor sets
+   display: block on it when an unhandled error happens. */
+#blazor-error-ui {
+    color-scheme: light only;
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 0.75rem;
+        top: 0.5rem;
+    }
