@@ -53,5 +53,17 @@ public sealed class SeleniumPageLoaderTests : IClassFixture<SeleniumPageLoaderTe
         Assert.Equal(3, server.UserAgents.Count);
     }
 
+    [Fact]
+    public async Task After_closing_the_browser_the_next_request_starts_a_new_one()
+    {
+        await loader.LoadAsync(server.BaseUrl + "first");
+        loader.CloseBrowser();
+
+        var page = await loader.LoadAsync(server.BaseUrl + "second");
+
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        Assert.Equal(2, server.UserAgents.Count);
+    }
+
     public void Dispose() => server.Dispose();
 }

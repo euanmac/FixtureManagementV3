@@ -1,3 +1,4 @@
+using FixtureManagement.FullTime;
 using System.Net;
 using Bunit;
 using FixtureManagement.ApiClient;
@@ -158,6 +159,25 @@ public class ServerPageTests : AppComponentTestBase
         Assert.Null(SettingsStore.ServerAddress);
         Assert.False(Session.IsSignedIn);
         Assert.Equal("login", CurrentUrl);
+    }
+
+    [Fact]
+    public void Choosing_how_to_read_FullTime_saves_it_and_keeps_the_user_signed_in()
+    {
+        SignIn();
+        var page = Render<ServerPage>();
+        Assert.True(page.Find("#loader-htmlweb").HasAttribute("checked"));
+        Assert.False(page.Find("#loader-selenium").HasAttribute("checked"));
+
+        page.Find("#loader-selenium").Change(true);
+
+        Assert.Equal(FullTimePageLoaderKind.Selenium, Settings.FullTimePageLoader);
+        Assert.True(page.Find("#loader-selenium").HasAttribute("checked"));
+        Assert.True(Session.IsSignedIn);
+        Assert.Equal("", CurrentUrl);
+
+        page.Find("#loader-htmlweb").Change(true);
+        Assert.Equal(FullTimePageLoaderKind.HtmlWeb, Settings.FullTimePageLoader);
     }
 }
 

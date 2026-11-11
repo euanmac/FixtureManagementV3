@@ -1,3 +1,4 @@
+using FixtureManagement.FullTime;
 using FixtureManagement.ApiClient;
 using FixtureManagement.App.Auth;
 using FixtureManagement.App.Settings;
@@ -67,6 +68,33 @@ public class AppSettingsTests
     {
         var settings = new AppSettings(new InMemoryAppSettingsStore { ServerAddress = "not a url at all" });
         Assert.Equal(AppSettings.DefaultServerAddress, settings.ServerAddress);
+    }
+
+    [Fact]
+    public void FullTime_loader_defaults_to_HtmlWeb_and_saves_only_a_change()
+    {
+        var store = new InMemoryAppSettingsStore();
+        var settings = new AppSettings(store);
+        var changes = 0;
+        settings.Changed += () => changes++;
+        Assert.Equal(FullTimePageLoaderKind.HtmlWeb, settings.FullTimePageLoader);
+
+        settings.SetFullTimePageLoader(FullTimePageLoaderKind.Selenium);
+        Assert.Equal("Selenium", store.FullTimePageLoader);
+        Assert.Equal(FullTimePageLoaderKind.Selenium, settings.FullTimePageLoader);
+
+        settings.SetFullTimePageLoader(FullTimePageLoaderKind.HtmlWeb);
+        Assert.Null(store.FullTimePageLoader);
+        Assert.Equal(2, changes);
+    }
+
+    [Theory]
+    [InlineData("something else")]
+    [InlineData("7")]
+    public void An_unknown_saved_FullTime_loader_means_HtmlWeb(string saved)
+    {
+        var settings = new AppSettings(new InMemoryAppSettingsStore { FullTimePageLoader = saved });
+        Assert.Equal(FullTimePageLoaderKind.HtmlWeb, settings.FullTimePageLoader);
     }
 }
 

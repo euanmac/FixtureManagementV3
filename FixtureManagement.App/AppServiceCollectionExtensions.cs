@@ -18,7 +18,12 @@ public static class AppServiceCollectionExtensions
     {
         services.AddSingleton<AppSettings>();
         services.AddFixtureManagementApi(provider => provider.GetRequiredService<AppSettings>().ServerAddress);
-        services.AddFullTime();
+        // The FullTime loader follows the Server page's setting on every request (no restart needed).
+        services.AddFullTime(provider =>
+        {
+            var settings = provider.GetRequiredService<AppSettings>();
+            return () => settings.FullTimePageLoader;
+        });
 
         services.AddAuthorizationCore();
         services.AddCascadingAuthenticationState();

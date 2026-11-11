@@ -8,6 +8,7 @@ namespace FixtureManagement.Tests.App;
 public sealed class InMemoryAppSettingsStore : IAppSettingsStore
 {
     public string? ServerAddress { get; set; }
+    public string? FullTimePageLoader { get; set; }
 }
 
 public sealed class InMemorySessionStore : ISessionStore

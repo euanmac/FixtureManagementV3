@@ -1,3 +1,5 @@
+using FixtureManagement.FullTime;
+
 namespace FixtureManagement.App.Settings;
 
 /// <summary>
@@ -8,6 +10,9 @@ public interface IAppSettingsStore
 {
     /// <summary>The server's root URL, or null for the default.</summary>
     string? ServerAddress { get; set; }
+
+    /// <summary>How FullTime pages are fetched ("HtmlWeb" or "Selenium"), or null for the default (HtmlWeb).</summary>
+    string? FullTimePageLoader { get; set; }
 }
 
 /// <summary>The app's settings, with defaults applied. One per app (singleton).</summary>
@@ -32,7 +37,19 @@ public sealed class AppSettings(IAppSettingsStore store)
 
     public bool IsDefaultServer => ServerAddress == DefaultServerAddress;
 
-    /// <summary>Raised after the server address changes.</summary>
+    /// <summary>How the app reads FullTime: HtmlWeb (plain HTTP, the default) or Selenium (drives Chrome on this machine).</summary>
+    public FullTimePageLoaderKind FullTimePageLoader
+        => Enum.TryParse<FullTimePageLoaderKind>(store.FullTimePageLoader, out var kind) && Enum.IsDefined(kind)
+            ? kind
+            : FullTimePageLoaderKind.HtmlWeb;
+
+    public void SetFullTimePageLoader(FullTimePageLoaderKind kind)
+    {
+        store.FullTimePageLoader = kind == FullTimePageLoaderKind.HtmlWeb ? null : kind.ToString();
+        Changed?.Invoke();
+    }
+
+    /// <summary>Raised after a setting changes.</summary>
     public event Action? Changed;
 
     public void SetServerAddress(Uri address)

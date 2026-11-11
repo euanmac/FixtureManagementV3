@@ -2,6 +2,7 @@
 @inject AppSettings AppSettings
 @inject ApiAuthClient AuthClient
 @inject NavigationManager NavigationManager
+@using FixtureManagement.FullTime
 
 <PageTitle>Server</PageTitle>
 
@@ -40,6 +41,29 @@
     </div>
 </div>
 
+<h2 class="h4 mt-5">Reading FullTime</h2>
+
+<p>How the app downloads team pages from FullTime (Gameweek). A change applies to the next page it reads.</p>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="fullTimeLoader" id="loader-htmlweb"
+               checked="@(AppSettings.FullTimePageLoader == FullTimePageLoaderKind.HtmlWeb)"
+               @onchange="() => SetLoader(FullTimePageLoaderKind.HtmlWeb)" />
+        <label class="form-check-label" for="loader-htmlweb">Directly (standard)</label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="fullTimeLoader" id="loader-selenium"
+               checked="@(AppSettings.FullTimePageLoader == FullTimePageLoaderKind.Selenium)"
+               @onchange="() => SetLoader(FullTimePageLoaderKind.Selenium)" />
+        <label class="form-check-label" for="loader-selenium">Through Google Chrome (Selenium)</label>
+    </div>
+    <div class="form-text">
+        Try Chrome if FullTime refuses the app. It needs Google Chrome installed. A Chrome window opens while the
+        app reads FullTime, and closes when you switch back or quit the app.
+    </div>
+</div>
+
 @code {
     private string? addressText;
     private string? error;
@@ -61,6 +85,8 @@
         }
         Switch(address!);
     }
+
+    private void SetLoader(FullTimePageLoaderKind kind) => AppSettings.SetFullTimePageLoader(kind);
 
     private void UseLiveSite() => Switch(AppSettings.DefaultServerAddress);
 

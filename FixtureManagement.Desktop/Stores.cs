@@ -8,20 +8,31 @@ namespace FixtureManagement.Desktop;
 public sealed class PreferencesAppSettingsStore : IAppSettingsStore
 {
     private const string ServerAddressKey = "serverAddress";
+    private const string FullTimePageLoaderKey = "fullTimePageLoader";
 
     public string? ServerAddress
     {
-        get => Preferences.Default.Get<string?>(ServerAddressKey, null);
-        set
+        get => Get(ServerAddressKey);
+        set => Set(ServerAddressKey, value);
+    }
+
+    public string? FullTimePageLoader
+    {
+        get => Get(FullTimePageLoaderKey);
+        set => Set(FullTimePageLoaderKey, value);
+    }
+
+    private static string? Get(string key) => Preferences.Default.Get<string?>(key, null);
+
+    private static void Set(string key, string? value)
+    {
+        if (value is null)
         {
-            if (value is null)
-            {
-                Preferences.Default.Remove(ServerAddressKey);
-            }
-            else
-            {
-                Preferences.Default.Set(ServerAddressKey, value);
-            }
+            Preferences.Default.Remove(key);
+        }
+        else
+        {
+            Preferences.Default.Set(key, value);
         }
     }
 }

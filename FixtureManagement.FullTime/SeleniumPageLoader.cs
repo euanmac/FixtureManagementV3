@@ -115,6 +115,20 @@ public sealed class SeleniumPageLoader(FullTimeOptions options, ILogger<Selenium
         driver = null;
     }
 
+    /// <summary>Quits Chrome if it's running; the next request starts a new one.</summary>
+    public void CloseBrowser()
+    {
+        oneAtATime.Wait();
+        try
+        {
+            QuitBrowser();
+        }
+        finally
+        {
+            oneAtATime.Release();
+        }
+    }
+
     public void Dispose()
     {
         oneAtATime.Wait();

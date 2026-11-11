@@ -201,4 +201,26 @@ public static class FullTimeServiceCollectionExtensions
         services.AddSingleton<IFullTimeService, FullTimeService>();
         return services;
     }
+
+    /// <summary>
+    /// As <see cref="AddFullTime(IServiceCollection, Action{FullTimeOptions}?)"/>, but the page loader is chosen on every
+    /// request by <paramref name="pageLoaderChoice"/> (e.g. from an app setting), so it can change without a restart.
+    /// <see cref="FullTimeOptions.PageLoader"/> is ignored.
+    /// </summary>
+    public static IServiceCollection AddFullTime(this IServiceCollection services,
+        Func<IServiceProvider, Func<FullTimePageLoaderKind>> pageLoaderChoice, Action<FullTimeOptions>? configure = null)
+    {
+        var options = new FullTimeOptions();
+        configure?.Invoke(options);
+        services.AddSingleton(options);
+
+        services.AddSingleton<HtmlWebPageLoader>();
+        services.AddSingleton<SeleniumPageLoader>();
+        services.AddSingleton<IFullTimePageLoader>(provider => new SelectablePageLoader(
+            pageLoaderChoice(provider),
+            provider.GetRequiredService<HtmlWebPageLoader>(),
+            provider.GetRequiredService<SeleniumPageLoader>()));
+        services.AddSingleton<IFullTimeService, FullTimeService>();
+        return services;
+    }
 }
