@@ -1,6 +1,8 @@
 # Builds the desktop app (FixtureManagement.Desktop, MAUI Blazor Hybrid) for Windows.
 # - Runs only when started by hand: Actions tab -> this workflow -> "Run workflow". It deploys nothing.
-# - Download the result from the run page (Artifacts -> FixtureManager-windows-x64), unzip, run FixtureManagement.Desktop.exe.
+# - Download from the run page (Artifacts):
+#   FixtureManager-windows-installer = FixtureManagerSetup-<version>.exe – the one to hand out (per-user install, no admin);
+#   FixtureManager-windows-x64 = the plain folder – unzip, run FixtureManagement.Desktop.exe.
 # - Self-contained: .NET and the Windows App SDK are bundled, so nothing needs installing first.
 # - Unsigned for now: Windows SmartScreen shows "Windows protected your PC" -> More info -> Run anyway.
 
@@ -48,4 +50,25 @@ jobs:
         with:
           name: FixtureManager-windows-x64
           path: publish/win-x64
+          retention-days: 30
+
+      # The installer: one FixtureManagerSetup-<version>.exe (script: FixtureManagement.Desktop/Installer/FixtureManager.iss).
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build the installer
+        shell: pwsh
+        run: |
+          $version = (Select-Xml -Path FixtureManagement.Desktop/FixtureManagement.Desktop.csproj -XPath "//ApplicationDisplayVersion").Node.InnerText
+          $iscc = Get-ChildItem "${env:ProgramFiles(x86)}\Inno Setup*\ISCC.exe", "$env:ProgramFiles\Inno Setup*\ISCC.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $iscc) { Write-Error "ISCC.exe (Inno Setup) not found"; exit 1 }
+          & $iscc.FullName "/DAppVersion=$version" "/DSourceDir=$env:GITHUB_WORKSPACE\publish\win-x64" "/O$env:GITHUB_WORKSPACE\publish\installer" FixtureManagement.Desktop/Installer/FixtureManager.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-ChildItem publish/installer
+
+      - name: Upload the installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: FixtureManager-windows-installer
+          path: publish/installer/*.exe
           retention-days: 30
