@@ -3,12 +3,10 @@
 <plist version="1.0">
     <!-- See https://aka.ms/maui-publish-app-store#add-entitlements for more information about adding entitlements.-->
     <dict>
-        <!-- App Sandbox must be enabled to distribute a MacCatalyst app through the Mac App Store. -->
-        <key>com.apple.security.app-sandbox</key>
-        <true/>
-        <!-- When App Sandbox is enabled, this value is required to open outgoing network connections. -->
-        <key>com.apple.security.network.client</key>
-        <true/>
+        <!--
+            No App Sandbox: the app isn't distributed through the Mac App Store (the only place that requires it),
+            and the sandbox would stop the Selenium FullTime reader launching chromedriver and Chrome.
+            Network access needs no entitlement outside the sandbox.
+        -->
     </dict>
 </plist>
-
