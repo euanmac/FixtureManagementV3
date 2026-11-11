@@ -84,7 +84,9 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
-builder.Services.AddFullTime();   // FullTime scraping (shared with the desktop app)
+// FullTime scraping (shared with the desktop app). Settings from the "FullTime" section, e.g.
+// FullTime__PageLoader=Selenium (needs Chrome on the machine – not on Azure App Service).
+builder.Services.AddFullTime(options => builder.Configuration.GetSection("FullTime").Bind(options));
 builder.Services.AddScoped<PageHistoryService>();
 // Service interfaces used by the pages (Phase 3) and the /api endpoints; the desktop app will use HttpClient versions.
 builder.Services.AddScoped<ITeamService, EfTeamService>();

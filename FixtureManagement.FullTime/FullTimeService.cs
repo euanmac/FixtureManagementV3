@@ -20,6 +20,22 @@ public sealed class FullTimeOptions
 
     /// <summary>After FullTime refuses a request (403/429), don't ask again for this long.</summary>
     public TimeSpan PauseAfterRefusal { get; set; } = TimeSpan.FromMinutes(10);
+
+    /// <summary>How pages are fetched: HtmlWeb (plain HTTP, the default) or Selenium (drives a real Chrome).</summary>
+    public FullTimePageLoaderKind PageLoader { get; set; } = FullTimePageLoaderKind.HtmlWeb;
+
+    /// <summary>
+    /// Selenium only: run Chrome without a window. Off by default: FullTime answered headless Chrome with 403 but a
+    /// visible Chrome with the page (2026-11-11).
+    /// </summary>
+    public bool SeleniumHeadless { get; set; }
+}
+
+/// <summary>Which <see cref="IFullTimePageLoader"/> <see cref="FullTimeServiceCollectionExtensions.AddFullTime"/> registers.</summary>
+public enum FullTimePageLoaderKind
+{
+    HtmlWeb,
+    Selenium,
 }
 
 /// <summary>FullTime turned the request away (403/429), or we're still pausing after it did.</summary>
@@ -68,7 +84,7 @@ public sealed class FullTimeService(IFullTimePageLoader pageLoader, ILogger<Full
         {
             ThrowIfPausedAfterRefusal();
 
-            // HtmlWeb downloads and parses the page in one go (see HtmlWebPageLoader).
+            // The loader downloads and parses the page in one go (HtmlWebPageLoader or SeleniumPageLoader).
             var page = await pageLoader.LoadAsync(FullTimeParser.TeamPageUrl(team), cancellationToken);
             LastHtml = page.Html;
 
@@ -166,7 +182,7 @@ public static class FullTimeServiceCollectionExtensions
 {
     /// <summary>
     /// Registers IFullTimeService (singleton, so its cache and request throttle are shared by the whole app/site).
-    /// <paramref name="configure"/> can change the throttle (see <see cref="FullTimeOptions"/>).
+    /// <paramref name="configure"/> can change the throttle and the page loader (see <see cref="FullTimeOptions"/>).
     /// </summary>
     public static IServiceCollection AddFullTime(this IServiceCollection services, Action<FullTimeOptions>? configure = null)
     {
@@ -174,7 +190,14 @@ public static class FullTimeServiceCollectionExtensions
         configure?.Invoke(options);
         services.AddSingleton(options);
 
-        services.AddSingleton<IFullTimePageLoader, HtmlWebPageLoader>();
+        if (options.PageLoader == FullTimePageLoaderKind.Selenium)
+        {
+            services.AddSingleton<IFullTimePageLoader, SeleniumPageLoader>();
+        }
+        else
+        {
+            services.AddSingleton<IFullTimePageLoader, HtmlWebPageLoader>();
+        }
         services.AddSingleton<IFullTimeService, FullTimeService>();
         return services;
     }

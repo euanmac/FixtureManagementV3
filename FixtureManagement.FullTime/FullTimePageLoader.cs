@@ -11,7 +11,7 @@ public sealed record FullTimePage(HttpStatusCode StatusCode, HtmlDocument Docume
     public string Html => Document.DocumentNode.OuterHtml;
 }
 
-/// <summary>Fetches FullTime pages. One implementation (HtmlWeb); tests substitute a fake so they never go online.</summary>
+/// <summary>Fetches FullTime pages: HtmlWebPageLoader (default) or SeleniumPageLoader; tests substitute a fake so they never go online.</summary>
 public interface IFullTimePageLoader
 {
     Task<FullTimePage> LoadAsync(string url, CancellationToken cancellationToken = default);
