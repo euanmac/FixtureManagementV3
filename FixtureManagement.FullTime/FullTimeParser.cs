@@ -1,6 +1,8 @@
 using System.Globalization;
 using FixtureManagement.Shared.Dtos;
 using FixtureManagement.Shared.Models;
+using System.Text.RegularExpressions;
+using FixtureManagement.Shared.Reconciliation;
 using HtmlAgilityPack;
 
 namespace FixtureManagement.FullTime;
@@ -9,7 +11,7 @@ namespace FixtureManagement.FullTime;
 /// Reads fixtures out of a FullTime "displayTeam" page. Pure (no network), so it can be tested with saved HTML.
 /// Moved unchanged from the website's FullTimeReconciliationService.
 /// </summary>
-public static class FullTimeParser
+public static partial class FullTimeParser
 {
     public const string FullTimeUrl = "https://fulltime.thefa.com/displayTeam.html?divisionseason={0}&teamID={1}";
     private const string FixturesTable = "fixtures-table";
@@ -23,9 +25,10 @@ public static class FullTimeParser
     public static string TeamPageUrl(TeamDto team) => string.Format(FullTimeUrl, team.FullTimeLeagueId, team.FullTimeTeamId);
 
     /// <summary>
-    /// Upcoming fixtures from the fixtures table, plus postponed games from the results table.
+    /// Upcoming fixtures from the fixtures table, plus postponed games from the results table, for Gameweek.
     /// "Home" means a Thame team is the home side; when both sides are Thame teams, the last word of
-    /// <paramref name="team"/>'s name (e.g. "Black") decides which one we are.
+    /// <paramref name="team"/>'s name (e.g. "Black") decides which one we are. Fixtures with no date yet (TBC)
+    /// are left out, since Gameweek shows a single week.
     /// </summary>
     public static List<FullTimeFixture> ParseFixtures(string html, TeamDto team)
     {
@@ -35,44 +38,58 @@ public static class FullTimeParser
     }
 
     /// <summary>As above, for a page HtmlWeb has already loaded and parsed.</summary>
-    public static List<FullTimeFixture> ParseFixtures(HtmlDocument doc, TeamDto team)
-    {
-        var fixtures = new List<FullTimeFixture>();
+    public static List<FullTimeFixture> ParseFixtures(HtmlDocument doc, TeamDto team) =>
+        ReadRows(doc, team)
+            .Where(r => r.Date is not null)
+            .Select(r => new FullTimeFixture
+            {
+                Date = r.Date.GetValueOrDefault(),
+                IsHome = r.IsHome,
+                Opponent = r.Opponent,
+                FixtureType = r.FixtureType,
+            })
+            .ToList();
 
+    /// <summary>
+    /// A team's FullTime page as fixtures for an upload (reconciliation): the same rows as ParseFixtures, plus
+    /// fixtures with no date yet (Date null), FullTime's fixture id and a "Postponed" status where it applies.
+    /// </summary>
+    public static List<SourceFixture> ParseTeamPage(string html, TeamDto team)
+    {
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+        return ReadRows(doc, team)
+            .Select(r => new SourceFixture
+            {
+                TeamId = team.Id,
+                SourceTeamName = r.OurName,
+                Date = r.Date,
+                IsHome = r.IsHome,
+                Opponent = r.Opponent,
+                FixtureType = r.FixtureType,
+                SourceFixtureId = r.FixtureId,
+                Status = r.FixtureType == FixtureType.Postponed ? "Postponed" : "",
+            })
+            .ToList();
+    }
+
+    private sealed record Row(DateOnly? Date, bool IsHome, string OurName, string Opponent, FixtureType FixtureType, string? FixtureId);
+
+    private static List<Row> ReadRows(HtmlDocument doc, TeamDto team)
+    {
+        var rows = new List<Row>();
         try
         {
-            var rows = doc.DocumentNode.SelectNodes($"//div[contains(@class,'{FixturesTable}')]/table/tbody/tr");
-            if (rows != null)
+            var fixtureRows = doc.DocumentNode.SelectNodes($"//div[contains(@class,'{FixturesTable}')]/table/tbody/tr");
+            if (fixtureRows != null)
             {
-                foreach (var row in rows)
+                foreach (var row in fixtureRows)
                 {
                     // County cup rows are marked by a class rather than a type code.
                     string type = row.GetAttributeValue("class", "") != CountyCupRow
                         ? row.SelectSingleNode("td[1]").InnerText.Trim()
                         : "CC";
-
-                    string date = row.SelectSingleNode("./td[2]").InnerText.Trim().Substring(0, 8);
-                    string home = HtmlEntity.DeEntitize(row.SelectSingleNode($"td[contains(@class,'{HomeTeam}')]").InnerText.Trim());
-                    string away = HtmlEntity.DeEntitize(row.SelectSingleNode($"td[contains(@class,'{AwayTeam}')]").InnerText.Trim());
-
-                    bool isHome = home.ToLower().IndexOf("thame ") >= 0;
-                    bool isAway = away.ToLower().IndexOf("thame ") >= 0;
-
-                    // Thame on both sides: tell them apart by the last word of our team's name.
-                    if (isHome && isAway)
-                    {
-                        string[] names = team.Name.Split(' ');
-                        string name = names[names.Length - 1].ToLower();
-                        isHome = home.ToLower().IndexOf(name) >= 0;
-                    }
-
-                    fixtures.Add(new FullTimeFixture
-                    {
-                        Date = DateOnly.Parse(date, UkCulture),
-                        IsHome = isHome,
-                        Opponent = isHome ? away : home,
-                        FixtureType = MapFixtureType(type),
-                    });
+                    rows.Add(ReadRow(row, team, MapFixtureType(type)));
                 }
             }
 
@@ -84,20 +101,7 @@ public static class FullTimeParser
                 {
                     var scoreNode = row.SelectSingleNode($"td[contains(@class,'{Score}')]");
                     bool isPostponed = scoreNode?.SelectSingleNode("a[contains(text(),'P')]") != null;
-                    if (!isPostponed) continue;
-
-                    string date = row.SelectSingleNode("./td[2]").InnerText.Trim().Substring(0, 8);
-                    string home = row.SelectSingleNode($"td[contains(@class,'{HomeTeam}')]").InnerText.Trim();
-                    string away = row.SelectSingleNode($"td[contains(@class,'{AwayTeam}')]").InnerText.Trim();
-                    bool isHome = home.ToLower().IndexOf("thame ") >= 0;
-
-                    fixtures.Add(new FullTimeFixture
-                    {
-                        Date = DateOnly.Parse(date, UkCulture),
-                        IsHome = isHome,
-                        Opponent = isHome ? away : home,
-                        FixtureType = FixtureType.Postponed,
-                    });
+                    if (isPostponed) rows.Add(ReadRow(row, team, FixtureType.Postponed));
                 }
             }
         }
@@ -105,9 +109,54 @@ public static class FullTimeParser
         {
             throw new FormatException($"Couldn't read the FullTime page for team {team.Id}: {e.Message}", e);
         }
-
-        return fixtures;
+        return rows;
     }
+
+    private static Row ReadRow(HtmlNode row, TeamDto team, FixtureType fixtureType)
+    {
+        DateOnly? date = ReadDate(row.SelectSingleNode("./td[2]").InnerText);
+        string home = HtmlEntity.DeEntitize(row.SelectSingleNode($"td[contains(@class,'{HomeTeam}')]").InnerText.Trim());
+        string away = HtmlEntity.DeEntitize(row.SelectSingleNode($"td[contains(@class,'{AwayTeam}')]").InnerText.Trim());
+
+        bool isHome = home.ToLower().IndexOf("thame ") >= 0;
+        bool isAway = away.ToLower().IndexOf("thame ") >= 0;
+
+        // Thame on both sides: tell them apart by the last word of our team's name.
+        if (isHome && isAway)
+        {
+            string[] names = team.Name.Split(' ');
+            string name = names[names.Length - 1].ToLower();
+            isHome = home.ToLower().IndexOf(name) >= 0;
+        }
+
+        return new Row(date, isHome, isHome ? home : away, isHome ? away : home, fixtureType, ReadFixtureId(row));
+    }
+
+    /// <summary>"08/11/26 10:00" → 8 Nov 2026; "TBC" → null. Anything else is a page we don't understand.</summary>
+    private static DateOnly? ReadDate(string text)
+    {
+        var trimmed = HtmlEntity.DeEntitize(text).Trim();
+        if (trimmed.StartsWith("TBC", StringComparison.OrdinalIgnoreCase)) return null;
+        var datePart = trimmed.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+        if (DateOnly.TryParseExact(datePart, "dd/MM/yy", UkCulture, DateTimeStyles.None, out var date)) return date;
+        throw new FormatException($"Unexpected date \"{trimmed}\".");
+    }
+
+    /// <summary>FullTime's id for the fixture, from the row's link to displayFixture/displayCountyFixture, if any.</summary>
+    private static string? ReadFixtureId(HtmlNode row)
+    {
+        var links = row.SelectNodes(".//a[@href]");
+        if (links is null) return null;
+        foreach (var link in links)
+        {
+            var match = FixtureLink().Match(HtmlEntity.DeEntitize(link.GetAttributeValue("href", "")));
+            if (match.Success) return match.Groups[1].Value;
+        }
+        return null;
+    }
+
+    [GeneratedRegex(@"display(?:County)?Fixture\.html\?(?:.*&)?id=(\d+)", RegexOptions.IgnoreCase)]
+    private static partial Regex FixtureLink();
 
     /// <summary>FullTime's fixture-type codes (first column of the fixtures table).</summary>
     public static FixtureType MapFixtureType(string code) => code switch

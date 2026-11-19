@@ -93,6 +93,8 @@ builder.Services.AddScoped<IBookingService, EfBookingService>();
 builder.Services.AddScoped<IPersonService, EfPersonService>();
 builder.Services.AddScoped<ITeamContactService, EfTeamContactService>();
 builder.Services.AddScoped<IFixtureService, EfFixtureService>();
+builder.Services.AddScoped<ISourceUploadService, EfSourceUploadService>();
+builder.Services.AddSingleton(TimeProvider.System);
 
 var app = builder.Build();
 

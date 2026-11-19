@@ -36,6 +36,7 @@ public class ApiAuthorizationTests(TestWebApplicationFactory factory) : IClassFi
     [InlineData("DELETE", $"/api/fixtures/{Id}/allocation")]
     [InlineData("POST", "/api/fixtures/allocations/confirm")]
     [InlineData("GET", "/api/fulltime/plan")]
+    [InlineData("POST", "/api/fulltime/upload")]
     public async Task Returns_401_without_a_token(string method, string url)
     {
         var client = factory.CreateClient(new() { AllowAutoRedirect = false });

@@ -1,9 +1,10 @@
 namespace FixtureManagement.Shared.Models;
 
 /// <summary>
-/// Each league's own id on FullTime (the <c>league=</c> number in its fixtures page address), used to fetch the
-/// league's whole fixture list. Not to be confused with Team.FullTimeLeagueId, which actually holds the team's
-/// divisionseason id (it changes every season; these don't).
+/// Each league's own id on FullTime (the <c>league=</c> number in its fixtures page address). Not used for fetching
+/// at the moment – the FullTime plan fetches each team's page, which needs only the team's ids – but kept so a
+/// league-wide fetch or link is possible later. Not to be confused with Team.FullTimeLeagueId, which actually holds
+/// the team's divisionseason id (it changes every season; these don't).
 /// Hard-coded like the league colours and match days, because the League list itself is fixed in code.
 /// </summary>
 public static class FullTimeLeagues

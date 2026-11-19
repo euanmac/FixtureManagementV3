@@ -107,6 +107,58 @@ public class FullTimeParserTests
         Assert.Equal(expected, FullTimeParser.MapFixtureType(code));
     }
 
+    // A team page with a TBC date and fixture links, as the upload reads it.
+    private const string PageWithTbcAndLinks = """
+        <html><body>
+        <div class="fixtures-table"><table><tbody>
+          <tr><td>L</td><td><a href="/displayFixture.html?id=12345">08/11/26 10:00</a></td><td class="home-team">Thame United Black U10</td><td>v</td><td class="road-team">Rivals U10</td></tr>
+          <tr class="fa-county-cup-fixture-row"><td>R2</td><td>TBC</td><td class="home-team">Faraway FC U10</td><td>v</td><td class="road-team">Thame United Black U10</td><td><a href="/displayCountyFixture.html?league=9&amp;id=67890">details</a></td></tr>
+        </tbody></table></div>
+        <div class="results-table"><table><tbody>
+          <tr><td>L</td><td>01/11/26 10:00</td><td class="home-team">Thame United Black U10</td><td class="score"><a>P - P</a></td><td class="road-team">Postponed Town</td></tr>
+        </tbody></table></div>
+        </body></html>
+        """;
+
+    [Fact]
+    public void ParseTeamPage_reads_rows_as_upload_fixtures_for_the_team()
+    {
+        var fixtures = FullTimeParser.ParseTeamPage(PageWithTbcAndLinks, Black);
+
+        Assert.Equal(3, fixtures.Count);
+        Assert.All(fixtures, f => Assert.Equal(Black.Id, f.TeamId));
+        var league = fixtures[0];
+        Assert.Equal((new DateOnly(2026, 11, 8), true, "Rivals U10", "Thame United Black U10", FixtureType.League, "12345", ""),
+            (league.Date, league.IsHome, league.Opponent, league.SourceTeamName, league.FixtureType, league.SourceFixtureId, league.Status));
+    }
+
+    [Fact]
+    public void ParseTeamPage_keeps_a_TBC_fixture_with_no_date()
+    {
+        var cup = FullTimeParser.ParseTeamPage(PageWithTbcAndLinks, Black)[1];
+
+        Assert.Null(cup.Date);
+        Assert.False(cup.IsHome);
+        Assert.Equal(FixtureType.CountyCup, cup.FixtureType);
+        Assert.Equal("67890", cup.SourceFixtureId);       // county cup link, &amp; decoded
+    }
+
+    [Fact]
+    public void ParseTeamPage_marks_postponed_games()
+    {
+        var postponed = FullTimeParser.ParseTeamPage(PageWithTbcAndLinks, Black)[2];
+
+        Assert.Equal((FixtureType.Postponed, "Postponed", (string?)null), (postponed.FixtureType, postponed.Status, postponed.SourceFixtureId));
+    }
+
+    [Fact]
+    public void A_TBC_date_no_longer_stops_Gameweek_reading_the_team()
+    {
+        var fixtures = FullTimeParser.ParseFixtures(PageWithTbcAndLinks, Black);
+
+        Assert.Equal([new DateOnly(2026, 11, 8), new DateOnly(2026, 11, 1)], fixtures.Select(f => f.Date));   // the TBC row is skipped
+    }
+
     [Fact]
     public void TeamPageUrl_uses_both_ids()
     {
