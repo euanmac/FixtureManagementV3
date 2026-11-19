@@ -96,6 +96,12 @@ builder.Services.AddScoped<IFixtureService, EfFixtureService>();
 
 var app = builder.Build();
 
+// Add any tables newer than the database (e.g. fixture reconciliation's). Only adds; see SchemaUpgrade.
+using (var db = app.Services.GetRequiredService<IDbContextFactory<AppDBContext>>().CreateDbContext())
+{
+    FixtureManagement.Server.Data.SchemaUpgrade.Apply(db);
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
