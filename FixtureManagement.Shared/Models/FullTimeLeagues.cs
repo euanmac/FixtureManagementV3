@@ -43,12 +43,12 @@ public static class FullTimeLeagues
 
     private static readonly Dictionary<string, FixtureType> NoCodes = new();
 
-    // Codes only one league uses, from the first extension upload (19/11/26). Still unknown (left as Other until
-    // the user confirms what they are): ADL "IGUB", UHL "BTUR" and "HVC".
+    // Codes only one league uses, from the first extension upload (19/11/26; cups confirmed by the user).
     private static readonly Dictionary<string, FixtureType> AylesburyCodes = new(StringComparer.Ordinal)
     {
         ["DIV1"] = FixtureType.League,
         ["DIV3"] = FixtureType.League,
+        ["IGUB"] = FixtureType.Cup,
     };
 
     private static readonly Dictionary<string, FixtureType> OxGirlsCodes = new(StringComparer.Ordinal)
@@ -64,6 +64,8 @@ public static class FullTimeLeagues
     private static readonly Dictionary<string, FixtureType> HellenicCodes = new(StringComparer.Ordinal)
     {
         ["PREM"] = FixtureType.League,
+        ["BTUR"] = FixtureType.Cup,
+        ["HVC"] = FixtureType.Cup,
     };
 
     /// <summary>Codes only this league uses. Add them as uploads report unknown codes.</summary>

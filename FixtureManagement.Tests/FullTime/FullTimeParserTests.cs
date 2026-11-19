@@ -114,6 +114,9 @@ public class FullTimeParserTests
     [InlineData(League.OxGirls, "O", FixtureType.Other)]
     [InlineData(League.OxOver50, "50D1", FixtureType.League)]
     [InlineData(League.UHL, "PREM", FixtureType.League)]
+    [InlineData(League.ADL, "IGUB", FixtureType.Cup)]
+    [InlineData(League.UHL, "BTUR", FixtureType.Cup)]
+    [InlineData(League.UHL, "HVC", FixtureType.Cup)]
     public void League_specific_codes(League league, string code, FixtureType expected)
     {
         Assert.Equal(expected, FullTimeParser.MapFixtureType(league, code));
