@@ -61,8 +61,8 @@ public class FullTimeUploadReaderTests
         var vets = new TeamDto { Id = Guid.NewGuid(), Name = "Thame United", AgeGroup = AgeGroup.O50, League = League.OxOver50, FullTimeLeagueId = "1", FullTimeTeamId = "2" };
         const string page = """
             <div class="fixtures-table"><table><tbody>
-              <tr><td>50D1</td><td>29/11/26 10:30</td><td class="home-team">Thame United</td><td>v</td><td class="road-team">Kidlington</td></tr>
-              <tr><td>50D1</td><td>06/12/26 10:30</td><td class="home-team">Witney</td><td>v</td><td class="road-team">Thame United</td></tr>
+              <tr><td>ZZ9</td><td>29/11/26 10:30</td><td class="home-team">Thame United</td><td>v</td><td class="road-team">Kidlington</td></tr>
+              <tr><td>ZZ9</td><td>06/12/26 10:30</td><td class="home-team">Witney</td><td>v</td><td class="road-team">Thame United</td></tr>
               <tr><td>L</td><td>13/12/26 10:30</td><td class="home-team">Thame United</td><td>v</td><td class="road-team">Bicester</td></tr>
             </tbody></table></div>
             """;
@@ -70,7 +70,7 @@ public class FullTimeUploadReaderTests
         var result = FullTimeUploadReader.Read([Page(vets, page)], [vets]);
 
         var code = Assert.Single(result.UnknownTypeCodes);
-        Assert.Equal((League.OxOver50, "50D1", 2), (code.League, code.Code, code.Count));
+        Assert.Equal((League.OxOver50, "ZZ9", 2), (code.League, code.Code, code.Count));
         Assert.Equal($"{vets.DisplayName}: 29/11/2026 v Kidlington", code.Example);
         Assert.Equal(FixtureType.Other, result.Fixtures[0].FixtureType);
     }

@@ -108,6 +108,25 @@ public class FullTimeParserTests
         Assert.Equal(expected, FullTimeParser.MapFixtureType(League.OxOver50, code));
     }
 
+    [Theory]
+    [InlineData(League.ADL, "DIV1", FixtureType.League)]
+    [InlineData(League.ADL, "DIV3", FixtureType.League)]
+    [InlineData(League.OxGirls, "O", FixtureType.Other)]
+    [InlineData(League.OxOver50, "50D1", FixtureType.League)]
+    [InlineData(League.UHL, "PREM", FixtureType.League)]
+    public void League_specific_codes(League league, string code, FixtureType expected)
+    {
+        Assert.Equal(expected, FullTimeParser.MapFixtureType(league, code));
+        Assert.Equal(expected, FullTimeLeagues.FixtureTypeFor(league, code));
+    }
+
+    [Fact]
+    public void A_code_only_means_something_in_its_own_league()
+    {
+        Assert.Null(FullTimeLeagues.FixtureTypeFor(League.WycAndSouthBucksMinor, "50D1"));
+        Assert.Equal(FixtureType.Other, FullTimeParser.MapFixtureType(League.WycAndSouthBucksMinor, "50D1"));
+    }
+
     [Fact]
     public void A_county_cup_tie_listed_twice_is_one_fixture()
     {
