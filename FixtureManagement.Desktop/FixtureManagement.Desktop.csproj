@@ -7,8 +7,8 @@
         <!-- Mac: pinned to the 26.0 Mac Catalyst SDK. The MAUI workload's default (27.0) needs Xcode 27.1, and each SDK
              checks for an exact Xcode major.minor; Xcode 26.6 (the newest for macOS 26.7) builds 26.0 bindings fine, so
              the exact-match check is switched off. Revisit when Xcode is updated: plain net10.0-maccatalyst + remove
-             ValidateXcodeVersion once Xcode matches the workload's SDK. -->
-        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">net10.0-maccatalyst26.0</TargetFrameworks>
+             ValidateXcodeVersion once Xcode matches the workload's SDK. iOS (iPhone/iPad) is pinned to 26.0 for the same reason. -->
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">net10.0-maccatalyst26.0;net10.0-ios26.0</TargetFrameworks>
         <ValidateXcodeVersion Condition="$([MSBuild]::IsOSPlatform('osx'))">false</ValidateXcodeVersion>
         <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">net10.0-windows10.0.19041.0</TargetFrameworks>
 
@@ -29,6 +29,9 @@
         <ApplicationTitle>Fixture Manager</ApplicationTitle>
         <!-- Identifies the app to the OS (Keychain items, preferences, signing). Changing it later loses saved settings and sign-in. -->
         <ApplicationId>com.euanmac.fixturemanagement</ApplicationId>
+        <!-- iPhone: the free (Personal Team) provisioning profile was made for this ID. Switch to the one above if the app
+             is signed with a paid Apple Developer account. -->
+        <ApplicationId Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">com.mactech.fixturemanagement</ApplicationId>
 
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
         <ApplicationVersion>1</ApplicationVersion>
@@ -37,6 +40,7 @@
         <WindowsPackageType>None</WindowsPackageType>
 
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">17.0</SupportedOSPlatformVersion>
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
         <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
     </PropertyGroup>
