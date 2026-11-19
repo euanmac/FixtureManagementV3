@@ -1,3 +1,4 @@
+using FixtureManagement.Shared.Models;
 using FixtureManagement.Shared.Reconciliation;
 
 namespace FixtureManagement.Shared.Dtos;
@@ -46,6 +47,18 @@ public record FullTimeUploadResultDto
     public int Fixtures { get; init; }
     /// <summary>Pages that couldn't be used. Those teams aren't covered, so their fixtures aren't compared.</summary>
     public IReadOnlyList<FullTimePageErrorDto> Failed { get; init; } = [];
+    /// <summary>FullTime type codes the league's table doesn't know (saved as "Other"): add them to FullTimeLeagues.</summary>
+    public IReadOnlyList<FullTimeTypeCodeDto> UnknownTypeCodes { get; init; } = [];
+}
+
+public record FullTimeTypeCodeDto
+{
+    public League League { get; init; }
+    public string LeagueName { get; init; } = "";
+    public string Code { get; init; } = "";
+    public int Count { get; init; }
+    /// <summary>One fixture with the code, to help tell what it means, e.g. "U14 Boys - Thame United Black: 06/12/2026 v Rivals".</summary>
+    public string Example { get; init; } = "";
 }
 
 public record FullTimePageErrorDto

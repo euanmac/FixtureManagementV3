@@ -25,6 +25,8 @@ public record SourceFixture
     public string? SourceFixtureId { get; init; }
     /// <summary>The source's status note, e.g. "Postponed". Empty if none.</summary>
     public string Status { get; init; } = "";
+    /// <summary>The source's own code for the fixture's type (e.g. FullTime's "L" or "50D1"). Not saved; used to report codes we don't know.</summary>
+    public string TypeCode { get; init; } = "";
 }
 
 /// <summary>How an app fixture and a source fixture compare.</summary>

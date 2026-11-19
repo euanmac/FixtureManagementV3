@@ -52,7 +52,8 @@ public static partial class FullTimeParser
 
     /// <summary>
     /// A team's FullTime page as fixtures for an upload (reconciliation): the same rows as ParseFixtures, plus
-    /// fixtures with no date yet (Date null), FullTime's fixture id and a "Postponed" status where it applies.
+    /// fixtures with no date yet (Date null), FullTime's fixture id, its type code and a "Postponed" status where
+    /// it applies.
     /// </summary>
     public static List<SourceFixture> ParseTeamPage(string html, TeamDto team)
     {
@@ -69,11 +70,12 @@ public static partial class FullTimeParser
                 FixtureType = r.FixtureType,
                 SourceFixtureId = r.FixtureId,
                 Status = r.FixtureType == FixtureType.Postponed ? "Postponed" : "",
+                TypeCode = r.TypeCode,
             })
             .ToList();
     }
 
-    private sealed record Row(DateOnly? Date, bool IsHome, string OurName, string Opponent, FixtureType FixtureType, string? FixtureId);
+    private sealed record Row(DateOnly? Date, bool IsHome, string OurName, string Opponent, FixtureType FixtureType, string TypeCode, string? FixtureId);
 
     private static List<Row> ReadRows(HtmlDocument doc, TeamDto team)
     {
@@ -89,7 +91,7 @@ public static partial class FullTimeParser
                     string type = row.GetAttributeValue("class", "") != CountyCupRow
                         ? row.SelectSingleNode("td[1]").InnerText.Trim()
                         : "CC";
-                    rows.Add(ReadRow(row, team, MapFixtureType(type)));
+                    rows.Add(ReadRow(row, team, MapFixtureType(team.League, type), type));
                 }
             }
 
@@ -101,7 +103,7 @@ public static partial class FullTimeParser
                 {
                     var scoreNode = row.SelectSingleNode($"td[contains(@class,'{Score}')]");
                     bool isPostponed = scoreNode?.SelectSingleNode("a[contains(text(),'P')]") != null;
-                    if (isPostponed) rows.Add(ReadRow(row, team, FixtureType.Postponed));
+                    if (isPostponed) rows.Add(ReadRow(row, team, FixtureType.Postponed, ""));
                 }
             }
         }
@@ -109,10 +111,34 @@ public static partial class FullTimeParser
         {
             throw new FormatException($"Couldn't read the FullTime page for team {team.Id}: {e.Message}", e);
         }
-        return rows;
+        return MergeDuplicates(rows);
     }
 
-    private static Row ReadRow(HtmlNode row, TeamDto team, FixtureType fixtureType)
+    /// <summary>
+    /// FullTime can list one tie twice on a team's page (a county cup tie appears both as a county cup row and under
+    /// the league's own name for the competition). Same date, venue and opponent = one fixture: keep a recognised
+    /// type over "Other", and FullTime's fixture id from whichever row has it. TBC rows are left as they are.
+    /// </summary>
+    private static List<Row> MergeDuplicates(List<Row> rows)
+    {
+        var merged = new List<Row>();
+        foreach (var row in rows)
+        {
+            int existing = row.Date is null ? -1
+                : merged.FindIndex(m => m.Date == row.Date && m.IsHome == row.IsHome && m.Opponent == row.Opponent);
+            if (existing < 0)
+            {
+                merged.Add(row);
+                continue;
+            }
+            var kept = merged[existing];
+            var typed = kept.FixtureType == FixtureType.Other && row.FixtureType != FixtureType.Other ? row : kept;
+            merged[existing] = typed with { FixtureId = kept.FixtureId ?? row.FixtureId };
+        }
+        return merged;
+    }
+
+    private static Row ReadRow(HtmlNode row, TeamDto team, FixtureType fixtureType, string typeCode)
     {
         DateOnly? date = ReadDate(row.SelectSingleNode("./td[2]").InnerText);
         string home = HtmlEntity.DeEntitize(row.SelectSingleNode($"td[contains(@class,'{HomeTeam}')]").InnerText.Trim());
@@ -129,7 +155,7 @@ public static partial class FullTimeParser
             isHome = home.ToLower().IndexOf(name) >= 0;
         }
 
-        return new Row(date, isHome, isHome ? home : away, isHome ? away : home, fixtureType, ReadFixtureId(row));
+        return new Row(date, isHome, isHome ? home : away, isHome ? away : home, fixtureType, typeCode, ReadFixtureId(row));
     }
 
     /// <summary>"08/11/26 10:00" → 8 Nov 2026; "TBC" → null. Anything else is a page we don't understand.</summary>
@@ -158,19 +184,10 @@ public static partial class FullTimeParser
     [GeneratedRegex(@"display(?:County)?Fixture\.html\?(?:.*&)?id=(\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex FixtureLink();
 
-    /// <summary>FullTime's fixture-type codes (first column of the fixtures table).</summary>
-    public static FixtureType MapFixtureType(string code) => code switch
-    {
-        "F" => FixtureType.Friendly,
-        "Cup" => FixtureType.Cup,
-        "CC" => FixtureType.CountyCup,
-        "L" => FixtureType.League,
-        "ONE" => FixtureType.League,
-        "TWO" => FixtureType.League,
-        "HL2N" => FixtureType.League,
-        "D3N" => FixtureType.League,
-        "VETP" => FixtureType.League,
-        "N" => FixtureType.League,
-        _ => FixtureType.Other
-    };
+    /// <summary>
+    /// A FullTime fixture-type code (first column of the fixtures table) for the team's league. Codes differ between
+    /// leagues; the table is FullTimeLeagues.FixtureTypeFor. Unknown codes are Other.
+    /// </summary>
+    public static FixtureType MapFixtureType(League league, string code) =>
+        FullTimeLeagues.FixtureTypeFor(league, code) ?? FixtureType.Other;
 }

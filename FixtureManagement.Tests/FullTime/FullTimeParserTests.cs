@@ -102,9 +102,29 @@ public class FullTimeParserTests
     [InlineData("VETP", FixtureType.League)]
     [InlineData("N", FixtureType.League)]
     [InlineData("?", FixtureType.Other)]
-    public void MapFixtureType_codes(string code, FixtureType expected)
+    public void MapFixtureType_codes_every_league_knows(string code, FixtureType expected)
     {
-        Assert.Equal(expected, FullTimeParser.MapFixtureType(code));
+        Assert.Equal(expected, FullTimeParser.MapFixtureType(League.WycAndSouthBucksMinor, code));
+        Assert.Equal(expected, FullTimeParser.MapFixtureType(League.OxOver50, code));
+    }
+
+    [Fact]
+    public void A_county_cup_tie_listed_twice_is_one_fixture()
+    {
+        // As FullTime shows it: once as a county cup row (no link), once under the league's name for it (with a link).
+        const string page = """
+            <div class="fixtures-table"><table><tbody>
+              <tr class="fa-county-cup-fixture-row"><td>R1</td><td>06/12/26 10:00</td><td class="home-team">Thame United Black U10</td><td>v</td><td class="road-team">Longford Park FC U10</td></tr>
+              <tr><td>XCC</td><td><a href="/displayFixture.html?id=31201701">06/12/26 10:00</a></td><td class="home-team">Thame United Black U10</td><td>v</td><td class="road-team">Longford Park FC U10</td></tr>
+              <tr><td>L</td><td>06/12/26 10:00</td><td class="home-team">Others U10</td><td>v</td><td class="road-team">Thame United Black U10</td></tr>
+            </tbody></table></div>
+            """;
+
+        var fixtures = FullTimeParser.ParseTeamPage(page, Black);
+
+        Assert.Equal(2, fixtures.Count);                 // a different opponent on the same day is kept
+        var cup = fixtures[0];
+        Assert.Equal((FixtureType.CountyCup, "31201701", "CC"), (cup.FixtureType, cup.SourceFixtureId, cup.TypeCode));
     }
 
     // A team page with a TBC date and fixture links, as the upload reads it.
@@ -128,8 +148,8 @@ public class FullTimeParserTests
         Assert.Equal(3, fixtures.Count);
         Assert.All(fixtures, f => Assert.Equal(Black.Id, f.TeamId));
         var league = fixtures[0];
-        Assert.Equal((new DateOnly(2026, 11, 8), true, "Rivals U10", "Thame United Black U10", FixtureType.League, "12345", ""),
-            (league.Date, league.IsHome, league.Opponent, league.SourceTeamName, league.FixtureType, league.SourceFixtureId, league.Status));
+        Assert.Equal((new DateOnly(2026, 11, 8), true, "Rivals U10", "Thame United Black U10", FixtureType.League, "12345", "", "L"),
+            (league.Date, league.IsHome, league.Opponent, league.SourceTeamName, league.FixtureType, league.SourceFixtureId, league.Status, league.TypeCode));
     }
 
     [Fact]

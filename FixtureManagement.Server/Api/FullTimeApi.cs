@@ -31,7 +31,7 @@ public static class FullTimeApi
 
             // Nothing usable: keep the previous upload rather than replace it with an empty one.
             if (read.TeamIds.Count == 0)
-                return Results.UnprocessableEntity(new FullTimeUploadResultDto { Failed = read.Failed });
+                return Results.UnprocessableEntity(new FullTimeUploadResultDto { Failed = read.Failed, UnknownTypeCodes = read.UnknownTypeCodes });
 
             var saved = await uploads.SaveUploadAsync(new SourceUploadDto
             {
@@ -50,6 +50,7 @@ public static class FullTimeApi
                 Teams = read.TeamIds.Count,
                 Fixtures = read.Fixtures.Count,
                 Failed = read.Failed,
+                UnknownTypeCodes = read.UnknownTypeCodes,
             });
         });
     }

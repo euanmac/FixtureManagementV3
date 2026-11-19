@@ -1,4 +1,6 @@
+using FixtureManagement.Shared;
 using FixtureManagement.Shared.Dtos;
+using FixtureManagement.Shared.Models;
 using FixtureManagement.Shared.Reconciliation;
 
 namespace FixtureManagement.FullTime;
@@ -13,7 +15,8 @@ public static class FullTimeUploadReader
     /// <summary>The SourceUpload.Source value for FullTime uploads.</summary>
     public const string Source = "FullTime";
 
-    public sealed record Result(IReadOnlyList<Guid> TeamIds, IReadOnlyList<SourceFixture> Fixtures, IReadOnlyList<FullTimePageErrorDto> Failed);
+    public sealed record Result(IReadOnlyList<Guid> TeamIds, IReadOnlyList<SourceFixture> Fixtures,
+        IReadOnlyList<FullTimePageErrorDto> Failed, IReadOnlyList<FullTimeTypeCodeDto> UnknownTypeCodes);
 
     public static Result Read(IReadOnlyList<FullTimePageDto> pages, IReadOnlyCollection<TeamDto> teams)
     {
@@ -49,8 +52,29 @@ public static class FullTimeUploadReader
                 failed.Add(new FullTimePageErrorDto { TeamId = page.TeamId, TeamName = team?.DisplayName ?? "", Error = error });
         }
 
-        return new Result(teamIds, fixtures, failed);
+        return new Result(teamIds, fixtures, failed, UnknownCodes(fixtures, teamsById));
     }
+
+    /// <summary>Type codes the team's league doesn't know, per league, so they can be added to FullTimeLeagues.</summary>
+    private static List<FullTimeTypeCodeDto> UnknownCodes(List<SourceFixture> fixtures, Dictionary<Guid, TeamDto> teamsById) =>
+        fixtures
+            .Select(f => (Fixture: f, Team: teamsById[f.TeamId]))
+            .Where(x => x.Fixture.TypeCode.Length > 0 && FullTimeLeagues.FixtureTypeFor(x.Team.League, x.Fixture.TypeCode) is null)
+            .GroupBy(x => (x.Team.League, x.Fixture.TypeCode))
+            .OrderBy(g => g.Key.League.DisplayName()).ThenBy(g => g.Key.TypeCode)
+            .Select(g =>
+            {
+                var (fixture, team) = g.First();
+                return new FullTimeTypeCodeDto
+                {
+                    League = g.Key.League,
+                    LeagueName = g.Key.League.DisplayName(),
+                    Code = g.Key.TypeCode,
+                    Count = g.Count(),
+                    Example = $"{team.DisplayName}: {fixture.Date?.ToString("dd/MM/yyyy") ?? "TBC"} v {fixture.Opponent}",
+                };
+            })
+            .ToList();
 
     /// <summary>A team page has a fixtures or results table. Blocked/error pages have neither.</summary>
     private static bool LooksLikeATeamPage(string html) =>

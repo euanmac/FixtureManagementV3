@@ -11,3 +11,4 @@ progress { width: 100%; }
 .hint { color: #6c757d; }
 .error { color: #b02a37; }
 #failed { padding-left: 18px; color: #b02a37; max-height: 160px; overflow-y: auto; }
+#codes-list { padding-left: 18px; max-height: 160px; overflow-y: auto; }

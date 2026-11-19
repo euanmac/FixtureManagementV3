@@ -44,6 +44,13 @@ function renderRun(run) {
     li.textContent = `${f.teamName || "Unknown team"} – ${f.error}`;
     return li;
   }));
+  const codes = run.unknownCodes || [];
+  $("codes").hidden = codes.length === 0;
+  $("codes-list").replaceChildren(...codes.map((c) => {
+    const li = document.createElement("li");
+    li.textContent = `${c.leagueName}: "${c.code}" × ${c.count} (e.g. ${c.example})`;
+    return li;
+  }));
   $("open-site").hidden = run.status !== "done";
 }
 

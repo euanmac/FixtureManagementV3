@@ -12,7 +12,7 @@ const FULLTIME_ORIGIN = "https://fulltime.thefa.com";
 
 // ---------- state shown by the popup ----------
 
-const idleState = { status: "idle", message: "", total: 0, done: 0, current: "", failed: [], result: null };
+const idleState = { status: "idle", message: "", total: 0, done: 0, current: "", failed: [], unknownCodes: [], result: null };
 
 async function setState(changes) {
   const { run = idleState } = await chrome.storage.session.get("run");
@@ -171,6 +171,7 @@ async function run() {
         ? `Saved ${result.fixtures} fixtures for ${result.teams} teams.`
         : "Fixture Manager couldn't use any of the pages, so nothing was saved.",
       failed: all,
+      unknownCodes: result.unknownTypeCodes || [],
       result,
     });
   } catch (e) {
