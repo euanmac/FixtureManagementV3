@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Fixture Manager – FullTime</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <h1>Fixture Manager – FullTime</h1>
+
+  <section id="signed-out" hidden>
+    <label>Fixture Manager site
+      <input id="server" list="servers" type="url" required>
+      <datalist id="servers">
+        <option value="https://tufixturemanager.azurewebsites.net/">Live</option>
+        <option value="https://euanblazortest2.azurewebsites.net/">Test</option>
+        <option value="https://localhost:7468/">This computer</option>
+      </datalist>
+    </label>
+    <label>Email <input id="email" type="email" autocomplete="username" required></label>
+    <label>Password <input id="password" type="password" autocomplete="current-password" required></label>
+    <button id="sign-in">Sign in</button>
+  </section>
+
+  <section id="signed-in" hidden>
+    <p class="who">Signed in to <span id="who-server"></span> as <span id="who-email"></span>
+      <button id="sign-out" class="link">Sign out</button></p>
+    <p class="hint">Have a fulltime.thefa.com page open in a tab, then:</p>
+    <button id="send">Send fixtures from FullTime</button>
+  </section>
+
+  <p id="error" class="error" hidden></p>
+
+  <section id="progress" hidden>
+    <p id="message"></p>
+    <progress id="bar" value="0" max="1"></progress>
+    <p id="current" class="hint"></p>
+    <ul id="failed"></ul>
+    <a id="open-site" href="#" target="_blank" hidden>Open Fixture Manager</a>
+  </section>
+
+  <script src="popup.js"></script>
+</body>
+</html>
