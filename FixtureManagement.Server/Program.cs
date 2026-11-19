@@ -99,7 +99,7 @@ var app = builder.Build();
 // Add any tables newer than the database (e.g. fixture reconciliation's). Only adds; see SchemaUpgrade.
 using (var db = app.Services.GetRequiredService<IDbContextFactory<AppDBContext>>().CreateDbContext())
 {
-    FixtureManagement.Server.Data.SchemaUpgrade.Apply(db);
+    SchemaUpgrade.Apply(db);
 }
 
 // Configure the HTTP request pipeline.
@@ -139,6 +139,7 @@ app.MapBookingEndpoints();
 app.MapPeopleEndpoints();
 app.MapTeamContactEndpoints();
 app.MapFixtureEndpoints();
+app.MapFullTimeEndpoints();
 app.Run();
 
 // Lets the test project start the app with WebApplicationFactory<Program>.
