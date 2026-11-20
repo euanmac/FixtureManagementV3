@@ -155,3 +155,35 @@
     -webkit-mask-size: 100% 100%;
     mask-size: 100% 100%;
   }
+
+  /* Differs from FullTime (date moved, opponent, venue or type): decide on Review FullTime. */
+  .bi-exclamation-triangle {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    --svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cg fill='%23000'%3E%3Cpath d='M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.15.15 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.2.2 0 0 1-.054.06.1.1 0 0 1-.066.017H1.146a.1.1 0 0 1-.066-.017.2.2 0 0 1-.054-.06.18.18 0 0 1 .002-.183L7.884 2.073a.15.15 0 0 1 .054-.057m1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767z'/%3E%3Cpath d='M7.002 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0M7.1 5.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0z'/%3E%3C/g%3E%3C/svg%3E");
+    background-color: currentColor;
+    -webkit-mask-image: var(--svg);
+    mask-image: var(--svg);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+  }
+
+  /* The cloud icons are drawn flatter than the others in their 16px box: draw them larger so the status icons look
+     the same size. The status icon sits on the first line of its row (rows with a note are taller). */
+  .status-cell .bi-cloud-check,
+  .status-cell .bi-cloud-slash {
+    width: 20px;
+    height: 20px;
+  }
+
+  .bi-cloud-arrow-down {
+    width: 20px;
+    height: 20px;
+  }
+
+  .status-cell i {
+    vertical-align: -3px;
+  }

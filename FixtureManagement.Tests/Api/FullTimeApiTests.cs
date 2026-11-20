@@ -45,12 +45,37 @@ public class FullTimeApiTests(TestWebApplicationFactory factory) : IClassFixture
         Assert.Equal(red.Id, Assert.Single(result.Failed).TeamId);
 
         using var scope = factory.Services.CreateScope();
-        var saved = await scope.ServiceProvider.GetRequiredService<ISourceUploadService>().GetLatestUploadAsync("FullTime");
+        var uploads = scope.ServiceProvider.GetRequiredService<ISourceUploadService>();
+        var saved = await uploads.GetLatestUploadAsync("FullTime:WycAndSouthBucksMinor");      // saved as its league's upload
         Assert.NotNull(saved);
         Assert.Equal(result.UploadId, saved.Id);
+        Assert.Equal("FullTime – Wycombe and South Bucks Minor League", saved.SourceName);
         Assert.Equal([black.Id], saved.TeamIds);
         Assert.Equal(TestWebApplicationFactory.UserEmail, saved.UploadedBy);
         Assert.Equal(["Rivals U10", "Others U10"], saved.Fixtures.Select(f => f.Opponent));
+    }
+
+    [Fact]
+    public async Task Each_league_is_saved_separately_so_fetching_one_league_keeps_the_others()
+    {
+        var client = await factory.CreateAuthenticatedClientAsync();
+        var wycombe = await CreateTeamAsync(client, "Thame United Black", "1", "21");
+        var girls = await CreateTeamAsync(client, "Thame United Black", "1", "22", League.OxGirls);
+        async Task UploadAsync(params TeamDto[] teams) =>
+            (await client.PostAsJsonAsync("/api/fulltime/upload", new FullTimeUploadRequest
+            {
+                Pages = teams.Select(t => new FullTimePageDto { TeamId = t.Id, Html = FullTimeUploadReaderTests.TeamPage }).ToList(),
+            })).EnsureSuccessStatusCode();
+
+        await UploadAsync(wycombe, girls);
+        await UploadAsync(girls);                       // just the girls' league again
+
+        using var scope = factory.Services.CreateScope();
+        var combined = await scope.ServiceProvider.GetRequiredService<ISourceUploadService>().GetCombinedUploadAsync("FullTime");
+        Assert.NotNull(combined);
+        Assert.Contains(wycombe.Id, combined.TeamIds);  // still there from the first upload
+        Assert.Contains(girls.Id, combined.TeamIds);
+        Assert.Equal(2, combined.Fixtures.Count(f => f.TeamId == girls.Id));    // once, not twice
     }
 
     [Fact]
@@ -78,11 +103,12 @@ public class FullTimeApiTests(TestWebApplicationFactory factory) : IClassFixture
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    private static async Task<TeamDto> CreateTeamAsync(HttpClient client, string name, string divisionSeason, string teamId)
+    private static async Task<TeamDto> CreateTeamAsync(HttpClient client, string name, string divisionSeason, string teamId,
+        League league = League.WycAndSouthBucksMinor)
     {
         var response = await client.PostAsJsonAsync("/api/teams", new TeamDto
         {
-            Name = name, AgeGroup = AgeGroup.U13, Gender = Gender.Male, League = League.WycAndSouthBucksMinor, Division = Division.One,
+            Name = name, AgeGroup = AgeGroup.U13, Gender = Gender.Male, League = league, Division = Division.One,
             FullTimeLeagueId = divisionSeason, FullTimeTeamId = teamId,
         });
         response.EnsureSuccessStatusCode();

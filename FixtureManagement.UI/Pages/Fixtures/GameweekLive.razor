@@ -1,0 +1,388 @@
+﻿@page "/gameweek/live"
+@* The original Gameweek, kept for when fetching FullTime live is wanted again: it reads each team's FullTime page on
+   every load (blocked on Azure; slow). Not in the menu. /gameweek now uses the latest FullTime upload instead. *@
+@preservewhitespace true
+@using System.ComponentModel.DataAnnotations
+
+@inject IFixtureService FixtureService
+@inject ITeamService TeamService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IFullTimeService FullTimeService
+
+@attribute [StreamRendering]
+<PageTitle>Gameweek (live)</PageTitle>
+
+<h1>Gameweek (live FullTime)</h1>
+<hr>
+@* <div class="container"> *@
+    <div class="row">
+        <div class="col">
+            <h3>@(gameWeekStart.ToString("dddd, d MMMM yyyy")) to @(gameWeekEnd.ToString("dddd, d MMMM yyyy"))</h3>
+        </div>
+        <div class="col text-end">
+                <a class="btn btn-secondary" href="gameweek/live" data-enhance-nav="false">today</a>
+                <div class="btn-group">
+                    <a class="btn btn-dark" aria-label="prevSat" href="@($"gameweek/live?matchday={gameWeekStart.AddDays(-7).ToString("dd-MMM-yyyy")}")" data-enhance-nav="false">
+                        <i class="bi bi-chevron-left align-middle" data-toggle="tooltip" data-original-title=""></i>
+                    </a>
+                    <a class="btn btn-dark" aria-label="nextSat" href="@($"gameweek/live?matchday={gameWeekStart.AddDays(7).ToString("dd-MMM-yyyy")}")" data-enhance-nav="false">
+                        <i class="bi bi-chevron-right align-middle" data-toggle="tooltip" data-original-title=""></i>
+                    </a>
+                </div>
+        </div>
+    </div>
+    @if (isAuthenticated) 
+    {
+        <div class="row my-2 g-1">
+            <div class="col-auto">
+                <EditForm OnSubmit="FixturesAction" FormName="Action" Model="fixtureRecResults" enhance>
+                    @* <input type="hidden" name="DownloadFixtures"  @value="DownloadFixtures" /> *@
+                    @* Static site: the pressed button's name/value is posted as FormAction. Interactive (desktop): the click records it. *@
+                    <button type="submit" class="btn btn-primary" disabled="@(buttonsDisabled || (downloadCount == 0))" name="FormAction" value="@Action.Download" @onclick="() => clickedAction = Action.Download">Download @(downloadCount)</button>
+                    <button type="submit" class="btn btn-primary" disabled="@(buttonsDisabled || (unconfirmedCount == 0))" name="FormAction" value="@Action.Confirm" @onclick="() => clickedAction = Action.Confirm">Confirm @(unconfirmedCount)</button>
+                    <button type="submit" class="btn btn-primary" disabled="@(buttonsDisabled || (unmatchedCount ==0))" name="FormAction" value="@Action.Delete" @onclick="() => clickedAction = Action.Delete">Delete Unmatched</button>
+                    <button type="submit" class="btn btn-primary" disabled="@buttonsDisabled" name="FormAction" value="@Action.Update" @onclick="() => clickedAction = Action.Update">Update</button>
+
+                </EditForm>
+            </div>
+            <div class="col-auto">
+                <EditForm OnSubmit="ClearCache" FormName="ClearCache" Model="this" enhance>
+                </EditForm>
+            </div>
+        
+        @* <div class="col">
+            @if (isAuthenticated) {            
+                @((TimeOnly.FromDateTime(DateTime.Now) - start).TotalMilliseconds)                
+            }
+        </div> *@
+        </div>
+    }
+@* </div> *@
+    <table class="table table-sm table-stripedx quickgrid">
+        <thead>
+            <tr>
+                <th>
+                    Team
+                </th>
+                <th>
+                    Date
+                </th>
+                <th>
+                    Status
+                </th>
+                <th>
+                    Venue
+                </th>
+                <th>
+                    Type
+                </th>
+                <th>
+                    Opponent
+                </th>
+                <th>
+                    Pitch
+                </th>
+                <th>
+                    Start
+                </th>
+                <th>
+                    Confirmed
+                </th>
+                @if (isAuthenticated)
+                {
+                    <th></th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @{stripe = false;}
+            @foreach (var team in fixtureRecResults.Keys)
+            {
+                var rowColour = stripe ? bgTableBgStriped : bgTableBg;
+                var newRow = true;
+                stripe = !stripe;
+                @foreach (var item in fixtureRecResults[team])
+                {
+                    <tr>
+                        <td style="@($"background-color: var({rowColour})")">
+                            @*@Html.DisplayFor(modelItem => item.GroupDescription)*@
+                            @if (newRow)
+                            {
+                                <a href="@($"teams/details?id={team.Id}")">@team.DisplayName</a>
+                            }
+                        </td>
+                        <td style="@($"background-color: var({rowColour})")">
+                            @item.MatchDate.ToShortDateString()
+                        </td>
+                        <td class="text-center align-middle" style="@($"background-color: var({rowColour})")">
+                            <i class="@item.GetRecIcon() align-middle" data-toggle="tooltip" data-original-title="@item.RecStatus"></i>
+                        </td>
+                        @if (item.RecStatus != FixtureRecMatchType.noFixture && item.RecStatus != FixtureRecMatchType.pending && item.RecStatus != FixtureRecMatchType.unknownTeam)
+                        {
+                            <td style="@($"background-color: var({rowColour})")">
+                                @item.Venue
+                            </td>
+                            <td style="@($"background-color: var({rowColour})")">
+                                @item.FixtureType
+                            </td>
+                            <td style="@($"background-color: var({rowColour})")">
+                                @item.Opponent
+                            </td>
+                            @if (item.IsAllocated)
+                            {
+                                <td style="@($"background-color: var({rowColour})")">
+                                    @item.Pitch
+                                </td>
+                                <td style="@($"background-color: var({rowColour})")">
+                                    @(item.Start.ToShortTimeString())
+                                </td>
+                                <td style="@($"background-color: var({rowColour})")">
+                                    @(item.IsAllocated && item.IsConfirmed ? "Yes" : "No")
+                                </td>
+                            }
+                            else
+                            {
+                                <td style="@($"background-color: var({rowColour})")"/>
+                                <td style="@($"background-color: var({rowColour})")"/>
+                                <td style="@($"background-color: var({rowColour})")"/>
+                            }
+                        }
+                        else
+                        {
+                            <td style="@($"background-color: var({rowColour})")"/>
+                            <td style="@($"background-color: var({rowColour})")"/>
+                            <td style="@($"background-color: var({rowColour})")"/>
+                            <td style="@($"background-color: var({rowColour})")"/>
+                            <td style="@($"background-color: var({rowColour})")"/>
+                            <td style="@($"background-color: var({rowColour})")"/>
+                        }
+
+                        @if (isAuthenticated)
+                        {
+                            <td style="@($"background-color: var({rowColour})")">
+
+                                @if (item.RecStatus == FixtureRecMatchType.fullTimeUnmatched)
+                                {
+                                    <EditForm method="post" Model="item" OnSubmit="DownloadFixture" FormName="@(item.Id.ToString())" Enhance>
+                                        <input type="hidden" name="downloadFixture.Id" value="@item.Id" />
+                                        <input type="hidden" name="downloadFixture.Date" value="@item.MatchDate.ToString("yyyy-MM-dd")" />
+                                        @* ToString() matters: Blazor drops/empties bool attribute values, which would post IsHome as blank. *@
+                                        <input type="hidden" name="downloadFixture.IsHome" value="@((item.Venue == "H").ToString())" />
+                                        <input type="hidden" name="downloadFixture.Opponent" value="@item.Opponent" />
+                                        <input type="hidden" name="downloadFixture.FixtureType" value="@item.FixtureType" />
+                                        <input type="hidden" name="downloadFixture.TeamId" value="@team.Id" />
+                                        @* <button type="submit" class="btn btn-link">
+                                            <i class="bi bi-cloud-arrow-down"></i>
+                                        </button>s *@
+                                        <button type="submit" style="border: none; background-color: transparent" class="btn-link" @onclick="() => clickedRow = item">
+                                            <i class ="bi bi-cloud-arrow-down"/>
+                                        </button>
+                                    </EditForm>
+                                }
+                                @if (item.RecStatus != FixtureRecMatchType.fullTimeUnmatched && item.RecStatus != FixtureRecMatchType.noFixture && item.RecStatus != FixtureRecMatchType.pending && item.RecStatus != FixtureRecMatchType.unknownTeam)
+                                {
+
+
+                                    <a href="@(ActionURL("edit", item.Id))"><Icon Type="Icon.IconType.Edit"/></a>
+                                    <a href="@(ActionURL("delete", item.Id))"><Icon Type="Icon.IconType.Delete"/></a>        
+                                    @if (item.CanAllocate) {
+                                        <a href="@(ActionURL("allocate", item.Id))"><Icon Type="Icon.IconType.Schedule"/></a>
+                                    }
+                                    @if (item.IsAllocated)
+                                    {
+                                        @*Hidden fields for bulk confirmation*@
+                                        <input type="hidden" name="ConfirmAllocations.Index" value="@item.AllocationId" />
+                                        <input type="hidden" name="ConfirmAllocations[@item.AllocationId]" value="@item.AllocationId" />
+                                    }
+ 
+                                }
+
+                                @*|*@
+                                @*<a asp-page="./Delete" asp-route-id="@item.Team.Id"><i class="bi bi-trash"></i></a>*@
+                            </td>
+                        }
+                        @{newRow = false;}
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+
+    <p class="text-muted small mt-2">FullTime User-Agent: <code>@FullTimeService.UserAgent</code></p>
+
+@code {
+
+    private enum Action { 
+        Download, 
+        Delete, 
+        Update,
+        Confirm
+    }
+
+    // Which bulk button was pressed: posted on the static site, recorded by the click when interactive.
+    [SupplyParameterFromForm]
+    private Action? FormAction {get; set;}
+    private Action? clickedAction;
+
+    // Per-row download: the row's fields are posted on the static site; the clicked row is used when interactive.
+    [SupplyParameterFromForm]
+    private FixtureDto? downloadFixture {get; set;}
+    private TeamReconiliationRow? clickedRow;
+
+    private bool isAuthenticated = false;
+    private bool stripe = false;
+    private string bgTableBg = "--bs-table-bg";
+    private string bgTableBgStriped = "--bs-table-striped-bg";
+    private bool buttonsDisabled = true;
+    private int downloadCount;
+    private int unconfirmedCount;
+    private int unmatchedCount;
+
+    public Dictionary<TeamDto, List<TeamReconiliationRow>> fixtureRecResults {get; set;} = new();
+
+    private DateOnly gameWeekEnd;
+    private DateOnly gameWeekStart;
+    private DateOnly? loadedDay;
+
+    [SupplyParameterFromQuery]
+    private DateOnly? matchDay { get; set; }
+
+    private IEnumerable<TeamReconiliationRow> AllRows => fixtureRecResults.Values.SelectMany(x => x);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+    }
+
+    // Loads here rather than in OnInitialized so that, when interactive, following the previous/next week
+    // links (same page, new ?matchday) reloads the table. On the static site this runs once per request.
+    protected override async Task OnParametersSetAsync()
+    {
+        var day = matchDay ?? DateOnly.FromDateTime(DateTime.Now);
+        if (loadedDay != day)
+        {
+            loadedDay = day;
+            await LoadWeekAsync(day);
+        }
+    }
+
+    private async Task LoadWeekAsync(DateOnly day)
+    {
+        buttonsDisabled = true;
+
+        //Calculate Gameweek Start and end Dates (Monday to Sunday)
+        DayOfWeek dayOfWeek = day.DayOfWeek;
+        int startOffset = (dayOfWeek == DayOfWeek.Sunday) ? 6 : (int)dayOfWeek - 1;
+        int endOffset = (dayOfWeek == DayOfWeek.Sunday) ? 0 : 7 - (int)dayOfWeek;
+        gameWeekStart = day.AddDays(-startOffset);
+        gameWeekEnd = day.AddDays(endOffset);
+
+        //Get fixtures for the week, and all teams (already ordered by age group, gender, division)
+        var fixtures = await FixtureService.GetFixturesAsync(new FixtureQuery { From = gameWeekStart, To = gameWeekEnd });
+        var teams = await TeamService.GetTeamsAsync();
+
+        //Placeholder "pending" row for each team until its reconciliation comes back
+        fixtureRecResults = teams.ToDictionary(
+            t => t,
+            t => new List<TeamReconiliationRow> { new TeamReconiliationRow { Team = t, MatchDate = gameWeekStart, RecStatus = FixtureRecMatchType.pending } });
+        UpdateCounts();
+        StateHasChanged();
+
+        //For each team reconcile the fixtures for a given date
+        //Will be asynchronous so update state on each result returned
+        await foreach (var row in FullTimeService.Reconcile(teams, fixtures, gameWeekStart, gameWeekEnd)) {
+            if (row.Count > 0) {
+                fixtureRecResults[row[0].Team] = row;
+            }
+            UpdateCounts();
+            StateHasChanged();
+        }
+        buttonsDisabled = false;
+    }
+
+    private void UpdateCounts()
+    {
+        downloadCount = AllRows.Count(f => f.RecStatus == FixtureRecMatchType.fullTimeUnmatched);
+        unconfirmedCount = AllRows.Count(f => f.IsAllocated && !f.IsConfirmed);
+        unmatchedCount = AllRows.Count(f => f.RecStatus == FixtureRecMatchType.localFixtureUnmatched);
+    }
+
+    public async Task ClearCache() {
+        FullTimeService.ClearCache();
+        await ShowChangesAsync();
+    }
+
+    public async Task FixturesAction()
+    {
+        if (!isAuthenticated) return;
+
+        switch (FormAction ?? clickedAction ?? Action.Update) 
+        {
+            case Action.Download:
+                //Add every FullTime fixture that has no local match, in one save
+                var toAdd = AllRows
+                    .Where(f => f.RecStatus == FixtureRecMatchType.fullTimeUnmatched)
+                    .Select(ToFixture)
+                    .ToList();
+                if (toAdd.Count > 0) await FixtureService.CreateFixturesAsync(toAdd);
+                break;
+
+            case Action.Delete:
+                //Delete local fixtures that aren't on FullTime
+                foreach (var rec in AllRows.Where(f => f.RecStatus == FixtureRecMatchType.localFixtureUnmatched).ToList())
+                {
+                    await FixtureService.DeleteFixtureAsync(rec.Id);
+                }
+                break;
+
+            case Action.Update:
+                FullTimeService.ClearCache();
+                break;
+
+            case Action.Confirm:
+                //Confirm all allocated but unconfirmed fixtures
+                var toConfirm = AllRows.Where(f => f.IsAllocated && !f.IsConfirmed).Select(f => f.Id).ToList();
+                await FixtureService.ConfirmAllocationsAsync(toConfirm);
+                break;
+        }
+        await ShowChangesAsync();
+    }
+
+    private async Task DownloadFixture()
+    {
+        var fixture = downloadFixture ?? (clickedRow is null ? null : ToFixture(clickedRow));
+        if (!isAuthenticated || fixture is null) return;
+        await FixtureService.CreateFixtureAsync(fixture);
+        await ShowChangesAsync();
+    }
+
+    private static FixtureDto ToFixture(TeamReconiliationRow rec) => new()
+    {
+        TeamId = rec.Team.Id,
+        Date = rec.MatchDate,
+        IsHome = rec.Venue == "H",
+        Opponent = rec.Opponent,
+        FixtureType = rec.FixtureType,
+    };
+
+    // Static site: redirect back to this week (post-redirect-get). Interactive: reload the week in place.
+    private async Task ShowChangesAsync()
+    {
+        if (RendererInfo.IsInteractive)
+        {
+            clickedAction = null;
+            clickedRow = null;
+            await LoadWeekAsync(loadedDay!.Value);
+        }
+        else
+        {
+            NavigationManager.NavigateTo(ThisWeekUrl);
+        }
+    }
+
+    private string ThisWeekUrl => $"/gameweek/live?matchday={loadedDay!.Value.ToString("dd-MMM-yyyy")}";
+
+    private string ActionURL(string action, Guid id) => $"fixtures/{action}?id={id.ToString()}&returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}";
+}

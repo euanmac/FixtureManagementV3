@@ -1,0 +1,111 @@
+/* Each side of a difference is a clickable cell (a label around a hidden radio); the chosen side is highlighted.
+   Colours from the site's palette (app.css): the dark grey of a hovered primary button, its border, and the focus ring. */
+td.choice-cell {
+    padding: 0.15rem;
+}
+
+.choice {
+    display: block;
+    height: 100%;
+    padding: 0.25rem 0.4rem;
+    border: 2px solid transparent;
+    border-radius: 0.375rem;
+    cursor: pointer;
+}
+
+.choice:hover {
+    background-color: rgba(122, 119, 119, 0.12);   /* #7a7777, faint */
+}
+
+.choice:has(input:checked) {
+    background-color: #7a7777;
+    border-color: #484645;
+    color: #fff;
+}
+
+.choice:has(input:focus-visible) {
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #9a9998ad;
+}
+
+/* Each side's action ("Keep", "Use", "Add", "Delete") is its Apply button, shown only in the chosen cell. */
+.choice-action {
+    display: none;
+    margin-top: 0.15rem;
+}
+
+.choice:has(input:checked) .choice-action {
+    display: block;
+}
+
+/* Every section's table has the same column widths – percentages, so they flex with the screen – and they line up
+   down the page. Below the minimum width the table scrolls sideways (inside .table-responsive) rather than squash. */
+.review-table {
+    table-layout: fixed;
+    width: 100%;
+    min-width: 760px;
+}
+
+.review-table .col-date { width: 12%; }
+.review-table .col-team { width: 17%; }
+.review-table .col-side { width: 25%; }
+.review-table .col-source { width: 21%; }
+
+.review-table td {
+    overflow-wrap: anywhere;
+}
+
+/* Section headings: the title, its count and the section's "Apply all" on one line, centred vertically. Flex layout
+   drops the browser's own disclosure triangle, so draw one that turns when the section is open. */
+.section-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    list-style: none;
+    cursor: pointer;
+    padding: 0.4rem 0.6rem;
+    border-radius: 0.375rem;
+    background-color: rgba(122, 119, 119, 0.12);   /* light grey: the site's #7a7777, faint */
+}
+
+/* "Apply all" at the right-hand end, in line with the rows' Apply buttons (right-aligned in the last column; the
+   right padding matches a table cell's). */
+.section-summary {
+    padding-right: 0.25rem;
+}
+
+.section-summary button {
+    margin-left: auto;
+}
+
+.section-summary:hover {
+    background-color: rgba(122, 119, 119, 0.2);
+}
+
+.section-summary::-webkit-details-marker {
+    display: none;
+}
+
+.section-summary::before {
+    content: "\25B8";               /* ▸ */
+    display: inline-block;
+    width: 1em;
+    transition: transform 0.15s;
+}
+
+details[open] > .section-summary::before {
+    transform: rotate(90deg);
+}
+
+/* The site's primary button colours (app.css), small. */
+.cell-apply {
+    padding: 0.1rem 0.5rem;
+    border: 1px solid #03162a;
+    border-radius: 0.25rem;
+    background-color: #011222;
+    color: #fff;
+    font-weight: 600;
+}
+
+.cell-apply:hover {
+    background-color: #484645;
+}

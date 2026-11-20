@@ -11,6 +11,9 @@ public interface IReconciliationService
 {
     Task<ReconciliationReviewDto> GetReviewAsync(string source, CancellationToken cancellationToken = default);
 
+    /// <summary>One week (from–to, inclusive) compared with the latest upload, matches included (Gameweek).</summary>
+    Task<ReconciliationWeekDto> GetWeekAsync(string source, DateOnly from, DateOnly to, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// For each choice (by ReconciliationItem.Id): UseSource adds, updates or deletes the app fixture to match the
     /// source (a fixture that moves, or stops being a home game, loses its pitch allocation); KeepApp remembers the

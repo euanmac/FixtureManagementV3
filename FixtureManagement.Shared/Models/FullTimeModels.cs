@@ -30,7 +30,16 @@ public enum FixtureRecMatchType
     fullTimeUnmatched,
     [Display(Name = "Matched on FullTime")]
     fullTimematched,
-    pending
+    pending,
+    /// <summary>On both, but the date (moved), opponent, venue or type differs – decide on Review FullTime.</summary>
+    [Display(Name = "Differs from FullTime")]
+    fullTimeDifferent,
+    /// <summary>
+    /// Differs from FullTime (not added, not on FullTime, moved or different), but someone accepted Fixture Manager's
+    /// version on a review page. Not a match: the action to take FullTime's version stays available.
+    /// </summary>
+    [Display(Name = "Accepted")]
+    fullTimeAccepted,
 }
 
 /// <summary>One row of the Gameweek table: a local fixture, a FullTime-only fixture, or "no fixture" for a team.</summary>
@@ -53,6 +62,18 @@ public class TeamReconiliationRow
     public TimeOnly Start { get; set; }
     public string FullTimeURL { get; set; } = "";
     public FixtureType FixtureType { get; set; }
+    /// <summary>Extra detail for the row, e.g. what FullTime has instead. Empty if none.</summary>
+    public string Note { get; set; } = "";
+    /// <summary>
+    /// The reconciliation difference this row shows (ReconciliationItem.Id), to apply a choice for it. Empty when
+    /// there's nothing to decide (it matches, or wasn't compared). Set for accepted differences too, so the decision
+    /// can be changed.
+    /// </summary>
+    public string ItemId { get; set; } = "";
+    /// <summary>The row is FullTime's fixture, not in Fixture Manager (so it can be downloaded, not edited).</summary>
+    public bool FromSource { get; set; }
+    /// <summary>The kind of difference (with ItemId), so the actions offered can match it. Null if none.</summary>
+    public FixtureManagement.Shared.Reconciliation.DifferenceKind? Difference { get; set; }
 
     /// <summary>Bootstrap icon classes for the status column.</summary>
     public string GetRecIcon() => RecStatus switch
@@ -65,6 +86,8 @@ public class TeamReconiliationRow
         FixtureRecMatchType.fullTimeUnmatched => "bi bi-cloud-slash text-danger",
         FixtureRecMatchType.fullTimematched when (!IsAllocated && CanAllocate) => "bi bi-cloud-check text-warning",
         FixtureRecMatchType.fullTimematched => "bi bi-cloud-check text-success",
+        FixtureRecMatchType.fullTimeDifferent => "bi bi-exclamation-triangle text-warning",
+        FixtureRecMatchType.fullTimeAccepted => "bi bi-journal-check text-secondary",
         _ => "bi bi-question-circle-fill text-danger"
     };
 }

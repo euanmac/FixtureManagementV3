@@ -134,6 +134,31 @@ public class FixtureReconcilerTests
     }
 
     [Fact]
+    public void A_different_opponent_and_type_on_the_same_date_are_two_separate_fixtures()
+    {
+        // e.g. Fixture Manager has a league game, FullTime a cup tie against someone else, the same Saturday.
+        var result = Run([App(lions, Dec6, "Hook Norton", home: true)], [Src(lions, Dec6, "Middleton Cheney", home: false, type: FixtureType.Cup)]);
+
+        Assert.Equal([DifferenceKind.OnlyInSource, DifferenceKind.OnlyInApp], result.Items.Select(i => i.Kind));
+    }
+
+    [Fact]
+    public void Same_day_pairing_prefers_the_fixture_with_the_same_opponent()
+    {
+        var league = App(lions, Dec6, "Rivals", home: true);
+        var cup = App(lions, Dec6, "Cup Opponents", home: true, type: FixtureType.Cup);
+
+        // FullTime has "Cup Opponents" away, as a league game: it shares the opponent with the cup fixture (and only the type
+        // with the league one), so it pairs with the cup fixture; the league game is left on its own.
+        var result = Run([league, cup], [Src(lions, Dec6, "Cup Opponents", home: false, type: FixtureType.League)]);
+
+        var paired = Assert.Single(result.Items, i => i.Kind == DifferenceKind.Different);
+        Assert.Same(cup, paired.App);
+        Assert.Equal(FixtureChanges.Venue | FixtureChanges.Type, paired.Changes);
+        Assert.Same(league, Assert.Single(result.Items, i => i.Kind == DifferenceKind.OnlyInApp).App);
+    }
+
+    [Fact]
     public void Swapped_venue_on_the_same_date_is_different()
     {
         var item = Assert.Single(Run([App(lions, Dec6, "Rivals", home: true)], [Src(lions, Dec6, "Rivals", home: false)]).Items);

@@ -55,6 +55,16 @@ public class EfSourceUploadService(IDbContextFactory<AppDBContext> dbFactory, Ti
         return entity is null ? null : ToDto(entity);
     }
 
+    public async Task<SourceUploadDto?> GetCombinedUploadAsync(string source, CancellationToken cancellationToken = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var prefix = source + ":";
+        var entities = await db.SourceUpload.AsNoTracking().Include(u => u.Fixtures)
+            .Where(u => u.Source == source || u.Source.StartsWith(prefix))
+            .ToListAsync(cancellationToken);
+        return SourceUploads.Combine(source, entities.Select(ToDto).ToList());
+    }
+
     private static SourceUploadDto ToDto(SourceUpload u) => new()
     {
         Id = u.Id,
@@ -78,6 +88,8 @@ public class EfSourceUploadService(IDbContextFactory<AppDBContext> dbFactory, Ti
                 Competition = f.Competition,
                 SourceFixtureId = f.SourceFixtureId,
                 Status = f.Status,
+                UploadedAt = DateTime.SpecifyKind(u.UploadedAt, DateTimeKind.Utc),
+                UploadedBy = u.UploadedBy,
             })
             .ToList(),
     };

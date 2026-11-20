@@ -13,6 +13,9 @@ public static class ReconciliationApi
         group.MapGet("/{source}", async (string source, IReconciliationService reconciliation, CancellationToken ct) =>
             Results.Ok(await reconciliation.GetReviewAsync(source, ct)));
 
+        group.MapGet("/{source}/week", async (string source, DateOnly from, DateOnly to, IReconciliationService reconciliation, CancellationToken ct) =>
+            Results.Ok(await reconciliation.GetWeekAsync(source, from, to, ct)));
+
         group.MapPost("/{source}/apply", async (string source, ReconciliationApplyRequest request,
             IReconciliationService reconciliation, CancellationToken ct) =>
             Results.Ok(await reconciliation.ApplyAsync(source, request.Choices, ct)));

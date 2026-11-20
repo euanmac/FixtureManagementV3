@@ -186,4 +186,68 @@ public sealed class EfReconciliationServiceTests : IDisposable
         Assert.Equal(0, result.Added);
         Assert.Contains("without a date", Assert.Single(result.Errors));
     }
+
+    [Fact]
+    public async Task The_week_view_includes_matches_and_moves_into_or_out_of_the_week()
+    {
+        var lions = await _db.AddTeamAsync("Lions");
+        var same = await AddFixtureAsync(lions, Dec6, "Same");
+        var movedOut = await AddFixtureAsync(lions, Dec6, "Moved out", home: false);
+        var movedIn = await AddFixtureAsync(lions, Nov29, "Moved in");
+        await AddFixtureAsync(lions, Dec13, "Next week");
+        await UploadAsync([lions], Src(lions, Dec6, "Same"), Src(lions, Dec13, "Moved out", home: false),
+            Src(lions, Dec6, "Moved in"), Src(lions, Dec13, "Next week"));
+
+        var week = await _service.GetWeekAsync(Source, Dec6.AddDays(-6), Dec6);      // Mon 30 Nov – Sun 6 Dec
+
+        Assert.Equal("FullTime", week.Upload!.Source);
+        Assert.Equal([lions.Id], week.CoveredTeamIds);
+        Assert.Equal(Today, week.CoveredFrom);
+        Assert.Equal(3, week.Items.Count);                                              // not "Next week"
+        Assert.Contains(week.Items, i => i.Kind == DifferenceKind.Same && i.App!.Id == same.Id);
+        Assert.Contains(week.Items, i => i.Kind == DifferenceKind.DateMoved && i.App!.Id == movedOut.Id && i.Source!.Date == Dec13);
+        Assert.Contains(week.Items, i => i.Kind == DifferenceKind.DateMoved && i.App!.Id == movedIn.Id && i.Source!.Date == Dec6);
+    }
+
+    [Fact]
+    public async Task The_week_view_marks_differences_kept_earlier()
+    {
+        var lions = await _db.AddTeamAsync("Lions");
+        await AddFixtureAsync(lions, Dec6, "Our spelling");
+        await UploadAsync([lions], Src(lions, Dec6, "Their spelling"));
+        var review = await _service.GetReviewAsync(Source);
+        await _service.ApplyAsync(Source, Choose(review, _ => Resolution.KeepApp));
+
+        var item = Assert.Single((await _service.GetWeekAsync(Source, Dec6.AddDays(-6), Dec6)).Items);
+
+        Assert.Equal((DifferenceKind.Different, true, "me@example.com"), (item.Kind, item.Kept, item.KeptBy));
+        Assert.Equal(_time.GetUtcNow().UtcDateTime, item.KeptAt);
+    }
+
+    [Fact]
+    public async Task The_week_view_with_no_upload_is_empty()
+    {
+        var week = await _service.GetWeekAsync(Source, Dec6.AddDays(-6), Dec6);
+
+        Assert.Null(week.Upload);
+        Assert.Empty(week.Items);
+    }
+
+    [Fact]
+    public async Task An_accepted_difference_can_still_be_resolved_with_the_sources_version()
+    {
+        var lions = await _db.AddTeamAsync("Lions");
+        await UploadAsync([lions], Src(lions, Dec6, "Cup tie", type: FixtureType.Cup));
+        var review = await _service.GetReviewAsync(Source);
+        await _service.ApplyAsync(Source, Choose(review, _ => Resolution.KeepApp));          // "Don't add"
+        var accepted = Assert.Single((await _service.GetWeekAsync(Source, Dec6.AddDays(-6), Dec6)).Items);
+        Assert.True(accepted.Kept);
+
+        var result = await _service.ApplyAsync(Source, new Dictionary<string, Resolution> { [accepted.Id] = Resolution.UseSource });
+
+        Assert.Equal((1, 0), (result.Added, result.Skipped));
+        Assert.Equal(DifferenceKind.Same, Assert.Single((await _service.GetWeekAsync(Source, Dec6.AddDays(-6), Dec6)).Items).Kind);
+        await using var db = _db.CreateDbContext();
+        Assert.Equal(0, await db.ReconciliationDecision.CountAsync());                     // the old decision is gone
+    }
 }

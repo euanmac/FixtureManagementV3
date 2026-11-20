@@ -1,0 +1,555 @@
+@page "/fixtures/review/sections"
+@* The earlier review layout (differences grouped by kind, click a side then Apply), kept but out of the menu.
+   /fixtures/review is the view by team (Review.razor). *@
+@attribute [Authorize]
+@using FixtureManagement.Shared.Reconciliation
+@inject IReconciliationService ReconciliationService
+@inject ITeamService TeamService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Fixture Review</PageTitle>
+
+<h1>Fixture Review and Reconciliation</h1>
+<hr />
+
+@if (review is null)
+{
+    <p><em>Loading…</em></p>
+}
+else if (review.Upload is null)
+{
+    <div class="alert alert-info">
+        Nothing has been fetched from FullTime yet. Use the Fixture Manager browser extension: open a FullTime page,
+        then click <strong>Send fixtures from FullTime</strong>.
+    </div>
+}
+else
+{
+    <p>
+        Compared with the FullTime fetch of <strong>@review.Upload.UploadedAt.ToLocalTime().ToString("ddd d MMM yyyy HH:mm")</strong>
+        by @review.Upload.UploadedBy (@review.Upload.TeamCount teams, @review.Upload.FixtureCount fixtures),
+        for fixtures from @review.From.ToString("d MMM yyyy").
+    </p>
+
+    @if (applied is not null)
+    {
+        <div class="alert @(applied.Errors.Count > 0 ? "alert-warning" : "alert-success")" role="status">
+            Added @applied.Added, updated @applied.Updated, deleted @applied.Deleted, kept as they are @applied.Kept.
+            @if (applied.Skipped > 0)
+            {
+                <span>@applied.Skipped skipped because they had changed since the page was shown.</span>
+            }
+            @if (applied.Errors.Count > 0)
+            {
+                <ul class="mb-0">
+                    @foreach (var error in applied.Errors)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+
+    <p>
+        <span class="badge text-bg-success">@review.SameCount match</span>
+        <span class="badge text-bg-warning">@review.Items.Count to review</span>
+        @if (review.KeptCount > 0)
+        {
+            <span class="badge text-bg-secondary">@review.KeptCount kept as they are earlier</span>
+        }
+    </p>
+
+    @if (review.Clashes.Count > 0)
+    {
+        <div class="alert alert-warning">
+            <strong>Two fixtures on one day:</strong>
+            <ul class="mb-0">
+                @foreach (var clash in review.Clashes)
+                {
+                    <li><a href="@($"teams/details?id={clash.TeamId}")">@TeamName(clash.TeamId)</a> on @clash.Date.ToString("ddd d MMM yyyy") – @clash.Count fixtures @(clash.InSource ? $"on {SourceName}" : "in Fixture Manager")</li>
+                }
+            </ul>
+        </div>
+    }
+
+    @if (review.Items.Count == 0)
+    {
+        <div class="alert alert-success">Everything matches FullTime.</div>
+    }
+    else
+    {
+        @* Filters are toggle buttons: links that add or remove a value in the address (?league=A&league=B&kind=…), so
+           they work the same on the static site and in the app with no Filter button. Values in a row add together;
+           rows narrow each other; a row with nothing selected doesn't filter. Counts allow for the other rows. *@
+        <div class="mb-2">
+            <FilterRow Label="League" Options="LeagueFilterOptions()" />
+            <FilterRow Label="Age group" Options="AgeFilterOptions()" />
+            @if (filterLeague.Count > 0 || filterAge.Count > 0 || filterTeam.Count > 0)
+            {
+                <FilterRow Label="Team" Options="TeamFilterOptions()" />
+            }
+        </div>
+        @if (IsFiltered)
+        {
+            <p class="small text-muted">Showing @Visible.Count() of @review.Items.Count differences. <a href="fixtures/review/sections">Show all</a></p>
+        }
+
+        <EditForm Model="this" OnSubmit="ApplyAsync" FormName="apply" Enhance>
+            @foreach (var group in Groups(Visible))
+            {
+                <details open class="mt-3">
+                <summary class="h5 section-summary">
+                    <span class="section-title">@group.Heading <span class="badge text-bg-secondary">@group.Items.Count</span></span>
+                    @if (group.Items.Any(i => i.Suggested != Resolution.None))
+                    {
+                        var groupAction = GroupAction(group.Kind);
+                        @* Applies the chosen side of every row in this section (as filtered). *@
+                        <button type="submit" class="btn btn-sm btn-primary" name="RowAction" value="@groupAction"
+                                disabled="@busy" @onclick="() => clickedAction = groupAction">Apply Selected</button>
+                    }
+                </summary>
+                @* Same column widths in every section (percentages of the page, so they flex with the screen), so the sections
+                   line up. On a narrow screen the table keeps a minimum width and scrolls sideways instead of squashing. *@
+                <div class="table-responsive">
+                <table class="table table-sm align-middle review-table">
+                    <colgroup>
+                        <col class="col-date" />
+                        <col class="col-team" />
+                        <col class="col-side" />
+                        <col class="col-side" />
+                        <col class="col-source" />
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Team</th>
+                            <th>In Fixture Manager</th>
+                            <th>On @SourceName</th>
+                            <th>Source</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in group.Items)
+                        {
+                            <tr class="@(item.BroughtForward ? "table-danger" : "")">
+                                <td>
+                                    @DateText(item)
+                                    @if (item.BroughtForward)
+                                    {
+                                        <div><span class="badge text-bg-danger">Brought forward</span></div>
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.Team is not null)
+                                    {
+                                        <a href="@($"teams/details?id={item.Team.Id}")">@item.Team.DisplayName</a>
+                                    }
+                                    else
+                                    {
+                                        @item.Source?.SourceTeamName
+                                    }
+                                </td>
+                                @* Each side is a clickable cell: a hidden radio with the whole cell as its label, highlighted when
+                                   chosen (CSS :has, so it works on the static site without script). The row's Apply button or
+                                   "Apply all shown" posts the chosen side. *@
+                                <td class="choice-cell">
+                                    @if (item.Suggested == Resolution.None)
+                                    {
+                                        @AppText(item)
+                                    }
+                                    else
+                                    {
+                                        <label class="choice" title="@ChoiceTitle(item, Resolution.KeepApp)">
+                                            <input type="radio" class="visually-hidden" name="@($"Choices[{item.Id}]")" value="@Resolution.KeepApp"
+                                                   checked="@(ChoiceFor(item) == Resolution.KeepApp)" @onchange="() => choices[item.Id] = Resolution.KeepApp" />
+                                            @AppText(item)
+                                            @if (item.AffectsAllocation)
+                                            {
+                                                <span class="d-block small text-danger">Using @SourceName removes its pitch allocation.</span>
+                                            }
+                                            <span class="choice-action small">
+                                                @* The action is the button, shown only in the chosen cell (CSS). It applies its own side
+                                                   ("id|KeepApp"). Static site: posted as RowAction; interactive: the click records it. *@
+                                                <button type="submit" class="btn btn-sm cell-apply" name="RowAction" value="@RowSide(item, Resolution.KeepApp)"
+                                                        disabled="@busy" @onclick="() => clickedAction = RowSide(item, Resolution.KeepApp)">
+                                                    <Icon Type="@ChoiceIcon(item, Resolution.KeepApp)" /> @ChoiceLabel(item, Resolution.KeepApp)
+                                                </button>
+                                            </span>
+                                        </label>
+                                    }
+                                </td>
+                                <td class="choice-cell">
+                                    @if (item.Suggested == Resolution.None)
+                                    {
+                                        @SourceText(item)
+                                    }
+                                    else
+                                    {
+                                        <label class="choice" title="@ChoiceTitle(item, Resolution.UseSource)">
+                                            <input type="radio" class="visually-hidden" name="@($"Choices[{item.Id}]")" value="@Resolution.UseSource"
+                                                   checked="@(ChoiceFor(item) == Resolution.UseSource)" @onchange="() => choices[item.Id] = Resolution.UseSource" />
+                                            @SourceText(item)
+                                            <span class="choice-action small">
+                                                @* The action is the button, shown only in the chosen cell (CSS). It applies its own side
+                                                   ("id|UseSource"). Static site: posted as RowAction; interactive: the click records it. *@
+                                                <button type="submit" class="btn btn-sm cell-apply" name="RowAction" value="@RowSide(item, Resolution.UseSource)"
+                                                        disabled="@busy" @onclick="() => clickedAction = RowSide(item, Resolution.UseSource)">
+                                                    <Icon Type="@ChoiceIcon(item, Resolution.UseSource)" /> @ChoiceLabel(item, Resolution.UseSource)
+                                                </button>
+                                            </span>
+                                        </label>
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.Source?.SourceFixtureId is null)
+                                    {
+                                        @SourceName
+                                    }
+                                    else
+                                    {
+                                        <a href="@FixtureLink(item.Source.SourceFixtureId)" target="_blank" rel="noopener">@SourceName</a>
+                                    }
+                                    @* When this row's FullTime fixture was fetched (its league's upload) and who by. *@
+                                    <span class="d-block small text-muted">@UploadedText(item)</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                </div>
+                </details>
+            }
+            @if (!Visible.Any())
+            {
+                <p class="text-muted">No differences match the filters.</p>
+            }
+            <button type="submit" class="btn btn-primary" name="RowAction" value="@AllShown" disabled="@(busy || !Visible.Any())"
+                    @onclick="() => clickedAction = AllShown">Apply all shown</button>
+            <span class="text-muted ms-2">Click the Fixture Manager or @SourceName side to choose it (the suggestion is chosen to
+                start with), then Apply. Keeping Fixture Manager's version is remembered, so it won't be shown again unless it changes.</span>
+        </EditForm>
+    }
+}
+
+@code {
+    private const string Source = "FullTime";
+
+    private ReconciliationReviewDto? review;
+    private ReconciliationApplyResultDto? applied;
+    private Dictionary<Guid, string> teamNames = [];
+    private bool busy;
+
+    // The side chosen in each row. Static site: the radios are posted as Choices[id]=UseSource|KeepApp.
+    // Interactive (desktop): nothing is posted, so clicking a side records it in `choices`.
+    // No initializer (BL0008): a form post sets it.
+    [SupplyParameterFromForm(FormName = "apply")]
+    public Dictionary<string, Resolution>? Choices { get; set; }
+    private readonly Dictionary<string, Resolution> choices = [];
+
+    // Which Apply was pressed: a row's id, or "all" for every row shown. Static: posted as the button's name/value;
+    // interactive: the click records it.
+    [SupplyParameterFromForm(FormName = "apply")]
+    public string? RowAction { get; set; }
+    private string? clickedAction;
+    private const string AllShown = "all";
+
+    // Filters, from the address; each can be given several times (?league=A&league=B). Values are enum names / team
+    // ids. None = no filter on that row.
+    [SupplyParameterFromQuery(Name = "league")] public string[]? League { get; set; }
+    [SupplyParameterFromQuery(Name = "age")] public string[]? Age { get; set; }
+    [SupplyParameterFromQuery(Name = "team")] public string[]? Team { get; set; }
+    [SupplyParameterFromQuery(Name = "kind")] public string[]? Kind { get; set; }
+
+    // The filters in force (from the address).
+    private HashSet<string> filterLeague = [], filterAge = [], filterTeam = [], filterKind = [];
+
+    protected override void OnParametersSet()
+    {
+        static HashSet<string> Set(string[]? values) => (values ?? []).Where(v => !string.IsNullOrEmpty(v)).ToHashSet();
+        filterLeague = Set(League);
+        filterAge = Set(Age);
+        filterTeam = Set(Team);
+        filterKind = Set(Kind);
+    }
+
+    private bool IsFiltered => filterLeague.Count + filterAge.Count + filterTeam.Count + filterKind.Count > 0;
+
+    private static bool Matches(HashSet<string> filter, string value) => filter.Count == 0 || filter.Contains(value);
+
+    /// <summary>The differences the filters let through, in date order.</summary>
+    private IEnumerable<ReconciliationItem> Visible => MatchingExcept();
+
+    /// <summary>The differences matching every filter except the rows named (to count a row's buttons).</summary>
+    private IEnumerable<ReconciliationItem> MatchingExcept(params string[] ignore) =>
+        (review?.Items ?? []).Where(i =>
+            (ignore.Contains("kind") || Matches(filterKind, i.Kind.ToString()))
+            && (ignore.Contains("league") || Matches(filterLeague, i.Team?.League.ToString() ?? ""))
+            && (ignore.Contains("age") || Matches(filterAge, i.Team?.AgeGroup.ToString() ?? ""))
+            && (ignore.Contains("team") || Matches(filterTeam, i.Team?.Id.ToString() ?? "")));
+
+    /// <summary>
+    /// A filter row's toggle buttons: each value with differences (given the other rows) and its count. A button's
+    /// link adds its value to the row, or removes it if already selected. Changing league or age group also drops
+    /// selected teams that no longer fit.
+    /// </summary>
+    private IReadOnlyList<FilterOption> Options(string key, HashSet<string> selected, IEnumerable<(string Value, string Label)> values,
+        Func<ReconciliationItem, string?> valueOf, bool narrowsTeams = false)
+    {
+        // League and age group buttons may drop the selected teams, so they're counted without them.
+        var items = (narrowsTeams ? MatchingExcept(key, "team") : MatchingExcept(key)).ToList();
+        string Url(string value)
+        {
+            var toggled = selected.Contains(value) ? selected.Where(v => v != value).ToArray() : [.. selected, value];
+            var changes = new Dictionary<string, object?> { [key] = toggled.Length == 0 ? null : toggled };
+            if (narrowsTeams)
+            {
+                var leagues = key == "league" ? toggled.ToHashSet() : filterLeague;
+                var ages = key == "age" ? toggled.ToHashSet() : filterAge;
+                // The Team row is only shown while a league or age group is chosen; without one, no team filter either.
+                var teams = leagues.Count == 0 && ages.Count == 0 ? [] : TeamsWithDifferences
+                    .Where(t => filterTeam.Contains(t.Id.ToString()) && Matches(leagues, t.League.ToString()) && Matches(ages, t.AgeGroup.ToString()))
+                    .Select(t => t.Id.ToString()).ToArray();
+                changes["team"] = teams.Length == 0 ? null : teams;
+            }
+            return NavigationManager.GetUriWithQueryParameters(changes);
+        }
+        var options = new List<FilterOption>();
+        foreach (var (value, label) in values)
+        {
+            int count = items.Count(i => valueOf(i) == value);
+            if (count > 0 || selected.Contains(value)) options.Add(new FilterOption(label, count, selected.Contains(value), Url(value)));
+        }
+        return options;
+    }
+
+    private IEnumerable<TeamDto> TeamsWithDifferences =>
+        (review?.Items ?? []).Where(i => i.Team is not null).Select(i => i.Team!).DistinctBy(t => t.Id);
+
+    private IReadOnlyList<FilterOption> KindFilterOptions() =>
+        Options("kind", filterKind, KindOrder.Select(k => (k.Kind.ToString(), k.Heading)), i => i.Kind.ToString());
+
+    private IReadOnlyList<FilterOption> LeagueFilterOptions() =>
+        Options("league", filterLeague,
+            TeamsWithDifferences.Select(t => t.League).Distinct().OrderBy(l => l.DisplayName()).Select(l => (l.ToString(), l.DisplayName())),
+            i => i.Team?.League.ToString(), narrowsTeams: true);
+
+    private IReadOnlyList<FilterOption> AgeFilterOptions() =>
+        Options("age", filterAge,
+            TeamsWithDifferences.Select(t => t.AgeGroup).Distinct().Order().Select(a => (a.ToString(), a.ToString())),
+            i => i.Team?.AgeGroup.ToString(), narrowsTeams: true);
+
+    private IReadOnlyList<FilterOption> TeamFilterOptions() =>
+        Options("team", filterTeam,
+            TeamsWithDifferences.OrderBy(t => t.DisplayName).Select(t => (t.Id.ToString(), t.DisplayName)),
+            i => i.Team?.Id.ToString());
+
+    protected override async Task OnInitializedAsync()
+    {
+        // On a static post, ApplyAsync runs after this and reloads.
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        review = await ReconciliationService.GetReviewAsync(Source);
+        teamNames = (await TeamService.GetTeamsAsync()).ToDictionary(t => t.Id, t => t.DisplayName);
+        choices.Clear();
+        foreach (var item in review.Items)
+            choices[item.Id] = item.Suggested;
+    }
+
+    private Resolution ChoiceFor(ReconciliationItem item) =>
+        choices.TryGetValue(item.Id, out var choice) ? choice : item.Suggested;
+
+    private async Task ApplyAsync()
+    {
+        if (review is null) return;
+        busy = true;
+        try
+        {
+            var action = RowAction ?? clickedAction;
+            clickedAction = null;
+            var chosen = Chosen(action);
+            if (chosen.Count == 0) return;
+            applied = await ReconciliationService.ApplyAsync(Source, chosen);
+            await LoadAsync();
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private string TeamName(Guid teamId) => teamNames.TryGetValue(teamId, out var name) ? name : "A team";
+
+    private static string DateText(ReconciliationItem item)
+    {
+        static string Format(DateOnly? date) => date?.ToString("ddd dd/MM/yy") ?? "TBC";
+        return item.Kind == DifferenceKind.DateMoved
+            ? $"{Format(item.App?.Date)} → {Format(item.Source?.Date)}"
+            : Format(item.Date);
+    }
+
+    /// <summary>
+    /// When the row's source fixture was fetched and who by, for the Source column, e.g. "20/11 09:00 · me@example.com".
+    /// Leagues are fetched separately, so rows can differ. Empty for a row with no source fixture ("Not on FullTime").
+    /// </summary>
+    private static string UploadedText(ReconciliationItem item) => item.Source?.UploadedAt is null
+        ? ""
+        : $"{item.Source.UploadedAt.Value.ToLocalTime():dd/MM HH:mm} · {item.Source.UploadedBy}";
+
+    /// <summary>The source's name for headings and the Source column, e.g. "FullTime".</summary>
+    private string SourceName
+    {
+        get
+        {
+            var name = review?.Upload?.SourceName;
+            return string.IsNullOrEmpty(name) ? Source : name;
+        }
+    }
+
+    private sealed record Group(DifferenceKind Kind, string Heading, IReadOnlyList<ReconciliationItem> Items);
+
+    /// <summary>The RowAction value of a section's "Apply all" button.</summary>
+    private static string GroupAction(DifferenceKind kind) => $"group:{kind}";
+
+    /// <summary>The differences by kind, most urgent first; empty groups are left out. Items stay in date order.</summary>
+    private (DifferenceKind Kind, string Heading)[] KindOrder =>
+    [
+        (DifferenceKind.DateMoved, "Date moved"),
+        (DifferenceKind.Different, "Different"),
+        (DifferenceKind.OnlyInSource, "Not in Fixture Manager"),
+        (DifferenceKind.OnlyInApp, $"Not on {SourceName}"),
+        (DifferenceKind.NotLinked, "Not linked to a team"),
+    ];
+
+    private IEnumerable<Group> Groups(IEnumerable<ReconciliationItem> shown)
+    {
+        var list = shown.ToList();
+        foreach (var (kind, heading) in KindOrder)
+        {
+            var items = list.Where(i => i.Kind == kind).ToList();
+            if (items.Count > 0) yield return new Group(kind, heading, items);
+        }
+    }
+
+    /// <summary>The fixture's own page on FullTime.</summary>
+    private static string FixtureLink(string fixtureId) =>
+        $"https://fulltime.thefa.com/displayFixture.html?id={Uri.EscapeDataString(fixtureId)}";
+
+
+    /// <summary>
+    /// The choices to apply for the button pressed: one row's side ("{id}|UseSource" – the side the button stands for),
+    /// a section ("group:{kind}") or "all" rows shown, each with its chosen side. Only rows still shown count (a stale or
+    /// filtered-out row does nothing). Static: the posted radios; interactive: the clicks.
+    /// </summary>
+    /// <summary>The value of a row's side button: "{id}|UseSource" or "{id}|KeepApp".</summary>
+    private static string RowSide(ReconciliationItem item, Resolution side) => $"{item.Id}|{side}";
+
+    private Dictionary<string, Resolution> Chosen(string? action)
+    {
+        var shownItems = Visible.Where(i => i.Suggested != Resolution.None).ToList();
+        var rowSide = (action ?? "").Split('|');
+        if (rowSide.Length == 2)
+        {
+            return shownItems.Any(i => i.Id == rowSide[0])
+                && Enum.TryParse<Resolution>(rowSide[1], out var side) && side is Resolution.UseSource or Resolution.KeepApp
+                ? new Dictionary<string, Resolution> { [rowSide[0]] = side }
+                : [];
+        }
+        IReadOnlyDictionary<string, Resolution> picked = Choices ?? choices;
+        var rows = (action switch
+        {
+            AllShown => shownItems,
+            _ when action?.StartsWith("group:") == true => shownItems.Where(i => GroupAction(i.Kind) == action),
+            _ => shownItems.Where(i => i.Id == action),
+        }).Select(i => i.Id).ToHashSet();
+        return picked
+            .Where(c => rows.Contains(c.Key) && c.Value is Resolution.UseSource or Resolution.KeepApp)
+            .ToDictionary(c => c.Key, c => c.Value);
+    }
+
+    /// <summary>What choosing a side does, for that kind of difference.</summary>
+    private static string ChoiceLabel(ReconciliationItem item, Resolution side) => (item.Kind, side) switch
+    {
+        (DifferenceKind.OnlyInSource, Resolution.UseSource) => "Add",
+        (DifferenceKind.OnlyInSource, _) => "Don't add",
+        (DifferenceKind.OnlyInApp, Resolution.UseSource) => "Delete",
+        (_, Resolution.UseSource) => "Use",
+        _ => "Keep",
+    };
+
+    private static Icon.IconType ChoiceIcon(ReconciliationItem item, Resolution side) => (item.Kind, side) switch
+    {
+        (DifferenceKind.OnlyInSource, Resolution.UseSource) => Icon.IconType.Add,
+        (DifferenceKind.OnlyInApp, Resolution.UseSource) => Icon.IconType.Delete,
+        (_, Resolution.UseSource) => Icon.IconType.Use,
+        _ => Icon.IconType.Warning,      // accepting a difference: it stays, so a warning rather than a tick
+    };
+
+    private string ChoiceTitle(ReconciliationItem item, Resolution side) => (item.Kind, side) switch
+    {
+        (DifferenceKind.OnlyInSource, Resolution.UseSource) => $"Add this {SourceName} fixture to Fixture Manager",
+        (DifferenceKind.OnlyInSource, _) => "Don't add it (remembered)",
+        (DifferenceKind.OnlyInApp, Resolution.UseSource) => $"Delete it from Fixture Manager – it isn't on {SourceName}",
+        (_, Resolution.UseSource) => $"Update Fixture Manager with {SourceName}'s details",
+        _ => "Keep Fixture Manager's version (remembered)",
+    };
+
+    /// <summary>The Fixture Manager side. For a date move it starts with Fixture Manager's date.</summary>
+    private static RenderFragment AppText(ReconciliationItem item) =>
+        item.App is null
+            ? NoFixture
+            : FixtureText(item.Kind == DifferenceKind.DateMoved ? item.App.Date : null,
+                item.App.IsHome, item.App.Opponent, item.App.FixtureType, "", FixtureChanges.None);
+
+    /// <summary>The FullTime side, with the parts that differ from the app in bold. For a date move it starts with its date.</summary>
+    private static RenderFragment SourceText(ReconciliationItem item) =>
+        item.Source is null
+            ? NoFixture
+            : FixtureText(item.Kind == DifferenceKind.DateMoved ? item.Source.Date : null,
+                item.Source.IsHome, item.Source.Opponent, item.Source.FixtureType, item.Source.Status, item.Changes);
+
+    private static readonly RenderFragment NoFixture = builder => builder.AddContent(0, "—");
+
+    /// <summary>
+    /// "H v Rivals (League)" – or "Sun 20/12 · H v Rivals (League)" when given a date – with the changed parts bold and a
+    /// status badge (e.g. Postponed) if any.
+    /// </summary>
+    private static RenderFragment FixtureText(DateOnly? date, bool isHome, string opponent, FixtureType type, string status,
+        FixtureChanges bold) => builder =>
+    {
+        void Part(int seq, string text, FixtureChanges change)
+        {
+            if (bold.HasFlag(change) && change != FixtureChanges.None)
+            {
+                builder.OpenElement(seq, "strong");
+                builder.AddContent(seq + 1, text);
+                builder.CloseElement();
+            }
+            else
+            {
+                builder.AddContent(seq + 2, text);
+            }
+        }
+        if (date is not null)
+        {
+            Part(0, date.Value.ToString("ddd dd/MM"), FixtureChanges.Date);
+            builder.AddContent(5, " · ");
+        }
+        Part(10, isHome ? "H" : "A", FixtureChanges.Venue);
+        builder.AddContent(20, " v ");
+        Part(30, opponent, FixtureChanges.Opponent);
+        builder.AddContent(40, " (");
+        Part(50, type.DisplayName(), FixtureChanges.Type);
+        builder.AddContent(60, ")");
+        if (status.Length > 0)
+        {
+            builder.OpenElement(70, "span");
+            builder.AddAttribute(71, "class", "badge text-bg-secondary ms-1");
+            builder.AddContent(72, status);
+            builder.CloseElement();
+        }
+    };
+}

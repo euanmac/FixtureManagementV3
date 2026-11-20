@@ -27,6 +27,9 @@ public record SourceFixture
     public string Status { get; init; } = "";
     /// <summary>The source's own code for the fixture's type (e.g. FullTime's "L" or "50D1"). Not saved; used to report codes we don't know.</summary>
     public string TypeCode { get; init; } = "";
+    /// <summary>When the upload this fixture came in was made, and who by. Set when loaded; not saved per fixture.</summary>
+    public DateTime? UploadedAt { get; init; }
+    public string UploadedBy { get; init; } = "";
 }
 
 /// <summary>How an app fixture and a source fixture compare.</summary>
@@ -83,6 +86,11 @@ public sealed record ReconciliationItem
     public FixtureChanges Changes { get; init; }
     /// <summary>What the reconciler suggests; the user can override it.</summary>
     public Resolution Suggested { get; init; }
+    /// <summary>Someone chose to keep Fixture Manager's version of this difference earlier (only set by the week view).</summary>
+    public bool Kept { get; init; }
+    /// <summary>Who chose to keep it, and when (UTC) – set with Kept.</summary>
+    public string KeptBy { get; init; } = "";
+    public DateTime? KeptAt { get; init; }
 
     /// <summary>
     /// Identifies this exact difference, to remember a "keep the app version" decision about it. It includes

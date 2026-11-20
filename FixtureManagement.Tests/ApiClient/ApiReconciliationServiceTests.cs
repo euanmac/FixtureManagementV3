@@ -39,6 +39,10 @@ public class ApiReconciliationServiceTests(TestWebApplicationFactory factory) : 
         Assert.Equal((DifferenceKind.OnlyInSource, "Others U10", Resolution.UseSource), (item.Kind, item.Source!.Opponent, item.Suggested));
         Assert.Equal(team.Id, item.Team!.Id);
 
+        var week = await reconciliation.GetWeekAsync("FullTime", day1, day2);
+        Assert.Equal([DifferenceKind.Same, DifferenceKind.OnlyInSource], week.Items.Select(i => i.Kind));
+        Assert.Equal([team.Id], week.CoveredTeamIds);
+
         var result = await reconciliation.ApplyAsync("FullTime", new Dictionary<string, Resolution> { [item.Id] = item.Suggested });
 
         Assert.Equal(1, result.Added);

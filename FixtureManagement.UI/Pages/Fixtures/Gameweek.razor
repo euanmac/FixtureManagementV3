@@ -1,18 +1,41 @@
 ﻿@page "/gameweek"
 @preservewhitespace true
 @using System.ComponentModel.DataAnnotations
+@using FixtureManagement.Shared.Reconciliation
+@* Compares the week with the latest FullTime upload (sent by the browser extension), using the same reconciliation as
+   Review FullTime – no FullTime requests here. The previous version, which fetched FullTime live, is /gameweek/live. *@
 
 @inject IFixtureService FixtureService
 @inject ITeamService TeamService
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject IFullTimeService FullTimeService
+@inject IReconciliationService ReconciliationService
 
 @attribute [StreamRendering]
 <PageTitle>Gameweek</PageTitle>
 
 <h1>Gameweek</h1>
 <hr>
+@if (week is not null)
+{
+    @if (week.Upload is null)
+    {
+        <div class="alert alert-info py-2">
+            Nothing has been fetched from FullTime yet, so fixtures aren't compared. Use the Fixture Manager browser
+            extension: open a FullTime page, then click <strong>Send fixtures from FullTime</strong>.
+        </div>
+    }
+    else
+    {
+        <p class="text-muted small mb-2">
+            Compared with the FullTime fetch of @week.Upload.UploadedAt.ToLocalTime().ToString("ddd d MMM HH:mm") by @week.Upload.UploadedBy.
+            @if (isAuthenticated)
+            {
+                <a href="fixtures/review">Review all differences</a>
+            }
+        </p>
+    }
+}
 @* <div class="container"> *@
     <div class="row">
         <div class="col">
@@ -39,13 +62,9 @@
                     @* Static site: the pressed button's name/value is posted as FormAction. Interactive (desktop): the click records it. *@
                     <button type="submit" class="btn btn-primary" disabled="@(buttonsDisabled || (downloadCount == 0))" name="FormAction" value="@Action.Download" @onclick="() => clickedAction = Action.Download">Download @(downloadCount)</button>
                     <button type="submit" class="btn btn-primary" disabled="@(buttonsDisabled || (unconfirmedCount == 0))" name="FormAction" value="@Action.Confirm" @onclick="() => clickedAction = Action.Confirm">Confirm @(unconfirmedCount)</button>
-                    <button type="submit" class="btn btn-primary" disabled="@(buttonsDisabled || (unmatchedCount ==0))" name="FormAction" value="@Action.Delete" @onclick="() => clickedAction = Action.Delete">Delete Unmatched</button>
+                    <button type="submit" class="btn btn-primary" disabled="@(buttonsDisabled || (unmatchedCount ==0))" name="FormAction" value="@Action.Delete" @onclick="() => clickedAction = Action.Delete">Delete Unmatched @(unmatchedCount)</button>
                     <button type="submit" class="btn btn-primary" disabled="@buttonsDisabled" name="FormAction" value="@Action.Update" @onclick="() => clickedAction = Action.Update">Update</button>
 
-                </EditForm>
-            </div>
-            <div class="col-auto">
-                <EditForm OnSubmit="ClearCache" FormName="ClearCache" Model="this" enhance>
                 </EditForm>
             </div>
         
@@ -113,8 +132,9 @@
                         <td style="@($"background-color: var({rowColour})")">
                             @item.MatchDate.ToShortDateString()
                         </td>
-                        <td class="text-center align-middle" style="@($"background-color: var({rowColour})")">
-                            <i class="@item.GetRecIcon() align-middle" data-toggle="tooltip" data-original-title="@item.RecStatus"></i>
+                        @* Top-aligned, so the icon lines up with the first line of a row that has a note. *@
+                        <td class="text-center align-top status-cell" style="@($"background-color: var({rowColour})")">
+                            <i class="@StatusIcon(item)" title="@StatusTitle(item)"></i>
                         </td>
                         @if (item.RecStatus != FixtureRecMatchType.noFixture && item.RecStatus != FixtureRecMatchType.pending && item.RecStatus != FixtureRecMatchType.unknownTeam)
                         {
@@ -126,6 +146,10 @@
                             </td>
                             <td style="@($"background-color: var({rowColour})")">
                                 @item.Opponent
+                                @if (item.Note.Length > 0)
+                                {
+                                    <div class="small text-muted">@item.Note</div>
+                                }
                             </td>
                             @if (item.IsAllocated)
                             {
@@ -160,7 +184,8 @@
                         {
                             <td style="@($"background-color: var({rowColour})")">
 
-                                @if (item.RecStatus == FixtureRecMatchType.fullTimeUnmatched)
+                                @* Download: FullTime-only fixtures, and ones someone chose not to add (accepted) – still possible one by one. *@
+                                @if (item.RecStatus == FixtureRecMatchType.fullTimeUnmatched || (item.RecStatus == FixtureRecMatchType.fullTimeAccepted && item.FromSource))
                                 {
                                     <EditForm method="post" Model="item" OnSubmit="DownloadFixture" FormName="@(item.Id.ToString())" Enhance>
                                         <input type="hidden" name="downloadFixture.Id" value="@item.Id" />
@@ -178,7 +203,7 @@
                                         </button>
                                     </EditForm>
                                 }
-                                @if (item.RecStatus != FixtureRecMatchType.fullTimeUnmatched && item.RecStatus != FixtureRecMatchType.noFixture && item.RecStatus != FixtureRecMatchType.pending && item.RecStatus != FixtureRecMatchType.unknownTeam)
+                                @if (item.Id != Guid.Empty && !item.FromSource && item.RecStatus != FixtureRecMatchType.fullTimeUnmatched && item.RecStatus != FixtureRecMatchType.noFixture && item.RecStatus != FixtureRecMatchType.pending && item.RecStatus != FixtureRecMatchType.unknownTeam)
                                 {
 
 
@@ -207,7 +232,6 @@
         </tbody>
     </table>
 
-    <p class="text-muted small mt-2">FullTime User-Agent: <code>@FullTimeService.UserAgent</code></p>
 
 @code {
 
@@ -248,6 +272,9 @@
 
     private IEnumerable<TeamReconiliationRow> AllRows => fixtureRecResults.Values.SelectMany(x => x);
 
+    private const string Source = "FullTime";
+    private ReconciliationWeekDto? week;
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
@@ -277,26 +304,13 @@
         gameWeekStart = day.AddDays(-startOffset);
         gameWeekEnd = day.AddDays(endOffset);
 
-        //Get fixtures for the week, and all teams (already ordered by age group, gender, division)
+        //Fixtures for the week, all teams (already ordered by age group, gender, division), and the week compared with
+        //the latest FullTime upload. All local – no FullTime requests – so no need to stream team by team.
         var fixtures = await FixtureService.GetFixturesAsync(new FixtureQuery { From = gameWeekStart, To = gameWeekEnd });
         var teams = await TeamService.GetTeamsAsync();
-
-        //Placeholder "pending" row for each team until its reconciliation comes back
-        fixtureRecResults = teams.ToDictionary(
-            t => t,
-            t => new List<TeamReconiliationRow> { new TeamReconiliationRow { Team = t, MatchDate = gameWeekStart, RecStatus = FixtureRecMatchType.pending } });
+        week = await ReconciliationService.GetWeekAsync(Source, gameWeekStart, gameWeekEnd);
+        fixtureRecResults = GameweekRows.Build(teams, gameWeekStart, gameWeekEnd, fixtures, week);
         UpdateCounts();
-        StateHasChanged();
-
-        //For each team reconcile the fixtures for a given date
-        //Will be asynchronous so update state on each result returned
-        await foreach (var row in FullTimeService.Reconcile(teams, fixtures, gameWeekStart, gameWeekEnd)) {
-            if (row.Count > 0) {
-                fixtureRecResults[row[0].Team] = row;
-            }
-            UpdateCounts();
-            StateHasChanged();
-        }
         buttonsDisabled = false;
     }
 
@@ -304,13 +318,29 @@
     {
         downloadCount = AllRows.Count(f => f.RecStatus == FixtureRecMatchType.fullTimeUnmatched);
         unconfirmedCount = AllRows.Count(f => f.IsAllocated && !f.IsConfirmed);
-        unmatchedCount = AllRows.Count(f => f.RecStatus == FixtureRecMatchType.localFixtureUnmatched);
+        unmatchedCount = DeletableUnmatched.Count();
     }
 
-    public async Task ClearCache() {
-        FullTimeService.ClearCache();
-        await ShowChangesAsync();
-    }
+    /// <summary>
+    /// The status icon. Fixtures needing a decision – different from FullTime, or not on it – share the warning
+    /// triangle (the live page keeps the old icons, so this is decided here rather than in GetRecIcon).
+    /// </summary>
+    /// <summary>
+    /// What "Delete Unmatched" deletes (and counts): fixtures not on FullTime that have no pitch allocation. Allocated
+    /// ones are never bulk-deleted – the booking needs dealing with first (delete them one by one if they must go).
+    /// </summary>
+    private IEnumerable<TeamReconiliationRow> DeletableUnmatched =>
+        AllRows.Where(f => f.RecStatus == FixtureRecMatchType.localFixtureUnmatched && !f.IsAllocated && f.Id != Guid.Empty);
+
+    private static string StatusIcon(TeamReconiliationRow row) => NeedsReview(row)
+        ? "bi bi-exclamation-triangle text-warning"
+        : row.GetRecIcon();
+
+    private static bool NeedsReview(TeamReconiliationRow row) =>
+        row.RecStatus is FixtureRecMatchType.fullTimeDifferent or FixtureRecMatchType.localFixtureUnmatched;
+
+    private static string StatusTitle(TeamReconiliationRow row) =>
+        row.Note.Length > 0 ? $"{row.RecStatus.DisplayName()}: {row.Note}" : row.RecStatus.DisplayName();
 
     public async Task FixturesAction()
     {
@@ -329,14 +359,14 @@
 
             case Action.Delete:
                 //Delete local fixtures that aren't on FullTime
-                foreach (var rec in AllRows.Where(f => f.RecStatus == FixtureRecMatchType.localFixtureUnmatched).ToList())
+                foreach (var rec in DeletableUnmatched.ToList())
                 {
                     await FixtureService.DeleteFixtureAsync(rec.Id);
                 }
                 break;
 
             case Action.Update:
-                FullTimeService.ClearCache();
+                // Just reload: the comparison is worked out afresh from the latest upload each time.
                 break;
 
             case Action.Confirm:

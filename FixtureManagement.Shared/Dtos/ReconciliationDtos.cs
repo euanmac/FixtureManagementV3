@@ -32,6 +32,25 @@ public record SourceUploadSummaryDto
     public int FixtureCount { get; init; }
 }
 
+/// <summary>
+/// One week compared with the latest upload: GET /api/reconciliation/{source}/week and the Gameweek page.
+/// The comparison runs over everything the upload covers, so a fixture moved into or out of the week shows as a move.
+/// </summary>
+public record ReconciliationWeekDto
+{
+    /// <summary>The upload compared against, without its fixtures. Null if the source has never been uploaded.</summary>
+    public SourceUploadSummaryDto? Upload { get; init; }
+    /// <summary>The teams the upload covers; other teams' fixtures weren't compared.</summary>
+    public IReadOnlyList<Guid> CoveredTeamIds { get; init; } = [];
+    /// <summary>The first date the upload covers; earlier fixtures weren't compared.</summary>
+    public DateOnly? CoveredFrom { get; init; }
+    /// <summary>
+    /// Every comparison (matches too) with Fixture Manager's or the source's date in the week. Differences kept as
+    /// Fixture Manager's version earlier have Kept set.
+    /// </summary>
+    public IReadOnlyList<ReconciliationItem> Items { get; init; } = [];
+}
+
 /// <summary>POST /api/reconciliation/{source}/apply: the choice for each difference, by ReconciliationItem.Id.</summary>
 public record ReconciliationApplyRequest
 {

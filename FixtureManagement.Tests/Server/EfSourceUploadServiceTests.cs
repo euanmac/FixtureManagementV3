@@ -47,7 +47,11 @@ public sealed class EfSourceUploadServiceTests : IDisposable
         Assert.Equal((saved.Id, Now.UtcDateTime, DateTimeKind.Utc, "me@example.com"), (loaded.Id, loaded.UploadedAt, loaded.UploadedAt.Kind, loaded.UploadedBy));
         Assert.Equal((new DateOnly(2026, 11, 19), DateOnly.MaxValue), (loaded.From, loaded.To));
         Assert.Equal([teamId], loaded.TeamIds);
-        Assert.Equal([fixture, tbcUnlinked], loaded.Fixtures);   // records compare by value; TBC sorts last
+        // Records compare by value; TBC sorts last; each fixture carries its upload's time and uploader.
+        Assert.Equal(
+            [fixture with { UploadedAt = Now.UtcDateTime, UploadedBy = "me@example.com" },
+             tbcUnlinked with { UploadedAt = Now.UtcDateTime, UploadedBy = "me@example.com" }],
+            loaded.Fixtures);
     }
 
     [Fact]

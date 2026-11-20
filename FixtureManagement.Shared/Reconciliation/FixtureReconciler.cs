@@ -10,7 +10,7 @@ namespace FixtureManagement.Shared.Reconciliation;
 /// Fixtures are paired team by team, in passes, so each pass only sees what the earlier ones left:
 /// 1. same date, venue and opponent                 → Same (or Different if only the type differs)
 /// 2. same venue, type and opponent, other date      → DateMoved (a TBC source date counts as Same)
-/// 3. same date, anything else differs               → Different
+/// 3. same date and the same opponent or type        → Different (otherwise they're two separate fixtures)
 /// 4. whatever is left                               → OnlyInSource / OnlyInApp
 /// Moves are looked for before "same date, different opponent", so a rearranged fixture isn't mistaken for a
 /// change of opponent on its old date.
@@ -85,12 +85,16 @@ public static class FixtureReconciler
             if (match is not null) Pair(s, match);
         }
 
-        // 3. Same date, something else differs.
+        // 3. Same date, something else differs – but only if they have something real in common: the same opponent (the
+        //    venue or type changed) or the same type (the opponent changed, e.g. within the league). A league game and a
+        //    cup tie against someone else on the same day are two different fixtures, not one that changed.
         foreach (var s in source.Where(s => s.Date is not null).ToList())
         {
             var match = app
-                .Where(a => a.Date == s.Date)
-                .OrderByDescending(a => a.IsHome == s.IsHome)
+                .Where(a => a.Date == s.Date
+                    && (SameOpponent(a.Opponent, s.Opponent) || a.FixtureType == s.FixtureType))
+                .OrderByDescending(a => SameOpponent(a.Opponent, s.Opponent))
+                .ThenByDescending(a => a.IsHome == s.IsHome)
                 .ThenByDescending(a => a.FixtureType == s.FixtureType)
                 .FirstOrDefault();
             if (match is not null) Pair(s, match);

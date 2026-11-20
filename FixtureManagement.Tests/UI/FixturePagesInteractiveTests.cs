@@ -3,7 +3,7 @@ using Bunit;
 using NSubstitute;
 using Allocate = FixtureManagement.UI.Pages.Fixtures.Allocate;
 using FixturesIndex = FixtureManagement.UI.Pages.Fixtures.Index;
-using Gameweek = FixtureManagement.UI.Pages.Fixtures.Gameweek;
+using Gameweek = FixtureManagement.UI.Pages.Fixtures.GameweekLive;   // the live-FullTime copy; /gameweek has its own tests
 
 namespace FixtureManagement.Tests.UI;
 
@@ -83,7 +83,7 @@ public class GameweekInteractiveTests : InteractivePageTestBase
             .Returns(ServiceResult<IReadOnlyList<FixtureDto>>.Success([]));
         Fixtures.CreateFixtureAsync(Arg.Any<FixtureDto>(), Arg.Any<CancellationToken>())
             .Returns(ServiceResult<FixtureDto>.Success(new FixtureDto()));
-        GoTo($"gameweek?matchday={Sunday:dd-MMM-yyyy}");
+        GoTo($"gameweek/live?matchday={Sunday:dd-MMM-yyyy}");
     }
 
     private async IAsyncEnumerable<List<TeamReconiliationRow>> Rows([EnumeratorCancellation] CancellationToken ct = default)

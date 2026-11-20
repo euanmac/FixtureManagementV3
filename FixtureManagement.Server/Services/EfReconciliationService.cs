@@ -25,15 +25,59 @@ public class EfReconciliationService(
         return review;
     }
 
+    public async Task<ReconciliationWeekDto> GetWeekAsync(string source, DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
+    {
+        var upload = await uploads.GetCombinedUploadAsync(source, cancellationToken);
+        if (upload is null) return new ReconciliationWeekDto();
+
+        // Compare everything the upload covers (not just the week), so moves into or out of the week pair up.
+        var covered = (await teams.GetTeamsAsync(cancellationToken)).Where(t => upload.TeamIds.Contains(t.Id)).ToList();
+        var appFixtures = await fixtures.GetFixturesAsync(
+            new FixtureQuery { From = upload.From, To = upload.To == DateOnly.MaxValue ? null : upload.To }, cancellationToken);
+        var result = FixtureReconciler.Reconcile(covered, upload.From, upload.To, appFixtures, upload.Fixtures);
+
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var prefix = DecisionPrefix(source);
+        var decisions = (await db.ReconciliationDecision.AsNoTracking()
+                .Where(d => d.Key.StartsWith(prefix)).ToListAsync(cancellationToken))
+            .ToDictionary(d => d.Key);
+
+        bool InWeek(DateOnly? date) => date is not null && date.Value >= from && date.Value <= to;
+        ReconciliationItem WithDecision(ReconciliationItem item)
+        {
+            if (item.Kind == DifferenceKind.Same || !decisions.TryGetValue(prefix + item.Key, out var decision)) return item;
+            return item with
+            {
+                Kept = true,
+                KeptBy = decision.DecidedBy,
+                KeptAt = DateTime.SpecifyKind(decision.DecidedAt, DateTimeKind.Utc),
+            };
+        }
+        return new ReconciliationWeekDto
+        {
+            Upload = Summary(upload),
+            CoveredTeamIds = upload.TeamIds,
+            CoveredFrom = upload.From,
+            Items = result.Items
+                .Where(i => InWeek(i.App?.Date) || InWeek(i.Source?.Date))
+                .Select(WithDecision)
+                .ToList(),
+        };
+    }
+
     public async Task<ReconciliationApplyResultDto> ApplyAsync(string source, IReadOnlyDictionary<string, Resolution> choices,
         CancellationToken cancellationToken = default)
     {
         var (review, allDifferences) = await BuildAsync(source, cancellationToken);
-        var byId = review.Items.GroupBy(i => i.Id).ToDictionary(g => g.Key, g => g.First());
+        // Every current difference, accepted ones included, so an earlier "keep" can be changed (using the source's
+        // version makes the difference go, and SaveDecisionsAsync drops the old decision).
+        var byId = allDifferences.GroupBy(i => i.Id).ToDictionary(g => g.Key, g => g.First());
 
         int updated = 0, deleted = 0, skipped = 0;
         var toAdd = new List<FixtureDto>();
         var keep = new List<ReconciliationItem>();
+        var resolved = new List<ReconciliationItem>();      // differences settled with the source's version
+        var toAddItems = new List<ReconciliationItem>();
         var errors = new List<string>();
 
         foreach (var (id, choice) in choices)
@@ -50,8 +94,12 @@ public class EfReconciliationService(
             {
                 case DifferenceKind.OnlyInSource:
                     if (item.Source!.Date is null)
+                    {
                         errors.Add($"{Describe(item)}: can't be added without a date.");
+                    }
                     else
+                    {
+                        toAddItems.Add(item);
                         toAdd.Add(new FixtureDto
                         {
                             TeamId = item.Team!.Id,
@@ -60,10 +108,11 @@ public class EfReconciliationService(
                             Opponent = item.Source.Opponent,
                             FixtureType = item.Source.FixtureType,
                         });
+                    }
                     break;
 
                 case DifferenceKind.OnlyInApp:
-                    if (await fixtures.DeleteFixtureAsync(item.App!.Id, cancellationToken)) deleted++;
+                    if (await fixtures.DeleteFixtureAsync(item.App!.Id, cancellationToken)) { deleted++; resolved.Add(item); }
                     else errors.Add($"{Describe(item)}: the fixture had already gone.");
                     break;
 
@@ -81,7 +130,7 @@ public class EfReconciliationService(
                         Opponent = src.Opponent,
                         FixtureType = src.FixtureType,
                     }, cancellationToken);
-                    if (result.Succeeded) updated++;
+                    if (result.Succeeded) { updated++; resolved.Add(item); }
                     else errors.Add($"{Describe(item)}: {Reason(result)}.");
                     break;
             }
@@ -91,11 +140,11 @@ public class EfReconciliationService(
         if (toAdd.Count > 0)
         {
             var created = await fixtures.CreateFixturesAsync(toAdd, cancellationToken);
-            if (created.Succeeded) added = toAdd.Count;
+            if (created.Succeeded) { added = toAdd.Count; resolved.AddRange(toAddItems); }
             else errors.Add($"The {toAdd.Count} new fixtures couldn't be added: {Reason(created)}.");
         }
 
-        await SaveDecisionsAsync(source, keep, allDifferences, cancellationToken);
+        await SaveDecisionsAsync(source, keep, allDifferences.Except(resolved).ToList(), cancellationToken);
 
         return new ReconciliationApplyResultDto
         {
@@ -107,7 +156,7 @@ public class EfReconciliationService(
     private async Task<(ReconciliationReviewDto Review, List<ReconciliationItem> AllDifferences)> BuildAsync(string source, CancellationToken ct)
     {
         var today = DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime);
-        var upload = await uploads.GetLatestUploadAsync(source, ct);
+        var upload = await uploads.GetCombinedUploadAsync(source, ct);
         if (upload is null)
             return (new ReconciliationReviewDto { From = today, To = today }, []);
 
@@ -129,15 +178,7 @@ public class EfReconciliationService(
 
         var review = new ReconciliationReviewDto
         {
-            Upload = new SourceUploadSummaryDto
-            {
-                Source = upload.Source,
-                SourceName = upload.SourceName,
-                UploadedAt = upload.UploadedAt,
-                UploadedBy = upload.UploadedBy,
-                TeamCount = upload.TeamIds.Count,
-                FixtureCount = upload.Fixtures.Count,
-            },
+            Upload = Summary(upload),
             Items = open,
             SameCount = result.Items.Count(i => i.Kind == DifferenceKind.Same),
             KeptCount = differences.Count - open.Count,
@@ -177,6 +218,16 @@ public class EfReconciliationService(
     }
 
     private static string DecisionPrefix(string source) => source + "|";
+
+    private static SourceUploadSummaryDto Summary(SourceUploadDto upload) => new()
+    {
+        Source = upload.Source,
+        SourceName = upload.SourceName,
+        UploadedAt = upload.UploadedAt,
+        UploadedBy = upload.UploadedBy,
+        TeamCount = upload.TeamIds.Count,
+        FixtureCount = upload.Fixtures.Count,
+    };
 
     private static string Reason(ServiceResult result) =>
         result.Message
