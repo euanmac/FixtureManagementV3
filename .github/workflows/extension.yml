@@ -1,0 +1,75 @@
+# Packages the browser extension (FixtureManagement.BrowserExtension) for Chrome / Edge.
+# - Runs only when started by hand: Actions tab -> this workflow -> "Run workflow". It deploys nothing to the websites.
+# - Download from the run page (Artifacts): FixtureManagerExtension = FixtureManagerExtension.zip. Unzipped, it's one
+#   folder to choose in chrome://extensions (or edge://extensions) -> Developer mode -> Load unpacked. README.md inside
+#   has the steps.
+# - Tick "Publish as a GitHub Release" to also put the zip on the "extension" release, whose permanent link is
+#   https://github.com/euanmac/FixtureManagementV3/releases/download/extension/FixtureManagerExtension.zip
+#   That release is never marked "latest", so the desktop installer's releases/latest/... link keeps working.
+#   Bump "version" in manifest.json for each release; publishing again replaces the zip.
+
+name: Package browser extension
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Publish as a GitHub Release (updates the permanent download link)
+        type: boolean
+        default: false
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # only used by the release step
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the extension
+        working-directory: FixtureManagement.BrowserExtension
+        run: |
+          set -e
+          node --check background.js
+          node --check popup.js
+          jq empty manifest.json
+          for f in $(jq -r '.icons[], .action.default_icon[]' manifest.json); do
+            test -f "$f" || { echo "::error::Missing icon $f"; exit 1; }
+          done
+          echo "VERSION=$(jq -r .version manifest.json)" >> "$GITHUB_ENV"
+
+      - name: Zip
+        run: |
+          set -e
+          mkdir -p dist/FixtureManagerExtension
+          cp -r FixtureManagement.BrowserExtension/. dist/FixtureManagerExtension/
+          cd dist
+          zip -r FixtureManagerExtension.zip FixtureManagerExtension
+          unzip -l FixtureManagerExtension.zip
+          echo "Fixture Manager extension version $VERSION"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FixtureManagerExtension
+          path: dist/FixtureManagerExtension.zip
+          if-no-files-found: error
+
+      - name: Publish a GitHub Release
+        if: ${{ inputs.release }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          notes="Fixture Manager – FullTime browser extension, version $VERSION (commit ${GITHUB_SHA::7}).
+          Install: unzip, then chrome://extensions (or edge://extensions) -> Developer mode -> Load unpacked -> choose the FixtureManagerExtension folder.
+          Permanent link: https://github.com/$GITHUB_REPOSITORY/releases/download/extension/FixtureManagerExtension.zip"
+          if gh release view extension --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "Release 'extension' exists – replacing its zip"
+            gh release upload extension dist/FixtureManagerExtension.zip --clobber --repo "$GITHUB_REPOSITORY"
+            gh release edit extension --notes "$notes" --latest=false --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create extension dist/FixtureManagerExtension.zip --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --title "Fixture Manager browser extension" --notes "$notes" --latest=false
+          fi

@@ -11,4 +11,8 @@ progress { width: 100%; }
 .hint { color: #6c757d; }
 .error { color: #b02a37; }
 #failed { padding-left: 18px; color: #b02a37; max-height: 160px; overflow-y: auto; }
+fieldset { border: 1px solid #dee2e6; border-radius: 4px; padding: 6px 8px; margin: 0 0 8px; }
+legend { font-size: 13px; padding: 0 4px; width: auto; }
+#league-list label { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+#league-list input { display: inline; width: auto; margin: 0; }
 #codes-list { padding-left: 18px; max-height: 160px; overflow-y: auto; }

@@ -14,6 +14,7 @@
       <datalist id="servers">
         <option value="https://tufixturemanager.azurewebsites.net/">Live</option>
         <option value="https://euanblazortest2.azurewebsites.net/">Test</option>
+        <option value="https://tufixturemanager-qa.azurewebsites.net/">QA</option>
         <option value="https://localhost:7468/">This computer</option>
       </datalist>
     </label>
@@ -25,6 +26,12 @@
   <section id="signed-in" hidden>
     <p class="who">Signed in to <span id="who-server"></span> as <span id="who-email"></span>
       <button id="sign-out" class="link">Sign out</button></p>
+    <fieldset id="leagues">
+      <legend>Leagues to fetch
+        <span class="hint">(<button id="all-leagues" class="link">all</button> · <button id="no-leagues" class="link">none</button>)</span>
+      </legend>
+      <div id="league-list" class="hint">Loading the leagues…</div>
+    </fieldset>
     <p class="hint">Have a fulltime.thefa.com page open in a tab, then:</p>
     <button id="send">Send fixtures from FullTime</button>
   </section>

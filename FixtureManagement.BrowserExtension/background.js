@@ -117,15 +117,21 @@ async function fetchInTab(tabId, url) {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function run() {
+async function getPlan() {
+  const response = await callApi("api/fulltime/plan");
+  if (!response.ok) throw new Error(`Fixture Manager answered ${response.status} for the list of teams.`);
+  return response.json();
+}
+
+/** leagues: the League values to fetch (numbers, as in the plan); null or missing = all. */
+async function run(leagues) {
   await chrome.storage.session.set({ run: { ...idleState, status: "running", message: "Getting the list of teams…" } });
   try {
     const tab = await findFullTimeTab();
 
-    const planResponse = await callApi("api/fulltime/plan");
-    if (!planResponse.ok) throw new Error(`Fixture Manager answered ${planResponse.status} for the list of teams.`);
-    const plan = await planResponse.json();
-    if (plan.teams.length === 0) throw new Error("Fixture Manager has no teams with FullTime ids.");
+    const plan = await getPlan();
+    if (Array.isArray(leagues)) plan.teams = plan.teams.filter((t) => leagues.includes(t.league));
+    if (plan.teams.length === 0) throw new Error("No teams to fetch – tick at least one league.");
 
     const pages = [];
     const failed = [];
@@ -190,10 +196,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       } else if (message.type === "signOut") {
         await chrome.storage.local.remove("auth");
         sendResponse({ ok: true });
+      } else if (message.type === "plan") {
+        sendResponse({ ok: true, plan: await getPlan() });
       } else if (message.type === "send") {
         const { run: current } = await chrome.storage.session.get("run");
         if (current && current.status === "running") return sendResponse({ ok: false, error: "Already running." });
-        run();   // not awaited: the popup follows progress through storage
+        run(message.leagues);   // not awaited: the popup follows progress through storage
         sendResponse({ ok: true });
       }
     } catch (e) {

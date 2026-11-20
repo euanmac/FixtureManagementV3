@@ -11,6 +11,51 @@ function ask(message) {
   return chrome.runtime.sendMessage(message);
 }
 
+// ---------- leagues ----------
+// The website's plan lists the teams to fetch, each with its league. The popup shows one tick-box per league (with its
+// team count); the choice is kept in chrome.storage.local as the league numbers ticked (missing = all).
+
+let planLeagues = [];   // [{ league, name, teams }]
+
+async function loadLeagues() {
+  const answer = await ask({ type: "plan" });
+  if (!answer.ok) {
+    $("league-list").textContent = answer.error;
+    return;
+  }
+  const byLeague = new Map();
+  for (const team of answer.plan.teams) {
+    const entry = byLeague.get(team.league) || { league: team.league, name: team.leagueName, teams: 0 };
+    entry.teams++;
+    byLeague.set(team.league, entry);
+  }
+  planLeagues = [...byLeague.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const { leagues: saved } = await chrome.storage.local.get("leagues");
+  renderLeagues(Array.isArray(saved) ? saved : planLeagues.map((l) => l.league));
+}
+
+function renderLeagues(ticked) {
+  $("league-list").classList.remove("hint");
+  $("league-list").replaceChildren(...planLeagues.map((l) => {
+    const label = document.createElement("label");
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.value = l.league;
+    box.checked = ticked.includes(l.league);
+    box.addEventListener("change", saveLeagues);
+    label.append(box, `${l.name} (${l.teams} ${l.teams === 1 ? "team" : "teams"})`);
+    return label;
+  }));
+}
+
+function tickedLeagues() {
+  return [...$("league-list").querySelectorAll("input:checked")].map((box) => Number(box.value));
+}
+
+async function saveLeagues() {
+  await chrome.storage.local.set({ leagues: tickedLeagues() });
+}
+
 async function renderAuth() {
   const { auth } = await chrome.storage.local.get("auth");
   $("signed-out").hidden = !!auth;
@@ -19,6 +64,7 @@ async function renderAuth() {
     $("who-server").textContent = new URL(auth.server).host;
     $("who-email").textContent = auth.email;
     $("open-site").href = auth.server;
+    if (planLeagues.length === 0) loadLeagues();
   } else {
     const { lastServer } = await chrome.storage.local.get("lastServer");
     $("server").value = lastServer || "https://tufixturemanager.azurewebsites.net/";
@@ -57,11 +103,19 @@ function renderRun(run) {
 $("sign-in").addEventListener("click", async () => {
   showError("");
   const server = $("server").value.trim();
+  let url;
   try {
-    const url = new URL(server);
+    url = new URL(server);
     if (url.protocol !== "https:") throw new Error();
   } catch {
     return showError("Enter the site's address, starting https://");
+  }
+  // The extension may only talk to the sites listed in its manifest (host_permissions).
+  const allowed = chrome.runtime.getManifest().host_permissions
+    .map((p) => new URL(p.replace("/*", "/")).hostname)
+    .filter((h) => h !== "fulltime.thefa.com");
+  if (!allowed.includes(url.hostname)) {
+    return showError(`This extension only works with: ${allowed.join(", ")}.`);
   }
   await chrome.storage.local.set({ lastServer: server });
   $("sign-in").disabled = true;
@@ -75,13 +129,28 @@ $("sign-in").addEventListener("click", async () => {
 $("sign-out").addEventListener("click", async () => {
   showError("");
   await ask({ type: "signOut" });
+  planLeagues = [];
+  $("league-list").textContent = "Loading the leagues…";
   await renderAuth();
 });
 
 $("send").addEventListener("click", async () => {
   showError("");
-  const answer = await ask({ type: "send" });
+  const leagues = tickedLeagues();
+  if (planLeagues.length > 0 && leagues.length === 0) return showError("Tick at least one league.");
+  // Before the leagues have loaded, send everything (null = all).
+  const answer = await ask({ type: "send", leagues: planLeagues.length > 0 ? leagues : null });
   if (!answer.ok) showError(answer.error);
+});
+
+$("all-leagues").addEventListener("click", async () => {
+  renderLeagues(planLeagues.map((l) => l.league));
+  await saveLeagues();
+});
+
+$("no-leagues").addEventListener("click", async () => {
+  renderLeagues([]);
+  await saveLeagues();
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
