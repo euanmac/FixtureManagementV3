@@ -94,6 +94,13 @@ public sealed record ReconciliationItem
         App is null ? "" : $"{App.Id},{App.Date:yyyy-MM-dd},{(App.IsHome ? "H" : "A")},{App.FixtureType},{App.Opponent}",
         Source is null ? "" : $"{Source.SourceFixtureId},{Source.Date:yyyy-MM-dd},{(Source.IsHome ? "H" : "A")},{Source.FixtureType},{Source.Opponent}");
 
+    /// <summary>
+    /// A short id for this exact difference (a hash of Key), for forms and the apply request. Choices are matched
+    /// to differences by it, so if the data changes between showing the page and applying, a stale choice simply
+    /// matches nothing rather than being applied to a different fixture.
+    /// </summary>
+    public string Id => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Key)))[..16].ToLowerInvariant();
+
     /// <summary>The date to sort and filter by: the source's date if it has one, else the app's.</summary>
     public DateOnly? Date => Source?.Date ?? App?.Date;
 

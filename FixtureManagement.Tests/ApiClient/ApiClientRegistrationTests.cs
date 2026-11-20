@@ -18,6 +18,7 @@ public class ApiClientRegistrationTests
         Assert.IsType<ApiPersonService>(provider.GetRequiredService<IPersonService>());
         Assert.IsType<ApiTeamContactService>(provider.GetRequiredService<ITeamContactService>());
         Assert.IsType<ApiFixtureService>(provider.GetRequiredService<IFixtureService>());
+        Assert.IsType<ApiReconciliationService>(provider.GetRequiredService<IReconciliationService>());
         Assert.NotNull(provider.GetRequiredService<ApiAuthClient>());
         Assert.Same(provider.GetRequiredService<ApiSession>(), provider.GetRequiredService<ApiSession>());   // one session per app
 

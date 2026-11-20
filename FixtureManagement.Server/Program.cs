@@ -94,6 +94,8 @@ builder.Services.AddScoped<IPersonService, EfPersonService>();
 builder.Services.AddScoped<ITeamContactService, EfTeamContactService>();
 builder.Services.AddScoped<IFixtureService, EfFixtureService>();
 builder.Services.AddScoped<ISourceUploadService, EfSourceUploadService>();
+builder.Services.AddScoped<IReconciliationService, EfReconciliationService>();
+builder.Services.AddHttpContextAccessor();   // EfReconciliationService records who made a decision
 builder.Services.AddSingleton(TimeProvider.System);
 
 var app = builder.Build();
@@ -142,6 +144,7 @@ app.MapPeopleEndpoints();
 app.MapTeamContactEndpoints();
 app.MapFixtureEndpoints();
 app.MapFullTimeEndpoints();
+app.MapReconciliationEndpoints();
 app.Run();
 
 // Lets the test project start the app with WebApplicationFactory<Program>.

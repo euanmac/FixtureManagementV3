@@ -1,0 +1,270 @@
+@page "/fixtures/review"
+@attribute [Authorize]
+@using FixtureManagement.Shared.Reconciliation
+@inject IReconciliationService ReconciliationService
+@inject ITeamService TeamService
+
+<PageTitle>Review FullTime fixtures</PageTitle>
+
+<h1>Review FullTime fixtures</h1>
+<hr />
+
+@if (review is null)
+{
+    <p><em>Loading…</em></p>
+}
+else if (review.Upload is null)
+{
+    <div class="alert alert-info">
+        Nothing has been fetched from FullTime yet. Use the Fixture Manager browser extension: open a FullTime page,
+        then click <strong>Send fixtures from FullTime</strong>.
+    </div>
+}
+else
+{
+    <p>
+        Compared with the FullTime fetch of <strong>@review.Upload.UploadedAt.ToLocalTime().ToString("ddd d MMM yyyy HH:mm")</strong>
+        by @review.Upload.UploadedBy (@review.Upload.TeamCount teams, @review.Upload.FixtureCount fixtures),
+        for fixtures from @review.From.ToString("d MMM yyyy").
+    </p>
+
+    @if (applied is not null)
+    {
+        <div class="alert @(applied.Errors.Count > 0 ? "alert-warning" : "alert-success")" role="status">
+            Added @applied.Added, updated @applied.Updated, deleted @applied.Deleted, kept as they are @applied.Kept.
+            @if (applied.Skipped > 0)
+            {
+                <span>@applied.Skipped skipped because they had changed since the page was shown.</span>
+            }
+            @if (applied.Errors.Count > 0)
+            {
+                <ul class="mb-0">
+                    @foreach (var error in applied.Errors)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+
+    <p>
+        <span class="badge text-bg-success">@review.SameCount match</span>
+        <span class="badge text-bg-warning">@review.Items.Count to review</span>
+        @if (review.KeptCount > 0)
+        {
+            <span class="badge text-bg-secondary">@review.KeptCount kept as they are earlier</span>
+        }
+    </p>
+
+    @if (review.Clashes.Count > 0)
+    {
+        <div class="alert alert-warning">
+            <strong>Two fixtures on one day:</strong>
+            <ul class="mb-0">
+                @foreach (var clash in review.Clashes)
+                {
+                    <li>@TeamName(clash.TeamId) on @clash.Date.ToString("ddd d MMM yyyy") – @clash.Count fixtures @(clash.InSource ? "on FullTime" : "in the app")</li>
+                }
+            </ul>
+        </div>
+    }
+
+    @if (review.Items.Count == 0)
+    {
+        <div class="alert alert-success">Everything matches FullTime.</div>
+    }
+    else
+    {
+        <EditForm Model="this" OnSubmit="ApplyAsync" FormName="apply" Enhance>
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Team</th>
+                        <th>Difference</th>
+                        <th>In the app</th>
+                        <th>On FullTime</th>
+                        <th>Keep</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in review.Items)
+                    {
+                        var id = item.Id;
+                        var choice = ChoiceFor(item);
+                        <tr class="@(item.BroughtForward ? "table-danger" : "")">
+                            <td class="text-nowrap">@DateText(item)</td>
+                            <td>@item.Team?.DisplayName</td>
+                            <td>
+                                @KindText(item)
+                                @if (item.BroughtForward)
+                                {
+                                    <div><span class="badge text-bg-danger">Brought forward</span></div>
+                                }
+                                @if (item.AffectsAllocation)
+                                {
+                                    <div class="small text-danger">Using FullTime removes its pitch allocation.</div>
+                                }
+                            </td>
+                            <td>@AppText(item)</td>
+                            <td>@SourceText(item)</td>
+                            <td class="text-nowrap">
+                                @if (item.Suggested != Resolution.None)
+                                {
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" id="@($"use-{id}")" name="@($"Choices[{id}]")"
+                                               value="@Resolution.UseSource" checked="@(choice == Resolution.UseSource)"
+                                               @onchange="() => choices[id] = Resolution.UseSource" />
+                                        <label class="form-check-label" for="@($"use-{id}")">@UseSourceText(item)</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" id="@($"keep-{id}")" name="@($"Choices[{id}]")"
+                                               value="@Resolution.KeepApp" checked="@(choice == Resolution.KeepApp)"
+                                               @onchange="() => choices[id] = Resolution.KeepApp" />
+                                        <label class="form-check-label" for="@($"keep-{id}")">@KeepAppText(item)</label>
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <button type="submit" class="btn btn-primary" disabled="@busy">Apply</button>
+            <span class="text-muted ms-2">"Keep app" is remembered, so the difference won't be shown again unless it changes.</span>
+        </EditForm>
+    }
+}
+
+@code {
+    private const string Source = "FullTime";
+
+    private ReconciliationReviewDto? review;
+    private ReconciliationApplyResultDto? applied;
+    private Dictionary<Guid, string> teamNames = [];
+    private bool busy;
+
+    // Static site: the radios are posted as Choices[id]=UseSource|KeepApp.
+    // Interactive (desktop): nothing is posted, so the radios' @onchange records them in `choices`.
+    // No initializer (BL0008): a form post sets it.
+    [SupplyParameterFromForm(FormName = "apply")]
+    public Dictionary<string, Resolution>? Choices { get; set; }
+
+    private readonly Dictionary<string, Resolution> choices = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        // On a static post, ApplyAsync runs after this and reloads.
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        review = await ReconciliationService.GetReviewAsync(Source);
+        teamNames = (await TeamService.GetTeamsAsync()).ToDictionary(t => t.Id, t => t.DisplayName);
+        choices.Clear();
+        foreach (var item in review.Items)
+            choices[item.Id] = item.Suggested;
+    }
+
+    private Resolution ChoiceFor(ReconciliationItem item) =>
+        choices.TryGetValue(item.Id, out var choice) ? choice : item.Suggested;
+
+    private async Task ApplyAsync()
+    {
+        if (review is null) return;
+        busy = true;
+        try
+        {
+            // Static site: only what was posted (a browser posts every row's radios). Interactive: the clicks,
+            // starting from the suggestions shown.
+            IReadOnlyDictionary<string, Resolution> chosen = Choices ?? new Dictionary<string, Resolution>(choices);   // a copy: LoadAsync refills `choices`
+            applied = await ReconciliationService.ApplyAsync(Source, chosen);
+            await LoadAsync();
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private string TeamName(Guid teamId) => teamNames.TryGetValue(teamId, out var name) ? name : "A team";
+
+    private static string DateText(ReconciliationItem item)
+    {
+        static string Format(DateOnly? date) => date?.ToString("ddd dd/MM/yy") ?? "TBC";
+        return item.Kind == DifferenceKind.DateMoved
+            ? $"{Format(item.App?.Date)} → {Format(item.Source?.Date)}"
+            : Format(item.Date);
+    }
+
+    private static string KindText(ReconciliationItem item) => item.Kind switch
+    {
+        DifferenceKind.Different => "Different " + string.Join(", ",
+            new[] {
+                item.Changes.HasFlag(FixtureChanges.Opponent) ? "opponent" : null,
+                item.Changes.HasFlag(FixtureChanges.Venue) ? "home/away" : null,
+                item.Changes.HasFlag(FixtureChanges.Type) ? "type" : null,
+            }.Where(c => c is not null)),
+        DifferenceKind.OnlyInSource => "Not in the app",
+        DifferenceKind.OnlyInApp => "Not on FullTime",
+        _ => item.Kind.DisplayName(),
+    };
+
+    private static string UseSourceText(ReconciliationItem item) => item.Kind switch
+    {
+        DifferenceKind.OnlyInSource => "Add it",
+        DifferenceKind.OnlyInApp => "Delete it",
+        _ => "Use FullTime",
+    };
+
+    private static string KeepAppText(ReconciliationItem item) => item.Kind switch
+    {
+        DifferenceKind.OnlyInSource => "Don't add",
+        _ => "Keep app",
+    };
+
+    private static RenderFragment AppText(ReconciliationItem item) =>
+        item.App is null
+            ? NoFixture
+            : FixtureText(item.App.IsHome, item.App.Opponent, item.App.FixtureType, "", FixtureChanges.None);
+
+    /// <summary>The FullTime side, with the parts that differ from the app in bold.</summary>
+    private static RenderFragment SourceText(ReconciliationItem item) =>
+        item.Source is null
+            ? NoFixture
+            : FixtureText(item.Source.IsHome, item.Source.Opponent, item.Source.FixtureType, item.Source.Status, item.Changes);
+
+    private static readonly RenderFragment NoFixture = builder => builder.AddContent(0, "—");
+
+    /// <summary>"H v Rivals (League)", with the changed parts bold and a status badge (e.g. Postponed) if any.</summary>
+    private static RenderFragment FixtureText(bool isHome, string opponent, FixtureType type, string status, FixtureChanges bold) => builder =>
+    {
+        void Part(int seq, string text, FixtureChanges change)
+        {
+            if (bold.HasFlag(change) && change != FixtureChanges.None)
+            {
+                builder.OpenElement(seq, "strong");
+                builder.AddContent(seq + 1, text);
+                builder.CloseElement();
+            }
+            else
+            {
+                builder.AddContent(seq + 2, text);
+            }
+        }
+        Part(10, isHome ? "H" : "A", FixtureChanges.Venue);
+        builder.AddContent(20, " v ");
+        Part(30, opponent, FixtureChanges.Opponent);
+        builder.AddContent(40, " (");
+        Part(50, type.DisplayName(), FixtureChanges.Type);
+        builder.AddContent(60, ")");
+        if (status.Length > 0)
+        {
+            builder.OpenElement(70, "span");
+            builder.AddAttribute(71, "class", "badge text-bg-secondary ms-1");
+            builder.AddContent(72, status);
+            builder.CloseElement();
+        }
+    };
+}

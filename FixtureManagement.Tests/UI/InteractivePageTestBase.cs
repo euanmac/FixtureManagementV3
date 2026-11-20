@@ -19,6 +19,7 @@ public abstract class InteractivePageTestBase : BunitContext
     protected IPitchService Pitches { get; } = Substitute.For<IPitchService>();
     protected IBookingService Bookings { get; } = Substitute.For<IBookingService>();
     protected IFullTimeService FullTime { get; } = Substitute.For<IFullTimeService>();
+    protected IReconciliationService Reconciliation { get; } = Substitute.For<IReconciliationService>();
 
     /// <summary>Signed in by default; call Auth.SetNotAuthorized() to test the signed-out view.</summary>
     protected BunitAuthorizationContext Auth { get; }
@@ -33,6 +34,7 @@ public abstract class InteractivePageTestBase : BunitContext
         Services.AddSingleton(Pitches);
         Services.AddSingleton(Bookings);
         Services.AddSingleton(FullTime);
+        Services.AddSingleton(Reconciliation);
 
         // Order matters: AddAuthorization registers services; the two settings after it resolve some.
         Auth = AddAuthorization();

@@ -31,6 +31,7 @@ public static class ApiClientServiceCollectionExtensions
         services.AddHttpClient<IPersonService, ApiPersonService>(Configure).AddHttpMessageHandler<BearerTokenHandler>();
         services.AddHttpClient<ITeamContactService, ApiTeamContactService>(Configure).AddHttpMessageHandler<BearerTokenHandler>();
         services.AddHttpClient<IFixtureService, ApiFixtureService>(Configure).AddHttpMessageHandler<BearerTokenHandler>();
+        services.AddHttpClient<IReconciliationService, ApiReconciliationService>(Configure).AddHttpMessageHandler<BearerTokenHandler>();
         return services;
     }
 
