@@ -46,9 +46,10 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <!-- App icon and splash screen: the template's for now. -->
-        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
-        <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+        <!-- App icon and splash screen: the Thame United crest (from the club website, background made transparent)
+             on white. appicon.svg is just the white square behind it. -->
+        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.png" ForegroundScale="0.8" Color="#FFFFFF" />
+        <MauiSplashScreen Include="Resources\Splash\splash.png" Color="#FFFFFF" BaseSize="160,160" />
         <MauiFont Include="Resources\Fonts\*" />
         <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
     </ItemGroup>
