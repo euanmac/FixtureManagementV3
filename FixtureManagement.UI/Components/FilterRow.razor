@@ -1,0 +1,17 @@
+@* A row of filter buttons: a label, then one link per option with its count; the active one is highlighted.
+   Links rather than a form, so a filter works with one click on the static site and in the app. *@
+<div class="d-flex flex-wrap align-items-center gap-1 mb-1">
+    <span class="small text-muted me-1 filter-label">@Label</span>
+    @foreach (var option in Options)
+    {
+        <a class="btn btn-sm @(option.Active ? "btn-primary" : "btn-outline-secondary")" href="@option.Url"
+           aria-current="@(option.Active ? "true" : null)">
+            @option.Label <span class="badge ms-1 @(option.Active ? "text-bg-light" : "text-bg-secondary")">@option.Count</span>
+        </a>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter, EditorRequired] public IReadOnlyList<FilterOption> Options { get; set; } = [];
+}
