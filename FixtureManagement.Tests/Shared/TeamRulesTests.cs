@@ -160,4 +160,24 @@ public class TeamDtoTests
     {
         Assert.Equal("Sam Smith", new TeamContactSummaryDto { FirstName = "Sam", LastName = "Smith" }.FullName);
     }
+
+    [Fact]
+    public void League_numbers_never_change()
+    {
+        // Teams store their league as this number: a league inserted anywhere but the end would move teams.
+        Assert.Equal(
+            [League.SouthBucksMini, League.BucksGirls, League.WycAndSouthBucksMinor, League.OxMailYouth, League.OxOver50,
+             League.HighWycSunComb, League.TVCWFL, League.OxGirls, League.JPL, League.UHL, League.ADL, League.SSM,
+             League.AlliedCounties, League.OxSenior],
+            Enum.GetValues<League>());
+        Assert.Equal(13, (int)League.OxSenior);
+    }
+
+    [Fact]
+    public void The_Oxford_Senior_League_plays_on_Saturdays()
+    {
+        Assert.Equal("Oxford Senior League", League.OxSenior.DisplayName());
+        Assert.Equal(DayOfWeek.Saturday, TeamRules.MatchDay(League.OxSenior));
+        Assert.Equal("DarkOliveGreen", TeamRules.Colour(League.OxSenior));
+    }
 }

@@ -53,6 +53,7 @@ public static class TeamRules
         League.JPL => (25, 25, 112),
         League.UHL => (105, 105, 105),
         League.ADL => (105, 105, 105),
+        League.OxSenior => (85, 107, 47),
         _ => (70, 130, 180)
     };
 
@@ -69,6 +70,7 @@ public static class TeamRules
         League.JPL => "MidnightBlue",
         League.UHL => "DimGray",
         League.ADL => "DimGray",
+        League.OxSenior => "DarkOliveGreen",
         _ => "SteelBlue"
     };
 
@@ -85,6 +87,7 @@ public static class TeamRules
         League.JPL => DayOfWeek.Saturday,
         League.UHL => DayOfWeek.Saturday,
         League.ADL => DayOfWeek.Saturday,
+        League.OxSenior => DayOfWeek.Saturday,
         _ => DayOfWeek.Sunday
     };
 

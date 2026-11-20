@@ -34,7 +34,10 @@ public enum League
     [Display(Name = "Spartan South Midlands")]
     SSM,
     [Display(Name = "Allied Counties League")]
-    AlliedCounties
+    AlliedCounties,
+    // New leagues go at the end: teams store the league as its number, so inserting one earlier would move them.
+    [Display(Name = "Oxford Senior League")]
+    OxSenior
 }
 
 public enum TeamSize

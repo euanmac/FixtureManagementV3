@@ -19,7 +19,7 @@ public static class FullTimeLeagues
         League.OxMailYouth => "6306575",          // "Oxfordshire Youth Football League" on FullTime
         League.OxOver50 => "396136022",           // "Oxfordshire Veterans Football League" on FullTime
         League.OxGirls => "7702944",
-        // Still to add: League.ADL, League.UHL, League.TVCWFL, League.JPL
+        // Still to add: League.ADL, League.UHL, League.TVCWFL, League.JPL, League.OxSenior
         _ => null,
     };
 
@@ -51,6 +51,15 @@ public static class FullTimeLeagues
         ["IGUB"] = FixtureType.Cup,
     };
 
+    // Men B's codes from the first upload (DIV3 league, IGUB cup) were read while B was down as Aylesbury & District;
+    // B plays in the Oxford Senior League, so they're its codes too. Remove them from ADL once an ADL-only upload
+    // confirms ADL doesn't use them.
+    private static readonly Dictionary<string, FixtureType> OxSeniorCodes = new(StringComparer.Ordinal)
+    {
+        ["DIV3"] = FixtureType.League,
+        ["IGUB"] = FixtureType.Cup,
+    };
+
     private static readonly Dictionary<string, FixtureType> OxGirlsCodes = new(StringComparer.Ordinal)
     {
         ["O"] = FixtureType.Other,          // the league's "Other Fixtures" groups
@@ -75,6 +84,7 @@ public static class FullTimeLeagues
         League.OxGirls => OxGirlsCodes,
         League.OxOver50 => OxOver50Codes,
         League.UHL => HellenicCodes,
+        League.OxSenior => OxSeniorCodes,
         _ => NoCodes,
     };
 
