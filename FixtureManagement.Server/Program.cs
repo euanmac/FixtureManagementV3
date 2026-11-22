@@ -9,6 +9,10 @@ using FixtureManagement.Server;
 using FixtureManagement.Shared.Services;
 using FixtureManagement.FullTime;
 
+// UK dates and numbers everywhere (e.g. 22/11/2026), whatever the server's own language – Azure's is US English.
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
+System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
