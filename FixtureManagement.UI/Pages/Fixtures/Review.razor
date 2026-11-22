@@ -64,7 +64,7 @@ else
         @VisibleTeams.Count() teams, @VisibleTeams.Count(t => IssueCount(t) > 0) with something to resolve.
         @if (IsFiltered)
         {
-            <a href="fixtures/review">Show all</a>
+            <a href="fixtures/review?ft=all">Show all</a>
         }
     </p>
 
@@ -181,7 +181,8 @@ else
     public string? RowAction { get; set; }
     private string? clickedAction;
 
-    // Filters, from the address; each can be given several times. None = no filter on that row.
+    // Filters, from the address; each can be given several times. None = no filter on that row, except FullTime:
+    // with no "ft" it shows teams on FullTime only, and "ft=all" turns that off.
     [SupplyParameterFromQuery(Name = "ft")] public string[]? FullTime { get; set; }
     [SupplyParameterFromQuery(Name = "league")] public string[]? League { get; set; }
     [SupplyParameterFromQuery(Name = "age")] public string[]? Age { get; set; }
@@ -192,7 +193,7 @@ else
     protected override void OnParametersSet()
     {
         static HashSet<string> Set(string[]? values) => (values ?? []).Where(v => !string.IsNullOrEmpty(v)).ToHashSet();
-        filterFullTime = Set(FullTime);
+        filterFullTime = FullTime is null || FullTime.Length == 0 ? [FullTimeDefault] : Set(FullTime.Where(v => v != FullTimeAll).ToArray());
         filterLeague = Set(League);
         filterAge = Set(Age);
         filterTeam = Set(Team);
@@ -291,6 +292,8 @@ else
 
     // ---------- filters (by team) ----------
 
+    private const string FullTimeDefault = "on", FullTimeAll = "all";
+
     private bool IsFiltered => filterFullTime.Count + filterLeague.Count + filterAge.Count + filterTeam.Count > 0;
 
     private static bool Matches(HashSet<string> filter, string value) => filter.Count == 0 || filter.Contains(value);
@@ -314,7 +317,8 @@ else
         string Url(string value)
         {
             var toggled = selected.Contains(value) ? selected.Where(v => v != value).ToArray() : [.. selected, value];
-            var changes = new Dictionary<string, object?> { [key] = toggled.Length == 0 ? null : toggled };
+            // No "ft" means the default (on FullTime), so clearing that row needs "ft=all".
+            var changes = new Dictionary<string, object?> { [key] = toggled.Length > 0 ? toggled : key == "ft" ? new[] { FullTimeAll } : null };
             if (narrowsTeams)
             {
                 var ft = key == "ft" ? toggled.ToHashSet() : filterFullTime;

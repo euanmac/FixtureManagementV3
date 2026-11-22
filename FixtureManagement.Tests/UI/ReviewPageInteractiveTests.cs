@@ -62,6 +62,7 @@ public class ReviewPageInteractiveTests : InteractivePageTestBase
     [Fact]
     public void Every_team_has_a_closed_section_whose_header_says_what_needs_resolving()
     {
+        GoTo("fixtures/review?ft=all");
         var page = Render<Review>();
 
         Assert.Equal(3, page.FindAll("details.team-section").Count);
@@ -105,6 +106,19 @@ public class ReviewPageInteractiveTests : InteractivePageTestBase
         Assert.DoesNotContain("Added 1", page.Markup);                                 // no result banner
         Assert.Empty(page.FindAll(".alert"));
         Assert.True(Section(page, lions).HasAttribute("open"));
+    }
+
+    [Fact]
+    public void By_default_only_teams_on_FullTime_are_shown_and_the_filter_can_be_cleared()
+    {
+        var page = Render<Review>();
+
+        Assert.Equal([lions.DisplayName, tigers.DisplayName], page.FindAll(".team-name").Select(n => n.TextContent).Order());
+        var ftRow = page.FindAll(".filter-label").Single(l => l.TextContent == "FullTime").ParentElement!;
+        var on = ftRow.QuerySelectorAll("a").Single(a => a.TextContent.Contains("On FullTime") && !a.TextContent.Contains("Not"));
+        Assert.Equal("true", on.GetAttribute("aria-current"));
+        Assert.Contains("ft=all", on.GetAttribute("href"));
+        Assert.Contains(page.FindAll("a"), a => a.TextContent == "Show all" && a.GetAttribute("href") == "fixtures/review?ft=all");
     }
 
     [Fact]
